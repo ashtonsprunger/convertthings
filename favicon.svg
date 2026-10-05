@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <!-- Top Arrow: pointing right -->
+  <path d="M5 14h26V8l12 8.75L31 25.5v-6H5z" fill="#06b6d4" />
+  <!-- Bottom Arrow: pointing left -->
+  <path d="M43 34H17v6L5 31.25 17 22.5v6h26z" fill="#06b6d4" />
+</svg>
