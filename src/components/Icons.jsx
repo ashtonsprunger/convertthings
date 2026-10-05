@@ -236,6 +236,22 @@ export function Icon({ name, size = 18, className = '', ...props }) {
           <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
         </svg>
       );
+    case 'BrandLogo':
+      return (
+        <svg
+          width={size}
+          height={size}
+          viewBox="0 0 48 48"
+          fill="currentColor"
+          className={`ct-icon ct-icon-BrandLogo ${className}`}
+          {...props}
+        >
+          {/* Top Arrow: pointing right */}
+          <path d="M5 14h26V8l12 8.75L31 25.5v-6H5z" />
+          {/* Bottom Arrow: pointing left */}
+          <path d="M43 34H17v6L5 31.25 17 22.5v6h26z" />
+        </svg>
+      );
     case 'BookOpen':
       return (
         <svg {...defaultProps}>

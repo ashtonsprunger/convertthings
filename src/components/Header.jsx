@@ -7,7 +7,7 @@ export function Header({ theme, onToggleTheme, onShare }) {
       <div className="ct-header-inner">
         <div className="ct-brand">
           <div className="ct-logo-badge" aria-hidden="true">
-            <Icon name="Swap" size={20} />
+            <Icon name="BrandLogo" size={28} />
           </div>
           <div className="ct-brand-text">
             <h1 className="ct-brand-title">ConvertThings</h1>
