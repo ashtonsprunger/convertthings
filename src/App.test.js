@@ -154,12 +154,17 @@ describe('ConvertThings UI Integration', () => {
     expect(Number(toInput.value)).toBeGreaterThan(0);
   });
 
-  test('clicking an omnibox suggestion chip updates converter', () => {
+  test('typing in omnibox and selecting instant match updates converter', () => {
     render(<App />);
-    const chip = screen.getByRole('button', { name: '72 °F to °C' });
-    expect(chip).toBeInTheDocument();
+    const omniboxInput = screen.getByLabelText(/Universal conversion search bar/i);
+    expect(omniboxInput).toBeInTheDocument();
 
-    fireEvent.click(chip);
+    fireEvent.change(omniboxInput, { target: { value: '72 f to c' } });
+
+    const matchBtn = screen.getByRole('button', { name: /Apply parsed conversion/i });
+    expect(matchBtn).toBeInTheDocument();
+
+    fireEvent.click(matchBtn);
 
     // Temperature tab should now be active
     const tempTab = screen.getByRole('tab', { name: /Temperature/i });

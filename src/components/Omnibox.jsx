@@ -2,17 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Icon } from './Icons';
 import { parseConversionQuery } from '../engine/parser';
 
-const PRESET_QUERIES = [
-  '100 km to miles',
-  '72 °F to °C',
-  '150 lbs to kg',
-  '1 cup to ml',
-  '500 sq ft to m²',
-  '100 Mbps to MB/s',
-  '30 psi to bar',
-  '1000 W to hp',
-];
-
 export function Omnibox({ onSelectConversion }) {
   const [query, setQuery] = useState('');
   const [parsed, setParsed] = useState(null);
@@ -59,31 +48,17 @@ export function Omnibox({ onSelectConversion }) {
     }
   };
 
-  const handleChipClick = (preset) => {
-    const res = parseConversionQuery(preset);
-    if (res && res.success) {
-      onSelectConversion({
-        categoryId: res.categoryId,
-        fromUnitId: res.fromUnit.id,
-        toUnitId: res.toUnit.id,
-        value: res.value,
-      });
-      setQuery('');
-      setParsed(null);
-    }
-  };
-
   return (
     <section className="ct-omnibox-section" aria-label="Quick search and convert">
       <form className={`ct-omnibox-wrapper ${isFocused ? 'focused' : ''}`} onSubmit={handleSubmit}>
-        <div className="ct-omnibox-icon">
-          <Icon name="Search" size={17} />
+        <div className="ct-omnibox-icon" title="Smart conversion engine">
+          <Icon name="Sparkles" size={17} />
         </div>
         <input
           ref={inputRef}
           type="text"
           className="ct-omnibox-input"
-          placeholder="Search or convert anything (e.g. '100 km to miles', '72 f to c', '150 lbs in kg')..."
+          placeholder="Type any conversion (e.g. 100 km to miles, 72°F in °C, 150 lbs to kg)..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setIsFocused(true)}
@@ -139,23 +114,6 @@ export function Omnibox({ onSelectConversion }) {
           <span className="ct-preview-hint">Press Enter or click to open</span>
         </div>
       )}
-
-      {/* Clean, low-profile quick suggestions */}
-      <div className="ct-chips-container" aria-label="Popular quick conversions">
-        <span className="ct-chips-label">Quick:</span>
-        <div className="ct-chips-scroll">
-          {PRESET_QUERIES.map((preset) => (
-            <button
-              key={preset}
-              type="button"
-              className="ct-chip-btn"
-              onClick={() => handleChipClick(preset)}
-            >
-              {preset}
-            </button>
-          ))}
-        </div>
-      </div>
     </section>
   );
 }

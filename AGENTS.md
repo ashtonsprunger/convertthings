@@ -25,7 +25,7 @@
 
 2. **Universal Omnibox & Natural Language Query Parser (`src/engine/parser.js`)**:
    - Parses natural queries on the fly: `"100 km to miles"`, `"72 f in c"`, `"150 lbs into kg"`, `"1 cup to ml"`, `"500 sq ft to m²"`.
-   - Omnibox with hotkey (`/`) focus, live preview match banner, and popular search chips.
+   - Omnibox with hotkey (`/`) focus and live preview match banner.
 
 3. **SEO & Discoverability (`src/components/SeoContent.jsx`, `public/index.html`)**:
    - Synchronizes current state to URL query parameters (`?cat=length&from=km&to=mi&v=100`) via `history.replaceState`.
