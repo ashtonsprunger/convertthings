@@ -443,8 +443,8 @@ function App() {
           }}
         />
 
-        {/* Future mid-page ad placement (zero layout shift) */}
-        <AdSlot position="mid-content" />
+        {/* Mid-page ad placement (zero layout shift) */}
+        <AdSlot position="mid-content" slotId="1723113883" />
 
         {/* In-depth SEO Guides, Formulas, and FAQs */}
         <SeoContent
