@@ -223,5 +223,28 @@ describe('ConvertThings UI Integration', () => {
     fireEvent.click(closeBtn);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
+
+  test('mounts with clean unit pair route e.g. /convert/celsius-to-fahrenheit', () => {
+    window.history.replaceState({}, '', '/convert/celsius-to-fahrenheit');
+    render(<App />);
+
+    const tempTab = screen.getByRole('tab', { name: /Temperature/i });
+    expect(tempTab).toHaveClass('active');
+
+    // Converted value for 1 C should be 33.8 F
+    const toInput = screen.getByLabelText(/Converted value in/i);
+    expect(toInput.value).toBe('33.8');
+  });
+
+  test('mounts with specific calculation route e.g. /convert/100-km-to-miles', () => {
+    window.history.replaceState({}, '', '/convert/100-km-to-miles');
+    render(<App />);
+
+    const fromInput = screen.getByLabelText(/Enter value in/i);
+    expect(fromInput.value).toBe('100');
+
+    const toInput = screen.getByLabelText(/Converted value in/i);
+    expect(parseFloat(toInput.value)).toBeCloseTo(62.137, 2);
+  });
 });
 

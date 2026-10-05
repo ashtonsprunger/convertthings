@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   CATEGORIES,
-  UNIT_DEFINITIONS,
   getUnit,
   convertUnits,
   formatNumber,
 } from './engine/conversions';
+import { parseRoute, formatRoutePath } from './engine/urlRouter';
 import { Header } from './components/Header';
 import { Omnibox } from './components/Omnibox';
 import { CategoryNav } from './components/CategoryNav';
@@ -33,26 +33,13 @@ const DEFAULT_FAVORITES = [
 function App() {
   const [theme, toggleTheme] = useTheme();
 
-  // URL state initialization helper
+  // URL state initialization helper (supports clean /convert/ paths, categories, and query params)
   const getInitialState = () => {
     try {
-      if (typeof window !== 'undefined' && window.location.search) {
-        const params = new URLSearchParams(window.location.search);
-        const cat = params.get('cat');
-        const from = params.get('from');
-        const to = params.get('to');
-        const val = params.get('v');
-
-        if (cat && UNIT_DEFINITIONS[cat]) {
-          const catDef = CATEGORIES.find((c) => c.id === cat) || CATEGORIES[0];
-          const validFrom = getUnit(cat, from) ? from : catDef.defaultFrom;
-          const validTo = getUnit(cat, to) ? to : catDef.defaultTo;
-          return {
-            categoryId: cat,
-            fromUnitId: validFrom,
-            toUnitId: validTo,
-            fromValue: val !== null && !isNaN(val) ? val : '1',
-          };
+      if (typeof window !== 'undefined') {
+        const parsed = parseRoute(window.location.pathname, window.location.search);
+        if (parsed) {
+          return parsed;
         }
       }
     } catch (e) {
@@ -174,22 +161,47 @@ function App() {
         }
         metaDesc.content = `Easily convert ${fromUnit.plural || fromUnit.name} (${fromUnit.symbol}) to ${toUnit.plural || toUnit.name} (${toUnit.symbol}). Free, accurate, instant unit conversion calculator.`;
 
-        // URL Query Sync without reloading
-        const url = new URL(window.location.href);
-        url.searchParams.set('cat', categoryId);
-        url.searchParams.set('from', fromUnitId);
-        url.searchParams.set('to', toUnitId);
-        if (fromValue) {
-          url.searchParams.set('v', fromValue);
-        } else {
-          url.searchParams.delete('v');
+        // Clean URL Route Path
+        const routePath = formatRoutePath(categoryId, fromUnitId, toUnitId, fromValue);
+
+        // Update Canonical Link tag for search bots
+        let canonical = document.querySelector('link[rel="canonical"]');
+        if (!canonical) {
+          canonical = document.createElement('link');
+          canonical.rel = 'canonical';
+          document.head.appendChild(canonical);
         }
-        window.history.replaceState({}, '', url.toString());
+        canonical.href = `https://convertthings.com${routePath === '/' ? '' : routePath}`;
+
+        // Sync browser URL path without page reloading
+        if (window.location.pathname !== routePath) {
+          window.history.replaceState({}, '', routePath);
+        }
       }
     } catch (e) {
       // ignore
     }
   }, [categoryId, fromUnitId, toUnitId, fromValue]);
+
+  // Listen for browser Back / Forward history navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      try {
+        const parsed = parseRoute(window.location.pathname, window.location.search);
+        if (parsed) {
+          setCategoryId(parsed.categoryId);
+          setFromUnitId(parsed.fromUnitId);
+          setToUnitId(parsed.toUnitId);
+          setFromValue(parsed.fromValue);
+          performCalculation(parsed.fromValue, parsed.categoryId, parsed.fromUnitId, parsed.toUnitId, precision);
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [performCalculation, precision]);
 
   // Handle From Value changes
   const handleFromValueChange = (newVal) => {

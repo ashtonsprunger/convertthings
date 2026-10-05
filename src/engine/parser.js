@@ -3,7 +3,7 @@
  * Parses inputs like "100 km to miles", "72 f in c", "150 lbs into kg", "500 sq ft to sqm"
  */
 
-import { UNIT_DEFINITIONS, convertUnits, formatNumber } from './conversions';
+import { UNIT_DEFINITIONS, convertUnits, formatNumber } from './conversions.js';
 
 // Build a fast lookup map of alias -> { categoryId, unit }
 const ALIAS_LOOKUP = {};

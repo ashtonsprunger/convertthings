@@ -15,7 +15,9 @@
   },
   "scripts": {
     "start": "react-scripts start",
+    "prebuild": "node scripts/generateSitemap.mjs",
     "build": "react-scripts build",
+    "sitemap": "node scripts/generateSitemap.mjs",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "predeploy": "npm run build",
