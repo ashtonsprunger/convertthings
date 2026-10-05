@@ -202,5 +202,26 @@ describe('ConvertThings UI Integration', () => {
     expect(readout).toHaveTextContent(/ft/);
     expect(readout).toHaveTextContent(/equals/i);
   });
+
+  test('renders footer legal links and opens legal modal', () => {
+    render(<App />);
+    const privacyLink = screen.getByRole('link', { name: /Privacy Policy/i });
+    expect(privacyLink).toBeInTheDocument();
+    expect(privacyLink).toHaveAttribute('href', '/privacy.html');
+
+    // Click Privacy Policy link
+    fireEvent.click(privacyLink);
+
+    // Modal dialog should be in document
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: /Privacy Policy/i })).toBeInTheDocument();
+    expect(screen.getAllByText(/Google AdSense/i).length).toBeGreaterThan(0);
+
+    // Close modal
+    const closeBtn = screen.getByRole('button', { name: /Close dialog/i });
+    fireEvent.click(closeBtn);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
 });
 

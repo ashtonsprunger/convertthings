@@ -1,7 +1,14 @@
 import React from 'react';
 import { CATEGORIES } from '../engine/conversions';
 
-export function Footer({ onSelectCategory }) {
+export function Footer({ onSelectCategory, onOpenLegal }) {
+  const handleLegalClick = (e, tab) => {
+    if (onOpenLegal) {
+      e.preventDefault();
+      onOpenLegal(tab);
+    }
+  };
+
   return (
     <footer className="ct-footer">
       <div className="ct-footer-inner">
@@ -42,11 +49,45 @@ export function Footer({ onSelectCategory }) {
           <p className="ct-footer-copy">
             &copy; {new Date().getFullYear()} ConvertThings. All rights reserved.
           </p>
-          <div className="ct-footer-extra">
-            <span>Free Online Unit Converter</span>
+
+          <div className="ct-footer-legal-links">
+            <a
+              href="/privacy.html"
+              className="ct-footer-legal-link"
+              onClick={(e) => handleLegalClick(e, 'privacy')}
+            >
+              Privacy Policy
+            </a>
+            <span className="ct-dot">&bull;</span>
+            <a
+              href="/terms.html"
+              className="ct-footer-legal-link"
+              onClick={(e) => handleLegalClick(e, 'terms')}
+            >
+              Terms of Service
+            </a>
+            <span className="ct-dot">&bull;</span>
+            <a
+              href="#about"
+              className="ct-footer-legal-link"
+              onClick={(e) => handleLegalClick(e, 'about')}
+            >
+              About &amp; Contact
+            </a>
+            <span className="ct-dot">&bull;</span>
+            <a
+              href="https://github.com/ashtonsprunger/convertthings"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ct-footer-legal-link"
+            >
+              GitHub
+            </a>
           </div>
         </div>
       </div>
     </footer>
   );
 }
+
+export default Footer;

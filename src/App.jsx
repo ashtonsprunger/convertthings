@@ -15,6 +15,7 @@ import { ConversionTable } from './components/ConversionTable';
 import { ConversionHistory } from './components/ConversionHistory';
 import { SeoContent } from './components/SeoContent';
 import { Footer } from './components/Footer';
+import { LegalModal } from './components/LegalModal';
 import { AdSlot } from './components/AdSlot';
 import { Toast } from './components/Toast';
 import { useLocalStorage } from './hooks/useLocalStorage';
@@ -79,6 +80,19 @@ function App() {
   const [favorites, setFavorites] = useLocalStorage('ct-favorites', DEFAULT_FAVORITES);
   const [history, setHistory] = useLocalStorage('ct-history', []);
   const [toast, setToast] = useState({ message: '', visible: false });
+  const [legalModal, setLegalModal] = useState({ isOpen: false, tab: 'privacy' });
+
+  // Open modal if URL has hash (#privacy, #terms, #about)
+  useEffect(() => {
+    try {
+      const hash = window.location.hash.toLowerCase();
+      if (hash === '#privacy' || hash === '#terms' || hash === '#about') {
+        setLegalModal({ isOpen: true, tab: hash.replace('#', '') });
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, []);
 
   const historyTimeoutRef = useRef(null);
 
@@ -440,7 +454,16 @@ function App() {
         />
       </main>
 
-      <Footer onSelectCategory={handleSelectCategory} />
+      <Footer
+        onSelectCategory={handleSelectCategory}
+        onOpenLegal={(tab) => setLegalModal({ isOpen: true, tab })}
+      />
+
+      <LegalModal
+        isOpen={legalModal.isOpen}
+        initialTab={legalModal.tab}
+        onClose={() => setLegalModal({ isOpen: false, tab: 'privacy' })}
+      />
 
       <Toast
         message={toast.message}
