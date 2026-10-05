@@ -48,10 +48,6 @@
   transition: transform var(--transition-fast);
 }
 
-[data-theme="dark"] .ct-logo-badge {
-  color: #00f5d4;
-}
-
 .ct-brand:hover .ct-logo-badge {
   transform: scale(1.08);
 }
