@@ -161,6 +161,54 @@
   min-height: 280px;
 }
 
+.ct-ad-side-rail.ct-ad-active {
+  margin: 0;
+  width: 100%;
+  min-height: 280px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.ct-ad-side-rail .ct-ad-wrapper {
+  min-height: 250px;
+  width: 100%;
+}
+
+/* ==========================================
+   Hero 2-Column Layout (Desktop Side Rail)
+   ========================================== */
+.ct-hero-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.ct-hero-main {
+  min-width: 0;
+}
+
+.ct-hero-side {
+  display: none;
+}
+
+@media (min-width: 1140px) {
+  .ct-main {
+    max-width: 1220px;
+  }
+
+  .ct-hero-layout {
+    grid-template-columns: 1fr 300px;
+  }
+
+  .ct-hero-side {
+    display: block;
+    position: sticky;
+    top: 5rem;
+  }
+}
+
 /* ==========================================
    Omnibox (Universal Smart Search / Command Bar)
    ========================================== */

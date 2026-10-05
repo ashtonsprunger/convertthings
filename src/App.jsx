@@ -399,24 +399,32 @@ function App() {
           onRemoveFavorite={handleRemoveFavorite}
         />
 
-        {/* Core Conversion Panel */}
-        <ConversionCard
-          categoryId={categoryId}
-          fromUnitId={fromUnitId}
-          toUnitId={toUnitId}
-          fromValue={fromValue}
-          toValue={toValue}
-          precision={precision}
-          isFavorite={isCurrentFavorite}
-          onFromUnitChange={handleFromUnitChange}
-          onToUnitChange={handleToUnitChange}
-          onFromValueChange={handleFromValueChange}
-          onToValueChange={handleToValueChange}
-          onSwap={handleSwap}
-          onPrecisionChange={handlePrecisionChange}
-          onToggleFavorite={handleToggleFavorite}
-          onCopy={handleCopyResult}
-        />
+        {/* Core Conversion Panel with Desktop Side Rail */}
+        <div className="ct-hero-layout">
+          <div className="ct-hero-main">
+            <ConversionCard
+              categoryId={categoryId}
+              fromUnitId={fromUnitId}
+              toUnitId={toUnitId}
+              fromValue={fromValue}
+              toValue={toValue}
+              precision={precision}
+              isFavorite={isCurrentFavorite}
+              onFromUnitChange={handleFromUnitChange}
+              onToUnitChange={handleToUnitChange}
+              onFromValueChange={handleFromValueChange}
+              onToValueChange={handleToValueChange}
+              onSwap={handleSwap}
+              onPrecisionChange={handlePrecisionChange}
+              onToggleFavorite={handleToggleFavorite}
+              onCopy={handleCopyResult}
+            />
+          </div>
+
+          <aside className="ct-hero-side" aria-label="Desktop Advertisement Rail">
+            <AdSlot position="side-rail" slotId="8779651833" />
+          </aside>
+        </div>
 
         {/* Reference Comparison & Equivalence Table */}
         <ConversionTable
