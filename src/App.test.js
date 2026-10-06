@@ -649,5 +649,23 @@ describe('ConvertThings UI Integration', () => {
     // 1 m to inches = ~39.3701
     expect(Number(toInput.value)).toBeCloseTo(39.37, 1);
   });
+
+  test('renders on unit-pair sub-url without crashing', () => {
+    window.history.pushState({}, '', '/convert/cup_us-to-tbsp_us');
+    render(<App />);
+    expect(screen.getByRole('tab', { name: /Cooking/i })).toHaveClass('active');
+  });
+
+  test('renders on category sub-url /cooking without crashing', () => {
+    window.history.pushState({}, '', '/cooking');
+    render(<App />);
+    expect(screen.getByRole('tab', { name: /Cooking/i })).toHaveClass('active');
+  });
+
+  test('renders on /mass without crashing', () => {
+    window.history.pushState({}, '', '/mass');
+    render(<App />);
+    expect(screen.getByRole('tab', { name: /Weight & Mass/i })).toHaveClass('active');
+  });
 });
 
