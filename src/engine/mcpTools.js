@@ -47,7 +47,7 @@ export const MCP_TOOLS = [
           description: 'Optional category ID if known (e.g. "length", "mass", "temperature", "cooking", etc.). If omitted, will be inferred automatically.',
         },
         decimals: {
-          oneOf: [{ type: 'number' }, { type: 'string' }],
+          type: 'string',
           description: 'Number of decimal places to format the output to, or "auto" for smart precision (default: "auto").',
         },
       },
@@ -81,6 +81,7 @@ export const MCP_TOOLS = [
           description: 'Optional category ID to filter by (e.g. "length", "mass", "temperature", "cooking", "digital", etc.). If omitted, all categories and units are returned.',
         },
       },
+      required: [],
     },
   },
   {
