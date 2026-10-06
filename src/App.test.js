@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import App from './App';
 import {
   convertUnits,
@@ -166,6 +166,26 @@ describe('Natural Language Omnibox Parser', () => {
     expect(resConvert.fromUnit.id).toBe('km');
     expect(resConvert.toUnit.id).toBe('mi');
   });
+
+  test('parses natural language queries with thousands commas in numbers', () => {
+    const res1 = parseConversionQuery('1,000 km to miles');
+    expect(res1).not.toBeNull();
+    expect(res1.value).toBe(1000);
+    expect(res1.fromUnit.id).toBe('km');
+    expect(res1.toUnit.id).toBe('mi');
+    expect(parseFloat(res1.result)).toBeCloseTo(621.371, 2);
+
+    const res2 = parseConversionQuery('how many miles in 10,000 km');
+    expect(res2).not.toBeNull();
+    expect(res2.value).toBe(10000);
+    expect(parseFloat(res2.result)).toBeCloseTo(6213.71, 1);
+
+    const res3 = parseConversionQuery('1,000,000 bytes to megabytes');
+    expect(res3).not.toBeNull();
+    expect(res3.value).toBe(1000000);
+    expect(res3.fromUnit.id).toBe('byte');
+    expect(res3.toUnit.id).toBe('mb');
+  });
 });
 
 describe('ConvertThings UI Integration', () => {
@@ -281,6 +301,23 @@ describe('ConvertThings UI Integration', () => {
     expect(formulaStrip).toBeInTheDocument();
     expect(formulaStrip).toHaveTextContent(/Formula/i);
     expect(formulaStrip).toHaveTextContent(/Multiply the meter value by 3.2808/i);
+  });
+
+  test('formats large numbers with commas in equation readouts while keeping input fields numeric', () => {
+    render(<App />);
+    const fromInput = screen.getByLabelText(/Enter value in/i);
+    fireEvent.change(fromInput, { target: { value: '1000000' } });
+
+    // The input value remains the raw unformatted string '1000000' so HTML type="number" stays valid
+    expect(fromInput.value).toBe('1000000');
+
+    // But the equation hero readout and sentence are formatted with commas
+    const equationCard = screen.getByLabelText(/Conversion equations/i);
+    expect(equationCard).toHaveTextContent(/1,000,000 m/i);
+    expect(equationCard).toHaveTextContent(/1,000,000 meters/i);
+
+    // Converted feet value (~3,280,839.9) has commas in the display readout
+    expect(equationCard).toHaveTextContent(/3,280,839/i);
   });
 
   test('preserves user input in second field when changing precision (bidirectional source of truth)', () => {
@@ -500,6 +537,28 @@ describe('ConvertThings UI Integration', () => {
     fireEvent.keyDown(searchInput, { key: 'Enter', code: 'Enter' });
 
     expect(screen.getByTitle(/Change unit from Inch/i)).toBeInTheDocument();
+  });
+
+  test('unit search dropdown prioritizes units starting with search term (e.g. Terabytes over Bytes for "te")', () => {
+    render(<App />);
+    const digitalTab = screen.getByRole('tab', { name: /Digital Storage/i });
+    fireEvent.click(digitalTab);
+
+    // Open From dropdown (default in digital is GB)
+    const fromUnitBtn = screen.getByTitle(/Change unit from/i);
+    fireEvent.click(fromUnitBtn);
+
+    const searchInput = screen.getByPlaceholderText(/Search unit\.\.\./i);
+    fireEvent.change(searchInput, { target: { value: 'te' } });
+
+    // The first item in the dropdown list must be Terabytes
+    const listbox = screen.getByRole('listbox');
+    const options = within(listbox).getAllByRole('option');
+    expect(options[0]).toHaveTextContent(/Terabytes/i);
+
+    // Enter selects Terabytes
+    fireEvent.keyDown(searchInput, { key: 'Enter', code: 'Enter' });
+    expect(screen.getByTitle(/Change unit from Terabyte/i)).toBeInTheDocument();
   });
 
   test('renders semantic footer category links with valid href paths for SEO crawlers', () => {

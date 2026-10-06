@@ -77,7 +77,18 @@ describe('ConvertThings URL Router', () => {
     expect(formatRoutePath('length', 'km', 'mi', '1')).toBe('/convert/km-to-mi');
     expect(formatRoutePath('length', 'km', 'mi', 1)).toBe('/convert/km-to-mi');
     expect(formatRoutePath('length', 'km', 'mi', '100')).toBe('/convert/100-km-to-mi');
+    expect(formatRoutePath('length', 'km', 'mi', '1,000')).toBe('/convert/1000-km-to-mi');
     expect(formatRoutePath('temperature', 'c', 'f', '-40')).toBe('/convert/-40-c-to-f');
+  });
+
+  test('tolerates commas in URL paths and query parameters', () => {
+    const route = parseRoute('/convert/1,000-km-to-miles');
+    expect(route).not.toBeNull();
+    expect(route.fromValue).toBe('1000');
+
+    const routeQuery = parseRoute('/', '?cat=length&from=km&to=mi&v=10,000');
+    expect(routeQuery).not.toBeNull();
+    expect(routeQuery.fromValue).toBe('10000');
   });
 
   test('generates all unit pairs across all 15 categories', () => {

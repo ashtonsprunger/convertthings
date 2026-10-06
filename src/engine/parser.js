@@ -197,6 +197,11 @@ export function parseConversionQuery(rawQuery) {
     query = query.replace(/^convert\s+/i, '').trim();
   }
 
+  // Normalize numbers with thousands commas (e.g. "1,000,000 km to miles" -> "1000000 km to miles")
+  while (/(\d),(\d)/.test(query)) {
+    query = query.replace(/(\d),(\d)/g, '$1$2');
+  }
+
   // Pattern 0: Natural question format: "how many [toUnit] in [val]? [fromUnit]"
   const patternHowMany = /^(?:how many|how much)\s+([a-z0-9_°'"/²³µ\s]+?)\s+(?:in|are in|are there in)\s+(?:([+-]?[0-9]*\.?[0-9]+(?:e[+-]?[0-9]+)?)\s*)?(?:a\s+|an\s+)?([a-z0-9_°'"/²³µ\s]+)$/i;
   const matchHowMany = query.match(patternHowMany);

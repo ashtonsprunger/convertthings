@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Icon } from './Icons';
+import { formatDisplayNumber } from '../engine/conversions';
 
 export function ConversionHistory({ history, onSelectHistory, onClearHistory }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -44,11 +45,11 @@ export function ConversionHistory({ history, onSelectHistory, onClearHistory }) 
             >
               <div className="ct-history-expression">
                 <span className="ct-history-from">
-                  {item.fromValue} {item.fromSymbol}
+                  {formatDisplayNumber(item.fromValue)} {item.fromSymbol}
                 </span>
                 <span className="ct-history-equals">=</span>
                 <span className="ct-history-to">
-                  {item.toValue} {item.toSymbol}
+                  {formatDisplayNumber(item.toValue)} {item.toSymbol}
                 </span>
               </div>
               <span className="ct-history-cat">{item.categoryName}</span>

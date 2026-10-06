@@ -524,6 +524,9 @@ function App() {
           </aside>
         </div>
 
+        {/* Post-Conversion In-Content Ad Placement (High Viewability & Zero CLS) */}
+        <AdSlot position="mid-content" slotId="1723113883" />
+
         {/* Reference Comparison & Equivalence Table */}
         <ConversionTable
           categoryId={categoryId}
@@ -554,9 +557,6 @@ function App() {
             showToast('History cleared');
           }}
         />
-
-        {/* Mid-page ad placement (zero layout shift) */}
-        <AdSlot position="mid-content" slotId="1723113883" />
 
         {/* In-depth SEO Guides, Formulas, and FAQs */}
         <SeoContent

@@ -4,6 +4,7 @@ import {
   getUnitsForCategory,
   convertUnits,
   formatNumber,
+  formatDisplayNumber,
   getQuickReferenceTable,
 } from '../engine/conversions';
 
@@ -51,7 +52,7 @@ export function ConversionTable({ categoryId, fromUnitId, toUnitId, fromValue, o
             className={`ct-table-tab ${activeTab === 'all' ? 'active' : ''}`}
             onClick={() => setActiveTab('all')}
           >
-            All {fromUnit.name} Conversions ({numericVal} {fromUnit.symbol})
+            All {fromUnit.name} Conversions ({formatDisplayNumber(numericVal)} {fromUnit.symbol})
           </button>
         </div>
       </div>
@@ -86,10 +87,10 @@ export function ConversionTable({ categoryId, fromUnitId, toUnitId, fromValue, o
                   return (
                     <tr key={row.fromValue} className={isCurrent ? 'ct-row-current' : ''}>
                       <td className="ct-td-from">
-                        <strong>{row.fromValue}</strong> <span className="ct-cell-unit">{fromUnit.symbol}</span>
+                        <strong>{formatDisplayNumber(row.fromValue)}</strong> <span className="ct-cell-unit">{fromUnit.symbol}</span>
                       </td>
                       <td className="ct-td-to">
-                        <strong>{row.toValue}</strong> <span className="ct-cell-unit">{toUnit.symbol}</span>
+                        <strong>{formatDisplayNumber(row.toValue)}</strong> <span className="ct-cell-unit">{toUnit.symbol}</span>
                       </td>
                     </tr>
                   );
@@ -138,7 +139,7 @@ export function ConversionTable({ categoryId, fromUnitId, toUnitId, fromValue, o
                     <span className="ct-stat-name">{item.unit.plural || item.unit.name}</span>
                     <span className="ct-stat-symbol">{item.unit.symbol}</span>
                   </div>
-                  <div className="ct-stat-value">{item.value}</div>
+                  <div className="ct-stat-value">{formatDisplayNumber(item.value)}</div>
                 </a>
               );
             })}

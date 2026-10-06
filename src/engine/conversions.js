@@ -396,6 +396,37 @@ export function formatNumber(val, decimals = 'auto') {
 }
 
 /**
+ * Format a number for human-readable display with thousands separators (commas).
+ * Only formats the integer portion (e.g. 1000000.1234 -> "1,000,000.1234").
+ * Preserves exponential notation without injecting commas (e.g. "9.46073e15").
+ * Handles negative signs cleanly and is idempotent.
+ *
+ * @param {number|string} val - Number or numeric string to format
+ * @returns {string} - Comma-formatted display string
+ */
+export function formatDisplayNumber(val) {
+  if (val === null || val === undefined || val === '') return '';
+  const s = String(val).trim();
+  if (s === '-' || s === '') return s;
+
+  // Do not format scientific notation
+  if (s.includes('e') || s.includes('E')) return s;
+
+  const isNegative = s.startsWith('-');
+  const clean = (isNegative ? s.slice(1) : s).replace(/,/g, '');
+
+  const [intPart, decPart] = clean.split('.');
+
+  // Only format if integer part consists solely of digits
+  if (!/^\d+$/.test(intPart)) return s;
+
+  const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const formatted = decPart !== undefined ? `${formattedInt}.${decPart}` : formattedInt;
+
+  return isNegative ? `-${formatted}` : formatted;
+}
+
+/**
  * Generate structured formula details (both algebraic equation and English instruction).
  */
 export function getFormulaDetails(categoryId, fromUnitId, toUnitId) {
@@ -552,4 +583,110 @@ export function getQuickReferenceTable(categoryId, fromUnitId, toUnitId) {
       toValue: converted !== null ? formatNumber(converted) : '-',
     };
   });
+}
+
+/**
+ * Filter and prioritize units based on user search term.
+ * Prioritizes units that start with the search term while preserving all other matches.
+ *
+ * Priority tiers:
+ * 0. Exact match (symbol, ID, name, or alias equals query)
+ * 1. Primary prefix match (primary name, plural, symbol, or ID starts with query)
+ * 2. Word-boundary or alias prefix match (word within name/plural starts with query, or alias starts with query)
+ * 3. Substring match (query appears anywhere within name, plural, symbol, ID, or aliases)
+ *
+ * Within the same priority tier, the original unit order is preserved.
+ *
+ * @param {Array<object>} units - List of unit objects
+ * @param {string} search - User search string
+ * @returns {Array<object>} - Filtered and prioritized units
+ */
+export function filterAndSortUnits(units, search) {
+  if (!Array.isArray(units)) return [];
+  if (!search || typeof search !== 'string') return units;
+
+  const rawQuery = search.trim().toLowerCase();
+  if (!rawQuery) return units;
+
+  const queryNoDeg = rawQuery.replace(/^°/, '');
+
+  const matchesWithRank = [];
+
+  for (let i = 0; i < units.length; i++) {
+    const u = units[i];
+    if (!u) continue;
+
+    const name = (u.name || '').toLowerCase();
+    const plural = (u.plural || '').toLowerCase();
+    const symbol = (u.symbol || '').toLowerCase();
+    const symbolNoDeg = symbol.replace(/^°/, '');
+    const id = (u.id || '').toLowerCase();
+    const aliases = (u.aliases || []).map((a) => (a || '').toLowerCase().replace(/^°/, ''));
+
+    // Check if unit matches query anywhere
+    const hasSubstringMatch =
+      name.includes(rawQuery) ||
+      plural.includes(rawQuery) ||
+      symbol.includes(rawQuery) ||
+      (queryNoDeg.length > 0 && symbolNoDeg.includes(queryNoDeg)) ||
+      id.includes(rawQuery) ||
+      aliases.some((a) => a.includes(rawQuery) || (queryNoDeg.length > 0 && a.includes(queryNoDeg)));
+
+    if (!hasSubstringMatch) {
+      continue;
+    }
+
+    // Determine priority tier
+    // 0: Exact match (symbol, ID, name, plural, alias)
+    // 1: Primary prefix match (name, plural, symbol, ID starts with query)
+    // 2: Word-boundary prefix or alias prefix match
+    // 3: Substring match (query anywhere inside)
+    let rank = 3;
+
+    const isExact =
+      id === rawQuery ||
+      symbol === rawQuery ||
+      (queryNoDeg.length > 0 && symbolNoDeg === queryNoDeg) ||
+      name === rawQuery ||
+      plural === rawQuery ||
+      aliases.some((a) => a === rawQuery || (queryNoDeg.length > 0 && a === queryNoDeg));
+
+    if (isExact) {
+      rank = 0;
+    } else {
+      const isPrimaryPrefix =
+        name.startsWith(rawQuery) ||
+        plural.startsWith(rawQuery) ||
+        symbol.startsWith(rawQuery) ||
+        (queryNoDeg.length > 0 && symbolNoDeg.startsWith(queryNoDeg)) ||
+        id.startsWith(rawQuery);
+
+      if (isPrimaryPrefix) {
+        rank = 1;
+      } else {
+        const nameWords = name.split(/[\s\-_/]+/);
+        const pluralWords = plural.split(/[\s\-_/]+/);
+        const isWordPrefix =
+          nameWords.some((w) => w.startsWith(rawQuery)) ||
+          pluralWords.some((w) => w.startsWith(rawQuery)) ||
+          aliases.some((a) => a.startsWith(rawQuery) || (queryNoDeg.length > 0 && a.startsWith(queryNoDeg)));
+
+        if (isWordPrefix) {
+          rank = 2;
+        }
+      }
+    }
+
+    matchesWithRank.push({ unit: u, rank, index: i });
+  }
+
+  // Stable sort: by priority tier (rank) ascending, then original index ascending
+  matchesWithRank.sort((a, b) => {
+    if (a.rank !== b.rank) {
+      return a.rank - b.rank;
+    }
+    return a.index - b.index;
+  });
+
+  return matchesWithRank.map((item) => item.unit);
 }

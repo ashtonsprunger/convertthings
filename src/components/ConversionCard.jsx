@@ -6,6 +6,8 @@ import {
   getFormulaString,
   getFormulaDetails,
   convertUnits,
+  filterAndSortUnits,
+  formatDisplayNumber,
 } from '../engine/conversions';
 
 export function ConversionCard({
@@ -69,12 +71,15 @@ export function ConversionCard({
     };
   }, []);
 
+  const displayFromValue = formatDisplayNumber(fromValue || '0');
+  const displayToValue = formatDisplayNumber(toValue || '0');
+
   const handleCopyNumber = (e) => {
     if (e) {
       e.stopPropagation();
       e.preventDefault();
     }
-    const valToCopy = toValue || '0';
+    const valToCopy = displayToValue || '0';
     onCopy(valToCopy, `${valToCopy} copied to clipboard!`);
     setCopiedNumber(true);
     if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
@@ -97,24 +102,9 @@ export function ConversionCard({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Filtered unit lists for searchable dropdowns
-  const filteredFromUnits = units.filter((u) => {
-    const q = fromSearch.toLowerCase();
-    return (
-      u.name.toLowerCase().includes(q) ||
-      u.plural.toLowerCase().includes(q) ||
-      u.symbol.toLowerCase().includes(q)
-    );
-  });
-
-  const filteredToUnits = units.filter((u) => {
-    const q = toSearch.toLowerCase();
-    return (
-      u.name.toLowerCase().includes(q) ||
-      u.plural.toLowerCase().includes(q) ||
-      u.symbol.toLowerCase().includes(q)
-    );
-  });
+  // Filtered unit lists for searchable dropdowns (prioritizing prefix matches)
+  const filteredFromUnits = filterAndSortUnits(units, fromSearch);
+  const filteredToUnits = filterAndSortUnits(units, toSearch);
 
   // Keyboard navigation for From dropdown
   const handleFromSearchKeyDown = (e) => {
@@ -360,10 +350,10 @@ export function ConversionCard({
   // Formatted equation strings for copy footer and formula
   const formulaEquation = formulaDetails.equation || formula || 'Direct calculation';
   const formulaInstruction = formulaDetails.instruction || '';
-  const symbolText = `${fromValue || '0'} ${fromUnit.symbol} ${relOperator} ${toValue || '0'} ${toUnit.symbol}`;
+  const symbolText = `${displayFromValue} ${fromUnit.symbol} ${relOperator} ${displayToValue} ${toUnit.symbol}`;
   const fromName = parseFloat(fromValue) === 1 ? fromUnit.name : (fromUnit.plural || fromUnit.name);
   const toName = parseFloat(toValue) === 1 ? toUnit.name : (toUnit.plural || toUnit.name);
-  const sentenceText = `${fromValue || '0'} ${fromName} ${sentenceVerb} ${toValue || '0'} ${toName}`;
+  const sentenceText = `${displayFromValue} ${fromName} ${sentenceVerb} ${displayToValue} ${toName}`;
 
   // Helper to colorize formula equation components cleanly
   const renderFormulaContent = (text, fromSym) => {
@@ -876,7 +866,7 @@ export function ConversionCard({
         <div className="ct-footnote-row ct-footnote-row-hero">
           <span className="ct-footnote-val ct-val-hero" title={symbolText}>
             <span className="ct-fn-from">
-              <span className="ct-fn-num">{fromValue || '0'}</span>{' '}
+              <span className="ct-fn-num">{displayFromValue}</span>{' '}
               <span className="ct-fn-sym">{fromUnit.symbol}</span>
             </span>
             <span className="ct-fn-operator"> {relOperator} </span>
@@ -885,15 +875,15 @@ export function ConversionCard({
                 type="button"
                 className={`ct-num-copy-btn ${copiedNumber ? 'copied' : ''}`}
                 onClick={handleCopyNumber}
-                title={copiedNumber ? 'Copied to clipboard!' : `Copy ${toValue || '0'}`}
-                aria-label={copiedNumber ? 'Number copied to clipboard' : `Copy result number ${toValue || '0'}`}
+                title={copiedNumber ? 'Copied to clipboard!' : `Copy ${displayToValue}`}
+                aria-label={copiedNumber ? 'Number copied to clipboard' : `Copy result number ${displayToValue}`}
               >
-                <span className="ct-fn-num">{toValue || '0'}</span>
+                <span className="ct-fn-num">{displayToValue}</span>
                 <span className="ct-num-copy-icon" aria-hidden="true">
                   <Icon name={copiedNumber ? 'Check' : 'Copy'} size={13} />
                 </span>
                 <span className="ct-num-tooltip" role="tooltip" aria-hidden="true">
-                  {copiedNumber ? 'Copied!' : (toValue && toValue.toString().length <= 10 ? `Copy ${toValue}` : 'Copy number')}
+                  {copiedNumber ? 'Copied!' : (displayToValue && displayToValue.toString().length <= 10 ? `Copy ${displayToValue}` : 'Copy number')}
                 </span>
               </button>{' '}
               <span className="ct-fn-sym">{toUnit.symbol}</span>
@@ -915,12 +905,12 @@ export function ConversionCard({
         <div className="ct-footnote-row ct-footnote-row-sub">
           <span className="ct-footnote-val ct-val-sub" title={sentenceText}>
             <span className="ct-fn-from">
-              <span className="ct-fn-num">{fromValue || '0'}</span>{' '}
+              <span className="ct-fn-num">{displayFromValue}</span>{' '}
               <span className="ct-fn-sym">{fromName}</span>
             </span>
             <span className="ct-fn-operator"> {sentenceVerb} </span>
             <span className="ct-fn-to">
-              <span className="ct-fn-num">{toValue || '0'}</span>{' '}
+              <span className="ct-fn-num">{displayToValue}</span>{' '}
               <span className="ct-fn-sym">{toName}</span>
             </span>
           </span>

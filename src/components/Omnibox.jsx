@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Icon } from './Icons';
 import { parseConversionQuery } from '../engine/parser';
+import { formatDisplayNumber } from '../engine/conversions';
 
 export function Omnibox({ onSelectConversion }) {
   const [query, setQuery] = useState('');
@@ -105,9 +106,9 @@ export function Omnibox({ onSelectConversion }) {
           <div className="ct-preview-left">
             <span className="ct-preview-tag">Instant Match</span>
             <span className="ct-preview-text">
-              <strong>{parsed.value} {parsed.fromUnit.plural || parsed.fromUnit.name}</strong> ={' '}
+              <strong>{formatDisplayNumber(parsed.value)} {parsed.fromUnit.plural || parsed.fromUnit.name}</strong> ={' '}
               <span className="ct-preview-highlight">
-                {parsed.formattedResult} {parsed.toUnit.plural || parsed.toUnit.name}
+                {formatDisplayNumber(parsed.formattedResult)} {parsed.toUnit.plural || parsed.toUnit.name}
               </span>
             </span>
           </div>

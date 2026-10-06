@@ -25,12 +25,13 @@ export function parseRoute(pathname = '', search = '') {
     const cleanPath = (pathname || '').trim().toLowerCase();
 
     if (cleanPath.startsWith('/convert/')) {
-      const slug = cleanPath.replace(/^\/convert\/?/, '').replace(/\/$/, '');
+      const rawSlug = cleanPath.replace(/^\/convert\/?/, '').replace(/\/$/, '');
+      const slug = decodeURIComponent(rawSlug);
       // Match optional value prefix: e.g. "100-km-to-miles", "-40-c-to-f", "0.5_cup-to-ml", or "km-to-mi"
-      const pairMatch = slug.match(/^(?:([+-]?[0-9]*\.?[0-9]+(?:e[+-]?[0-9]+)?)[-_])?([a-z0-9_°'"/²³µ]+)-to-([a-z0-9_°'"/²³µ]+)$/i);
+      const pairMatch = slug.match(/^(?:([+-]?[0-9,]*\.?[0-9]+(?:e[+-]?[0-9]+)?)[-_])?([a-z0-9_°'"/²³µ]+)-to-([a-z0-9_°'"/²³µ]+)$/i);
 
       if (pairMatch) {
-        const valStr = pairMatch[1];
+        const valStr = pairMatch[1] ? pairMatch[1].replace(/,/g, '') : undefined;
         const fromToken = pairMatch[2];
         const toToken = pairMatch[3];
 
@@ -63,9 +64,12 @@ export function parseRoute(pathname = '', search = '') {
             let value = valStr || '1';
             if (search) {
               const params = new URLSearchParams(search);
-              const queryVal = params.get('v');
-              if (queryVal !== null && !isNaN(queryVal)) {
-                value = queryVal;
+              const rawQueryVal = params.get('v');
+              if (rawQueryVal !== null) {
+                const cleanQueryVal = rawQueryVal.replace(/,/g, '');
+                if (!isNaN(cleanQueryVal)) {
+                  value = cleanQueryVal;
+                }
               }
             }
 
@@ -98,7 +102,8 @@ export function parseRoute(pathname = '', search = '') {
       const cat = params.get('cat');
       const from = params.get('from');
       const to = params.get('to');
-      const val = params.get('v');
+      const rawVal = params.get('v');
+      const cleanVal = rawVal !== null ? rawVal.replace(/,/g, '') : null;
 
       if (cat && UNIT_DEFINITIONS[cat]) {
         const catDef = CATEGORIES.find((c) => c.id === cat) || CATEGORIES[0];
@@ -108,7 +113,7 @@ export function parseRoute(pathname = '', search = '') {
           categoryId: cat,
           fromUnitId: validFrom,
           toUnitId: validTo,
-          fromValue: val !== null && !isNaN(val) ? val : '1',
+          fromValue: cleanVal !== null && !isNaN(cleanVal) ? cleanVal : '1',
         };
       }
     }
@@ -131,7 +136,7 @@ export function parseRoute(pathname = '', search = '') {
 export function formatRoutePath(categoryId, fromUnitId, toUnitId, value = '1') {
   if (!fromUnitId || !toUnitId) return '/';
 
-  const valStr = value !== null && value !== undefined ? String(value).trim() : '1';
+  const valStr = value !== null && value !== undefined ? String(value).trim().replace(/,/g, '') : '1';
   const hasCustomValue = valStr !== '' && valStr !== '1' && !isNaN(valStr);
 
   if (hasCustomValue) {
