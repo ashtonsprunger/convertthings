@@ -393,7 +393,6 @@ function App() {
         theme={theme}
         onToggleTheme={toggleTheme}
         onShare={handleShare}
-        onOpenDevModal={() => setDevModalOpen(true)}
       />
 
       <main className="ct-main">

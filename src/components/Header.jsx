@@ -1,7 +1,7 @@
 import React from 'react';
 import { Icon } from './Icons';
 
-export function Header({ theme, onToggleTheme, onShare, onOpenDevModal }) {
+export function Header({ theme, onToggleTheme, onShare }) {
   return (
     <header className="ct-header">
       <div className="ct-header-inner">
@@ -16,18 +16,6 @@ export function Header({ theme, onToggleTheme, onShare, onOpenDevModal }) {
         </div>
 
         <div className="ct-header-actions">
-          {onOpenDevModal && (
-            <button
-              type="button"
-              className="ct-btn-pill-api"
-              onClick={onOpenDevModal}
-              title="Developer API & AI MCP Server"
-              aria-label="Developer API and AI MCP Server"
-            >
-              <span className="ct-api-pill-icon">⚡</span> AI &amp; API
-            </button>
-          )}
-
           <button
             type="button"
             className="ct-btn-icon"
