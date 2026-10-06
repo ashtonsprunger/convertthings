@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { Icon } from './Icons';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 import {
   getUnitsForCategory,
   getUnit,
@@ -44,6 +45,8 @@ export function ConversionCard({
   const [copiedFormula, setCopiedFormula] = useState(false);
   const [copiedInstruction, setCopiedInstruction] = useState(false);
   const [copiedKitchen, setCopiedKitchen] = useState(false);
+  const [kitchenMode, setKitchenMode] = useLocalStorage('ct-kitchen-mode', true);
+  const isKitchenActive = categoryId === 'cooking' && kitchenMode;
 
   const fromDropdownRef = useRef(null);
   const toDropdownRef = useRef(null);
@@ -419,6 +422,23 @@ export function ConversionCard({
 
   const kitchenCompound = getCookingCompoundMeasure(rawTargetValue, toUnit.id, categoryId);
 
+  const kitchenDisplayText = kitchenCompound
+    ? formatFractionForDisplay(kitchenCompound)
+    : (formatDisplayNumber(toValue || '0') || '0');
+
+  const handleCopyKitchenOutput = () => {
+    if (!kitchenDisplayText) return;
+    const textToCopy = kitchenCompound
+      ? kitchenDisplayText
+      : `${kitchenDisplayText} ${toUnit.symbol}`;
+    onCopy(textToCopy, `${textToCopy} copied to clipboard!`);
+    setCopiedKitchen(true);
+    if (copiedKitchenTimeoutRef.current) clearTimeout(copiedKitchenTimeoutRef.current);
+    copiedKitchenTimeoutRef.current = setTimeout(() => {
+      setCopiedKitchen(false);
+    }, 1600);
+  };
+
   // Calculate if the current conversion result is an approximation
   const isApproximate = (() => {
     if (!fromValue || !toValue || rawTargetValue === null) return false;
@@ -645,6 +665,23 @@ export function ConversionCard({
               <option value="fraction_improper">Fractions (Improper: 11/8)</option>
             </select>
           </div>
+
+          {categoryId === 'cooking' && (
+            <button
+              type="button"
+              className={`ct-kitchen-mode-toggle ${kitchenMode ? 'active' : ''}`}
+              onClick={() => setKitchenMode(!kitchenMode)}
+              title={kitchenMode ? 'Kitchen View active — click to switch to Standard View' : 'Standard View active — click to switch to Kitchen View'}
+              aria-label="Toggle Kitchen Mode"
+              aria-pressed={kitchenMode}
+            >
+              <Icon name="ChefHat" size={15} />
+              <span className="ct-kitchen-toggle-text">Kitchen View</span>
+              <span className={`ct-kitchen-toggle-pill ${kitchenMode ? 'on' : 'off'}`}>
+                {kitchenMode ? 'ON' : 'OFF'}
+              </span>
+            </button>
+          )}
         </div>
 
         <div className="ct-card-header-right">
@@ -819,7 +856,10 @@ export function ConversionCard({
           ref={toBlockRef}
           className={`ct-unit-block ct-unit-block-to ${isSwapping ? 'ct-is-swapping' : ''}`}
         >
-          <div className="ct-stepper-outer ct-stepper-outer-up">
+          <div
+            className="ct-stepper-outer ct-stepper-outer-up"
+            style={{ visibility: isKitchenActive ? 'hidden' : 'visible' }}
+          >
             <button
               type="button"
               className="ct-stepper-btn ct-stepper-btn-up ct-stepper-to"
@@ -831,37 +871,70 @@ export function ConversionCard({
             </button>
           </div>
 
-          <div className={`ct-integrated-input-box ct-input-box-to ${showToDropdown ? 'dropdown-active' : ''}`}>
-            <div className="ct-input-inner">
-              <input
-                id="toInput"
-                type={isFractionMode ? 'text' : 'number'}
-                step="any"
-                inputMode="decimal"
-                className={`ct-number-input ${getNumberFontSizeClass(toValue)} ${isFractionLike(toValue) ? 'ct-fraction-input' : ''}`}
-                value={toValue}
-                onChange={(e) => onToValueChange(e.target.value)}
-                onFocus={handleInputFocus}
-                onMouseDown={handleInputMouseDown}
+          <div className={`ct-integrated-input-box ct-input-box-to ${showToDropdown ? 'dropdown-active' : ''} ${isKitchenActive ? 'ct-kitchen-box' : ''}`}>
+            {isKitchenActive ? (
+              <div
+                className="ct-kitchen-output-box"
+                role="button"
+                tabIndex={0}
+                onClick={handleCopyKitchenOutput}
                 onKeyDown={(e) => {
-                  if (e.key === 'Escape') onToValueChange('');
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleCopyKitchenOutput();
+                  }
                 }}
-                placeholder="0"
-                title={toValue ? `${toValue} ${toUnit.symbol}` : `Converted value in ${toUnit.name}`}
-                aria-label={`Converted value in ${toUnit.plural || toUnit.name}`}
-              />
-              {toValue !== '' && (
-                <button
-                  type="button"
-                  className="ct-input-clear-btn"
-                  onClick={() => onToValueChange('')}
-                  title="Clear result"
-                  aria-label="Clear result"
-                >
-                  <Icon name="X" size={16} />
-                </button>
-              )}
-            </div>
+                title={copiedKitchen ? 'Copied to clipboard!' : `Click to copy: ${kitchenDisplayText}`}
+                aria-label={`Converted value in ${toUnit.plural || toUnit.name}: ${kitchenDisplayText}. Click to copy.`}
+              >
+                <div className="ct-kitchen-output-content">
+                  <span
+                    className={`ct-kitchen-output-text ${getNumberFontSizeClass(kitchenDisplayText)} ${toValue === '' ? 'ct-kitchen-placeholder' : ''}`}
+                  >
+                    {kitchenDisplayText}
+                  </span>
+                  {kitchenCompound && toValue && toValue !== kitchenDisplayText && (
+                    <span className="ct-kitchen-output-sub" title="Exact single unit equivalent">
+                      ({formatDisplayNumber(toValue)} {toUnit.symbol})
+                    </span>
+                  )}
+                </div>
+                <span className={`ct-kitchen-copy-indicator ${copiedKitchen ? 'copied' : ''}`} aria-hidden="true">
+                  <Icon name={copiedKitchen ? 'Check' : 'Copy'} size={15} />
+                </span>
+              </div>
+            ) : (
+              <div className="ct-input-inner">
+                <input
+                  id="toInput"
+                  type={isFractionMode ? 'text' : 'number'}
+                  step="any"
+                  inputMode="decimal"
+                  className={`ct-number-input ${getNumberFontSizeClass(toValue)} ${isFractionLike(toValue) ? 'ct-fraction-input' : ''}`}
+                  value={toValue}
+                  onChange={(e) => onToValueChange(e.target.value)}
+                  onFocus={handleInputFocus}
+                  onMouseDown={handleInputMouseDown}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') onToValueChange('');
+                  }}
+                  placeholder="0"
+                  title={toValue ? `${toValue} ${toUnit.symbol}` : `Converted value in ${toUnit.name}`}
+                  aria-label={`Converted value in ${toUnit.plural || toUnit.name}`}
+                />
+                {toValue !== '' && (
+                  <button
+                    type="button"
+                    className="ct-input-clear-btn"
+                    onClick={() => onToValueChange('')}
+                    title="Clear result"
+                    aria-label="Clear result"
+                  >
+                    <Icon name="X" size={16} />
+                  </button>
+                )}
+              </div>
+            )}
 
             <div className="ct-integrated-divider" aria-hidden="true" />
 
@@ -931,7 +1004,10 @@ export function ConversionCard({
             </div>
           </div>
 
-          <div className="ct-stepper-outer ct-stepper-outer-down">
+          <div
+            className="ct-stepper-outer ct-stepper-outer-down"
+            style={{ visibility: isKitchenActive ? 'hidden' : 'visible' }}
+          >
             <button
               type="button"
               className="ct-stepper-btn ct-stepper-btn-down ct-stepper-to"
@@ -946,103 +1022,105 @@ export function ConversionCard({
       </div>
 
       {/* Unified Conversion Result & Formula Card */}
-      <div className="ct-footnote-card" aria-label="Conversion equations">
-        {/* Row 1: Primary Equation (Hero) */}
-        <div className="ct-footnote-row ct-footnote-row-hero">
-          <div className="ct-footnote-val ct-val-hero" title={symbolText}>
-            <span className="ct-fn-from">
-              <span className="ct-fn-num">{displayFromValue}</span>{' '}
-              <span className="ct-fn-sym">{fromUnit.symbol}</span>
-            </span>
-            <span className="ct-fn-operator"> {relOperator} </span>
-            <span className="ct-fn-to">
-              <button
-                type="button"
-                className={`ct-num-copy-btn ${copiedNumber ? 'copied' : ''}`}
-                onClick={handleCopyNumber}
-                title={copiedNumber ? 'Copied to clipboard!' : `Copy ${displayToValue}`}
-                aria-label={copiedNumber ? 'Number copied to clipboard' : `Copy result number ${displayToValue}`}
-              >
-                <span className="ct-fn-num">{displayToValue}</span>
-                <span className="ct-num-copy-icon" aria-hidden="true">
-                  <Icon name={copiedNumber ? 'Check' : 'Copy'} size={13} />
-                </span>
-                <span className="ct-num-tooltip" role="tooltip" aria-hidden="true">
-                  {copiedNumber ? 'Copied!' : (displayToValue && displayToValue.toString().length <= 10 ? `Copy ${displayToValue}` : 'Copy number')}
-                </span>
-              </button>{' '}
-              <span className="ct-fn-sym">{toUnit.symbol}</span>
-            </span>
-          </div>
-        </div>
-
-        {/* Kitchen Compound Measure Breakdown */}
-        {kitchenCompound && (
-          <div className="ct-kitchen-measure-row" aria-label="Kitchen measuring breakdown">
-            <button
-              type="button"
-              className={`ct-kitchen-badge ${copiedKitchen ? 'copied' : ''}`}
-              onClick={handleCopyKitchen}
-              title={copiedKitchen ? 'Copied to clipboard!' : `Copy kitchen measure: ${formatFractionForDisplay(kitchenCompound)}`}
-              aria-label={copiedKitchen ? 'Kitchen measure copied' : `Kitchen measure: ${formatFractionForDisplay(kitchenCompound)}`}
-            >
-              <Icon name="ChefHat" size={15} className="ct-kitchen-icon" />
-              <span className="ct-kitchen-label">Kitchen Measure:</span>
-              <strong className="ct-kitchen-val">{formatFractionForDisplay(kitchenCompound)}</strong>
-              <span className="ct-kitchen-copy-icon" aria-hidden="true">
-                <Icon name={copiedKitchen ? 'Check' : 'Copy'} size={12} />
+      {!isKitchenActive && (
+        <div className="ct-footnote-card" aria-label="Conversion equations">
+          {/* Row 1: Primary Equation (Hero) */}
+          <div className="ct-footnote-row ct-footnote-row-hero">
+            <div className="ct-footnote-val ct-val-hero" title={symbolText}>
+              <span className="ct-fn-from">
+                <span className="ct-fn-num">{displayFromValue}</span>{' '}
+                <span className="ct-fn-sym">{fromUnit.symbol}</span>
               </span>
-            </button>
+              <span className="ct-fn-operator"> {relOperator} </span>
+              <span className="ct-fn-to">
+                <button
+                  type="button"
+                  className={`ct-num-copy-btn ${copiedNumber ? 'copied' : ''}`}
+                  onClick={handleCopyNumber}
+                  title={copiedNumber ? 'Copied to clipboard!' : `Copy ${displayToValue}`}
+                  aria-label={copiedNumber ? 'Number copied to clipboard' : `Copy result number ${displayToValue}`}
+                >
+                  <span className="ct-fn-num">{displayToValue}</span>
+                  <span className="ct-num-copy-icon" aria-hidden="true">
+                    <Icon name={copiedNumber ? 'Check' : 'Copy'} size={13} />
+                  </span>
+                  <span className="ct-num-tooltip" role="tooltip" aria-hidden="true">
+                    {copiedNumber ? 'Copied!' : (displayToValue && displayToValue.toString().length <= 10 ? `Copy ${displayToValue}` : 'Copy number')}
+                  </span>
+                </button>{' '}
+                <span className="ct-fn-sym">{toUnit.symbol}</span>
+              </span>
+            </div>
           </div>
-        )}
 
-        {/* Row 2: Invariant Educational Formula & Instruction (Separately copy-able) */}
-        {(formulaInstruction || formulaEquation) && (
-          <div className="ct-formula-section" aria-label="Conversion formula details">
-            {/* 1. Practical Sentence Instruction on Top */}
-            {formulaInstruction && (
+          {/* Kitchen Compound Measure Breakdown */}
+          {kitchenCompound && (
+            <div className="ct-kitchen-measure-row" aria-label="Kitchen measuring breakdown">
               <button
                 type="button"
-                className={`ct-formula-item ct-formula-instruction-item ${copiedInstruction ? 'copied' : ''}`}
-                onClick={handleCopyInstruction}
-                title={copiedInstruction ? 'Copied to clipboard!' : 'Copy instruction'}
-                aria-label={copiedInstruction ? 'Instruction copied to clipboard' : 'Conversion instruction'}
+                className={`ct-kitchen-badge ${copiedKitchen ? 'copied' : ''}`}
+                onClick={handleCopyKitchen}
+                title={copiedKitchen ? 'Copied to clipboard!' : `Copy kitchen measure: ${formatFractionForDisplay(kitchenCompound)}`}
+                aria-label={copiedKitchen ? 'Kitchen measure copied' : `Kitchen measure: ${formatFractionForDisplay(kitchenCompound)}`}
               >
-                <span className="ct-formula-item-text">
-                  {renderInstructionContent(formulaInstruction, fromUnit)}
-                </span>
-                <span className="ct-formula-copy-icon" aria-hidden="true">
-                  <Icon name={copiedInstruction ? 'Check' : 'Copy'} size={12} />
-                </span>
-                <span className="ct-formula-tooltip" role="tooltip" aria-hidden="true">
-                  {copiedInstruction ? 'Copied!' : 'Copy instruction'}
+                <Icon name="ChefHat" size={15} className="ct-kitchen-icon" />
+                <span className="ct-kitchen-label">Kitchen Measure:</span>
+                <strong className="ct-kitchen-val">{formatFractionForDisplay(kitchenCompound)}</strong>
+                <span className="ct-kitchen-copy-icon" aria-hidden="true">
+                  <Icon name={copiedKitchen ? 'Check' : 'Copy'} size={12} />
                 </span>
               </button>
-            )}
+            </div>
+          )}
 
-            {/* 2. Formal Mathematical Equation on Bottom */}
-            {formulaEquation && (
-              <button
-                type="button"
-                className={`ct-formula-item ct-formula-equation-item ${copiedFormula ? 'copied' : ''}`}
-                onClick={handleCopyFormula}
-                title={copiedFormula ? 'Copied to clipboard!' : 'Copy formula'}
-                aria-label={copiedFormula ? 'Formula copied to clipboard' : 'Conversion formula'}
-              >
-                <span className="ct-formula-item-text">
-                  {renderFormulaContent(formulaEquation, fromUnit.symbol)}
-                </span>
-                <span className="ct-formula-copy-icon" aria-hidden="true">
-                  <Icon name={copiedFormula ? 'Check' : 'Copy'} size={12} />
-                </span>
-                <span className="ct-formula-tooltip" role="tooltip" aria-hidden="true">
-                  {copiedFormula ? 'Copied!' : 'Copy formula'}
-                </span>
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+          {/* Row 2: Invariant Educational Formula & Instruction (Separately copy-able) */}
+          {(formulaInstruction || formulaEquation) && (
+            <div className="ct-formula-section" aria-label="Conversion formula details">
+              {/* 1. Practical Sentence Instruction on Top */}
+              {formulaInstruction && (
+                <button
+                  type="button"
+                  className={`ct-formula-item ct-formula-instruction-item ${copiedInstruction ? 'copied' : ''}`}
+                  onClick={handleCopyInstruction}
+                  title={copiedInstruction ? 'Copied to clipboard!' : 'Copy instruction'}
+                  aria-label={copiedInstruction ? 'Instruction copied to clipboard' : 'Conversion instruction'}
+                >
+                  <span className="ct-formula-item-text">
+                    {renderInstructionContent(formulaInstruction, fromUnit)}
+                  </span>
+                  <span className="ct-formula-copy-icon" aria-hidden="true">
+                    <Icon name={copiedInstruction ? 'Check' : 'Copy'} size={12} />
+                  </span>
+                  <span className="ct-formula-tooltip" role="tooltip" aria-hidden="true">
+                    {copiedInstruction ? 'Copied!' : 'Copy instruction'}
+                  </span>
+                </button>
+              )}
+
+              {/* 2. Formal Mathematical Equation on Bottom */}
+              {formulaEquation && (
+                <button
+                  type="button"
+                  className={`ct-formula-item ct-formula-equation-item ${copiedFormula ? 'copied' : ''}`}
+                  onClick={handleCopyFormula}
+                  title={copiedFormula ? 'Copied to clipboard!' : 'Copy formula'}
+                  aria-label={copiedFormula ? 'Formula copied to clipboard' : 'Conversion formula'}
+                >
+                  <span className="ct-formula-item-text">
+                    {renderFormulaContent(formulaEquation, fromUnit.symbol)}
+                  </span>
+                  <span className="ct-formula-copy-icon" aria-hidden="true">
+                    <Icon name={copiedFormula ? 'Check' : 'Copy'} size={12} />
+                  </span>
+                  <span className="ct-formula-tooltip" role="tooltip" aria-hidden="true">
+                    {copiedFormula ? 'Copied!' : 'Copy formula'}
+                  </span>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

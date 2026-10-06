@@ -412,18 +412,41 @@ describe('ConvertThings UI Integration', () => {
     expect(parseFloat(toInput.value)).toBeCloseTo(62.137, 2);
   });
 
-  test('automatically displays practical fractions for cooking in auto mode', () => {
+  test('automatically displays practical fractions and kitchen view for cooking in auto mode', () => {
     window.history.replaceState({}, '', '/convert/13-tbsp_us-to-cup_us');
     render(<App />);
 
     const fromInput = screen.getByLabelText(/Enter value in/i);
     expect(fromInput.value).toBe('13');
 
+    // Default Kitchen Mode is ON:
+    const kitchenToggle = screen.getByLabelText(/Toggle Kitchen Mode/i);
+    expect(kitchenToggle).toHaveAttribute('aria-pressed', 'true');
+
+    // In Kitchen Mode, 2nd input is replaced by the prominent kitchen-readable output
+    const kitchenOutput = screen.getByLabelText(/Converted value in.*¾ cup \+ 1 tbsp/i);
+    expect(kitchenOutput).toHaveTextContent('¾ cup + 1 tbsp');
+    expect(kitchenOutput).toHaveTextContent('(13/16 cup)');
+
+    // Everything below the inputs in the card is removed
+    expect(screen.queryByLabelText(/Conversion equations/i)).not.toBeInTheDocument();
+
+    // Toggle Kitchen Mode OFF to enter Standard View
+    fireEvent.click(kitchenToggle);
+    expect(kitchenToggle).toHaveAttribute('aria-pressed', 'false');
+
+    // Standard 2nd input is restored with fraction formatting
     const toInput = screen.getByLabelText(/Converted value in/i);
     expect(toInput.value).toBe('13/16');
 
+    // Footnote card below inputs is restored
     const equationCard = screen.getByLabelText(/Conversion equations/i);
     expect(equationCard).toHaveTextContent(/13 tbsp = 13\/16.*cup/i);
+
+    // Toggle back ON
+    fireEvent.click(kitchenToggle);
+    expect(kitchenToggle).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByLabelText(/Conversion equations/i)).not.toBeInTheDocument();
   });
 
   test('respects stored decimal precision on initial mount and page reload', () => {
