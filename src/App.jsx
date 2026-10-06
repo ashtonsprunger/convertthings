@@ -23,13 +23,7 @@ import { useLocalStorage } from './hooks/useLocalStorage';
 import { useTheme } from './hooks/useTheme';
 import './App.css';
 
-const DEFAULT_FAVORITES = [
-  { categoryId: 'length', fromUnitId: 'km', toUnitId: 'mi' },
-  { categoryId: 'mass', fromUnitId: 'kg', toUnitId: 'lb' },
-  { categoryId: 'temperature', fromUnitId: 'c', toUnitId: 'f' },
-  { categoryId: 'volume', fromUnitId: 'cup_us', toUnitId: 'ml' },
-  { categoryId: 'area', fromUnitId: 'sqft', toUnitId: 'sqm' },
-];
+const DEFAULT_FAVORITES = [];
 
 function App() {
   const [theme, toggleTheme] = useTheme();
@@ -54,22 +48,46 @@ function App() {
     };
   };
 
+  const getInitialPrecision = () => {
+    try {
+      if (typeof window !== 'undefined') {
+        const item = window.localStorage.getItem('ct-precision');
+        if (item) return JSON.parse(item);
+      }
+    } catch (e) {
+      // ignore
+    }
+    return 'auto';
+  };
+
   const initial = getInitialState();
+  const initialPrecision = getInitialPrecision();
   const [categoryId, setCategoryId] = useState(initial.categoryId);
   const [fromUnitId, setFromUnitId] = useState(initial.fromUnitId);
   const [toUnitId, setToUnitId] = useState(initial.toUnitId);
   const [fromValue, setFromValue] = useState(initial.fromValue);
   const [toValue, setToValue] = useState(() => {
     const res = convertUnits(initial.fromValue, initial.categoryId, initial.fromUnitId, initial.toUnitId);
-    return res !== null ? formatNumber(res) : '';
+    return res !== null ? formatNumber(res, initialPrecision) : '';
   });
 
-  const [precision, setPrecision] = useLocalStorage('ct-precision', 'auto');
+  const [precision, setPrecision] = useLocalStorage('ct-precision', initialPrecision);
   const [favorites, setFavorites] = useLocalStorage('ct-favorites', DEFAULT_FAVORITES);
   const [history, setHistory] = useLocalStorage('ct-history', []);
   const [toast, setToast] = useState({ message: '', visible: false });
   const [legalModal, setLegalModal] = useState({ isOpen: false, tab: 'privacy' });
   const [devModalOpen, setDevModalOpen] = useState(false);
+
+  // Helper to focus and select the first input field
+  const focusAndSelectFromInput = () => {
+    setTimeout(() => {
+      const el = document.getElementById('fromInput');
+      if (el) {
+        el.focus({ preventScroll: true });
+        el.select();
+      }
+    }, 10);
+  };
 
   // Open modal if URL has hash (#privacy, #terms, #about, #api, #mcp, #developer)
   useEffect(() => {
@@ -265,13 +283,16 @@ function App() {
     performCalculation(fromValue, categoryId, fromUnitId, newToId, precision);
   };
 
-  // Swap units (⇄)
+  // Swap units (⇄) and invert equation values
   const handleSwap = () => {
     const nextFrom = toUnitId;
     const nextTo = fromUnitId;
+    const nextVal = (toValue !== '' && toValue !== null && !isNaN(toValue)) ? toValue : fromValue;
     setFromUnitId(nextFrom);
     setToUnitId(nextTo);
-    performCalculation(fromValue, categoryId, nextFrom, nextTo, precision);
+    setFromValue(nextVal);
+    performCalculation(nextVal, categoryId, nextFrom, nextTo, precision);
+    focusAndSelectFromInput();
   };
 
   // Change precision
@@ -289,17 +310,18 @@ function App() {
     setFromValue(strVal);
     performCalculation(strVal, cId, fId, tId, precision);
     showToast(`Converted ${strVal} ${fId} to ${tId}`);
+    focusAndSelectFromInput();
   };
 
-  // Check if current pair is favorite
+  // Check if current pair is favorite (order-agnostic pair)
   const isCurrentFavorite = favorites.some(
     (fav) =>
       fav.categoryId === categoryId &&
-      fav.fromUnitId === fromUnitId &&
-      fav.toUnitId === toUnitId
+      ((fav.fromUnitId === fromUnitId && fav.toUnitId === toUnitId) ||
+       (fav.fromUnitId === toUnitId && fav.toUnitId === fromUnitId))
   );
 
-  // Toggle favorite
+  // Toggle favorite (order-agnostic pair)
   const handleToggleFavorite = () => {
     if (isCurrentFavorite) {
       setFavorites(
@@ -307,8 +329,8 @@ function App() {
           (fav) =>
             !(
               fav.categoryId === categoryId &&
-              fav.fromUnitId === fromUnitId &&
-              fav.toUnitId === toUnitId
+              ((fav.fromUnitId === fromUnitId && fav.toUnitId === toUnitId) ||
+               (fav.fromUnitId === toUnitId && fav.toUnitId === fromUnitId))
             )
         )
       );
@@ -324,9 +346,22 @@ function App() {
 
   const handleSelectFavorite = (fav) => {
     setCategoryId(fav.categoryId);
-    setFromUnitId(fav.fromUnitId);
-    setToUnitId(fav.toUnitId);
-    performCalculation(fromValue, fav.categoryId, fav.fromUnitId, fav.toUnitId, precision);
+
+    // If already on this exact direction, swap direction and invert value!
+    const isExact =
+      fav.categoryId === categoryId &&
+      fav.fromUnitId === fromUnitId &&
+      fav.toUnitId === toUnitId;
+
+    const nextFrom = isExact ? fav.toUnitId : fav.fromUnitId;
+    const nextTo = isExact ? fav.fromUnitId : fav.toUnitId;
+    const nextVal = (isExact && toValue !== '' && toValue !== null && !isNaN(toValue)) ? toValue : fromValue;
+
+    setFromUnitId(nextFrom);
+    setToUnitId(nextTo);
+    setFromValue(nextVal);
+    performCalculation(nextVal, fav.categoryId, nextFrom, nextTo, precision);
+    focusAndSelectFromInput();
   };
 
   const handleRemoveFavorite = (fav) => {
@@ -335,15 +370,15 @@ function App() {
         (f) =>
           !(
             f.categoryId === fav.categoryId &&
-            f.fromUnitId === fav.fromUnitId &&
-            f.toUnitId === fav.toUnitId
+            ((f.fromUnitId === fav.fromUnitId && f.toUnitId === fav.toUnitId) ||
+             (f.fromUnitId === fav.toUnitId && f.toUnitId === fav.fromUnitId))
           )
       )
     );
   };
 
   // Clipboard copy helper
-  const copyToClipboard = async (text, successMsg) => {
+  const copyToClipboard = async (text, successMsg = 'Copied to clipboard!') => {
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(text);
@@ -359,7 +394,7 @@ function App() {
       }
       showToast(successMsg);
     } catch (e) {
-      showToast('Copied!');
+      showToast(successMsg || 'Copied!');
     }
   };
 
@@ -367,8 +402,8 @@ function App() {
     setToast({ message, visible: true });
   };
 
-  const handleCopyResult = (text) => {
-    copyToClipboard(text, 'Result copied to clipboard!');
+  const handleCopyResult = (text, successMsg = 'Result copied to clipboard!') => {
+    copyToClipboard(text, successMsg);
   };
 
   const handleShare = () => {
@@ -411,6 +446,9 @@ function App() {
         {/* Favorites Bar */}
         <FavoritesBar
           favorites={favorites}
+          activeCategoryId={categoryId}
+          activeFromUnitId={fromUnitId}
+          activeToUnitId={toUnitId}
           onSelectFavorite={handleSelectFavorite}
           onRemoveFavorite={handleRemoveFavorite}
         />
@@ -460,6 +498,7 @@ function App() {
             setFromValue(item.fromValue);
             setToValue(item.toValue);
             showToast('Loaded from history');
+            focusAndSelectFromInput();
           }}
           onClearHistory={() => {
             setHistory([]);

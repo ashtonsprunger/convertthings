@@ -58,17 +58,32 @@ export function ConversionTable({ categoryId, fromUnitId, toUnitId, fromValue })
             <table className="ct-data-table">
               <thead>
                 <tr>
-                  <th scope="col">{fromUnit.plural || fromUnit.name} ({fromUnit.symbol})</th>
-                  <th scope="col">{toUnit.plural || toUnit.name} ({toUnit.symbol})</th>
+                  <th scope="col" className="ct-th-from">
+                    <span className="ct-col-pill ct-col-from">
+                      {fromUnit.plural || fromUnit.name} ({fromUnit.symbol})
+                    </span>
+                  </th>
+                  <th scope="col" className="ct-th-to">
+                    <span className="ct-col-pill ct-col-to">
+                      {toUnit.plural || toUnit.name} ({toUnit.symbol})
+                    </span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {quickTable.map((row) => (
-                  <tr key={row.fromValue}>
-                    <td><strong>{row.fromValue}</strong> {fromUnit.symbol}</td>
-                    <td>{row.toValue} {toUnit.symbol}</td>
-                  </tr>
-                ))}
+                {quickTable.map((row) => {
+                  const isCurrent = row.fromValue === numericVal;
+                  return (
+                    <tr key={row.fromValue} className={isCurrent ? 'ct-row-current' : ''}>
+                      <td className="ct-td-from">
+                        <strong>{row.fromValue}</strong> <span className="ct-cell-unit">{fromUnit.symbol}</span>
+                      </td>
+                      <td className="ct-td-to">
+                        <strong>{row.toValue}</strong> <span className="ct-cell-unit">{toUnit.symbol}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

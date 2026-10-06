@@ -396,36 +396,148 @@ export function formatNumber(val, decimals = 'auto') {
 }
 
 /**
- * Generate human-readable formula string for a conversion.
+ * Generate structured formula details (both algebraic equation and English instruction).
  */
-export function getFormulaString(categoryId, fromUnitId, toUnitId) {
+export function getFormulaDetails(categoryId, fromUnitId, toUnitId) {
   const from = getUnit(categoryId, fromUnitId);
   const to = getUnit(categoryId, toUnitId);
-  if (!from || !to) return '';
+  if (!from || !to) return { equation: '', instruction: '' };
 
   if (categoryId === 'temperature') {
-    if (from.id === 'c' && to.id === 'f') return '°F = (°C × 9/5) + 32';
-    if (from.id === 'f' && to.id === 'c') return '°C = (°F − 32) × 5/9';
-    if (from.id === 'c' && to.id === 'k') return 'K = °C + 273.15';
-    if (from.id === 'k' && to.id === 'c') return '°C = K − 273.15';
-    if (from.id === 'f' && to.id === 'k') return 'K = (°F − 32) × 5/9 + 273.15';
-    if (from.id === 'k' && to.id === 'f') return '°F = (K − 273.15) × 9/5 + 32';
+    if (from.id === 'c' && to.id === 'f') {
+      return {
+        equation: '°F = (°C × 9/5) + 32',
+        instruction: 'Multiply the Celsius temperature by 1.8 (9/5) and add 32',
+      };
+    }
+    if (from.id === 'f' && to.id === 'c') {
+      return {
+        equation: '°C = (°F − 32) × 5/9',
+        instruction: 'Subtract 32 from the Fahrenheit temperature and multiply by 5/9',
+      };
+    }
+    if (from.id === 'c' && to.id === 'k') {
+      return {
+        equation: 'K = °C + 273.15',
+        instruction: 'Add 273.15 to the Celsius temperature',
+      };
+    }
+    if (from.id === 'k' && to.id === 'c') {
+      return {
+        equation: '°C = K − 273.15',
+        instruction: 'Subtract 273.15 from the Kelvin temperature',
+      };
+    }
+    if (from.id === 'f' && to.id === 'k') {
+      return {
+        equation: 'K = (°F − 32) × 5/9 + 273.15',
+        instruction: 'Subtract 32 from Fahrenheit, multiply by 5/9, and add 273.15',
+      };
+    }
+    if (from.id === 'k' && to.id === 'f') {
+      return {
+        equation: '°F = (K − 273.15) × 9/5 + 32',
+        instruction: 'Subtract 273.15 from Kelvin, multiply by 1.8 (9/5), and add 32',
+      };
+    }
+    if (from.id === 'c' && to.id === 'r') {
+      return {
+        equation: '°R = (°C + 273.15) × 9/5',
+        instruction: 'Add 273.15 to Celsius and multiply by 1.8 (9/5)',
+      };
+    }
+    if (from.id === 'r' && to.id === 'c') {
+      return {
+        equation: '°C = (°R − 491.67) × 5/9',
+        instruction: 'Subtract 491.67 from Rankine and multiply by 5/9',
+      };
+    }
+    if (from.id === 'f' && to.id === 'r') {
+      return {
+        equation: '°R = °F + 459.67',
+        instruction: 'Add 459.67 to the Fahrenheit temperature',
+      };
+    }
+    if (from.id === 'r' && to.id === 'f') {
+      return {
+        equation: '°F = °R − 459.67',
+        instruction: 'Subtract 459.67 from the Rankine temperature',
+      };
+    }
   }
 
   if (categoryId === 'fuel') {
-    if (from.id === 'mpg_us' && to.id === 'l100km') return 'L/100km = 235.215 / mpg (US)';
-    if (from.id === 'l100km' && to.id === 'mpg_us') return 'mpg (US) = 235.215 / (L/100km)';
-    if (from.id === 'kml' && to.id === 'l100km') return 'L/100km = 100 / km/L';
+    if (from.id === 'mpg_us' && to.id === 'l100km') {
+      return {
+        equation: 'L/100km = 235.215 / mpg (US)',
+        instruction: 'Divide 235.215 by the US mpg value',
+      };
+    }
+    if (from.id === 'l100km' && to.id === 'mpg_us') {
+      return {
+        equation: 'mpg (US) = 235.215 / (L/100km)',
+        instruction: 'Divide 235.215 by the L/100km value',
+      };
+    }
+    if (from.id === 'mpg_imp' && to.id === 'l100km') {
+      return {
+        equation: 'L/100km = 282.481 / mpg (Imp)',
+        instruction: 'Divide 282.481 by the Imperial mpg value',
+      };
+    }
+    if (from.id === 'l100km' && to.id === 'mpg_imp') {
+      return {
+        equation: 'mpg (Imp) = 282.481 / (L/100km)',
+        instruction: 'Divide 282.481 by the L/100km value',
+      };
+    }
+    if (from.id === 'kml' && to.id === 'l100km') {
+      return {
+        equation: 'L/100km = 100 / (km/L)',
+        instruction: 'Divide 100 by the km/L value',
+      };
+    }
+    if (from.id === 'l100km' && to.id === 'kml') {
+      return {
+        equation: 'km/L = 100 / (L/100km)',
+        instruction: 'Divide 100 by the L/100km value',
+      };
+    }
   }
 
   // Factor based
   const factor = convertUnits(1, categoryId, from.id, to.id);
   if (factor !== null) {
+    // If factor < 1 and reciprocal 1/factor is a clean integer (e.g. stick to cup = / 2, in to ft = / 12),
+    // prefer clean division over multiplying by fractions/decimals
+    if (factor > 0 && factor < 1) {
+      const inv = 1 / factor;
+      const roundedInv = Math.round(inv);
+      if (Math.abs(inv - roundedInv) < 1e-7 && roundedInv >= 2) {
+        const formattedInv = formatNumber(roundedInv);
+        return {
+          equation: `${to.symbol} = ${from.symbol} / ${formattedInv}`,
+          instruction: `Divide the ${from.name.toLowerCase()} value by ${formattedInv}`,
+        };
+      }
+    }
+
     const formattedFactor = formatNumber(factor);
-    return `Multiply the ${from.name.toLowerCase()} value by ${formattedFactor}`;
+    return {
+      equation: `${to.symbol} = ${from.symbol} × ${formattedFactor}`,
+      instruction: `Multiply the ${from.name.toLowerCase()} value by ${formattedFactor}`,
+    };
   }
 
-  return '';
+  return { equation: '', instruction: '' };
+}
+
+/**
+ * Generate human-readable formula string for a conversion.
+ */
+export function getFormulaString(categoryId, fromUnitId, toUnitId) {
+  const details = getFormulaDetails(categoryId, fromUnitId, toUnitId);
+  return details.equation || '';
 }
 
 /**

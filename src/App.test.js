@@ -128,20 +128,24 @@ describe('ConvertThings UI Integration', () => {
     expect(massTab).toHaveClass('active');
   });
 
-  test('swaps units on swap button click', () => {
+  test('swaps units and inverts equation values on swap button click', () => {
     render(<App />);
     const swapButton = screen.getByLabelText(/Swap from and to units/i);
     expect(swapButton).toBeInTheDocument();
 
     // Initial default: 1 meter to feet = ~3.28084
+    const fromInputBefore = screen.getByLabelText(/Enter value in/i);
     const toInputBefore = screen.getByLabelText(/Converted value in/i);
+    expect(fromInputBefore.value).toBe('1');
     expect(Number(toInputBefore.value)).toBeCloseTo(3.28084, 3);
 
     fireEvent.click(swapButton);
 
-    // After swap: 1 foot to meters = 0.3048
+    // After swap: ~3.28084 feet to meters = 1 meter
+    const fromInputAfter = screen.getByLabelText(/Enter value in/i);
     const toInputAfter = screen.getByLabelText(/Converted value in/i);
-    expect(Number(toInputAfter.value)).toBeCloseTo(0.3048, 3);
+    expect(Number(fromInputAfter.value)).toBeCloseTo(3.28084, 3);
+    expect(Number(toInputAfter.value)).toBeCloseTo(1, 3);
   });
 
   test('updates converted value when input changes', () => {
@@ -191,16 +195,20 @@ describe('ConvertThings UI Integration', () => {
     expect(screen.getByRole('heading', { level: 3, name: /Frequently Asked Questions/i })).toBeInTheDocument();
   });
 
-  test('displays instant color-highlighted live conversion statement', () => {
+  test('displays conversion equations card and separate formula reference strip', () => {
     render(<App />);
-    const readout = screen.getByLabelText(/Current Conversion Statement/i);
-    expect(readout).toBeInTheDocument();
+    const equationCard = screen.getByLabelText(/Conversion equations/i);
+    expect(equationCard).toBeInTheDocument();
 
-    // Default 1 meter to feet
-    expect(readout).toHaveTextContent(/1/);
-    expect(readout).toHaveTextContent(/m/);
-    expect(readout).toHaveTextContent(/ft/);
-    expect(readout).toHaveTextContent(/equals/i);
+    // Default 1 meter to feet (approximation)
+    expect(equationCard).toHaveTextContent(/1 m (≈|=)/i);
+    expect(equationCard).toHaveTextContent(/1 meter (is approximately|equals)/i);
+
+    // Formula educational reference strip
+    const formulaStrip = screen.getByLabelText(/Conversion formula/i);
+    expect(formulaStrip).toBeInTheDocument();
+    expect(formulaStrip).toHaveTextContent(/Formula/i);
+    expect(formulaStrip).toHaveTextContent(/Multiply the meter value by 3.2808/i);
   });
 
   test('renders footer legal links and opens legal modal', () => {
@@ -245,6 +253,120 @@ describe('ConvertThings UI Integration', () => {
 
     const toInput = screen.getByLabelText(/Converted value in/i);
     expect(parseFloat(toInput.value)).toBeCloseTo(62.137, 2);
+  });
+
+  test('respects stored decimal precision on initial mount and page reload', () => {
+    window.localStorage.setItem('ct-precision', JSON.stringify('2'));
+    render(<App />);
+
+    const toInput = screen.getByLabelText(/Converted value in/i);
+    // 1 meter to feet formatted with 2 decimal precision should be '3.28'
+    expect(toInput.value).toBe('3.28');
+  });
+
+  test('clicking or focusing an input field selects its text', () => {
+    render(<App />);
+    const fromInput = screen.getByLabelText(/Enter value in/i);
+    const selectSpy = jest.spyOn(fromInput, 'select');
+
+    fireEvent.focus(fromInput);
+    expect(selectSpy).toHaveBeenCalled();
+
+    fireEvent.click(fromInput);
+    expect(selectSpy).toHaveBeenCalled();
+    selectSpy.mockRestore();
+  });
+
+  test('favorites bar is not rendered when there are no favorites by default', () => {
+    render(<App />);
+    expect(screen.queryByLabelText(/Favorite Conversions/i)).not.toBeInTheDocument();
+  });
+
+  test('clicking a favorite focuses and selects the from input field and sets active class', async () => {
+    window.localStorage.setItem('ct-favorites', JSON.stringify([{ categoryId: 'length', fromUnitId: 'km', toUnitId: 'mi' }]));
+    render(<App />);
+    const fromInput = screen.getByLabelText(/Enter value in/i);
+    const selectSpy = jest.spyOn(fromInput, 'select');
+
+    // Stored favorite pill: km ⇄ mi
+    const favBtn = screen.getByRole('button', { name: /km ⇄ mi/i });
+    const pill = favBtn.closest('.ct-favorite-pill');
+    expect(pill).not.toHaveClass('active');
+
+    fireEvent.click(favBtn);
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(selectSpy).toHaveBeenCalled();
+    expect(pill).toHaveClass('active');
+    selectSpy.mockRestore();
+  });
+
+  test('star favorite button is order-agnostic and stays active when swapped', async () => {
+    render(<App />);
+    // Initial state: star button starts inactive with no default favorites
+    const starBtn = screen.getByRole('button', { name: /Add to favorites/i });
+    expect(starBtn).toBeInTheDocument();
+    expect(starBtn).not.toHaveClass('active');
+
+    // Click star to add meter ⇄ feet to favorites
+    fireEvent.click(starBtn);
+    expect(starBtn).toHaveClass('active');
+    expect(screen.getByLabelText(/Favorite Conversions/i)).toBeInTheDocument();
+
+    // Click swap button to switch to ft -> m
+    const swapButton = screen.getByLabelText(/Swap from and to units/i);
+    fireEvent.click(swapButton);
+
+    // Star should STILL be active because the pair is in favorites regardless of order
+    expect(starBtn).toHaveClass('active');
+  });
+
+  test('clicking copy button on symbol or sentence triggers toast notification, and formula is displayed', async () => {
+    render(<App />);
+    const copySymbolBtn = screen.getByRole('button', { name: /Copy symbol equation/i });
+    fireEvent.click(copySymbolBtn);
+
+    expect(await screen.findByText(/Equation copied to clipboard!/i)).toBeInTheDocument();
+
+    const copySentenceBtn = screen.getByRole('button', { name: /Copy sentence equation/i });
+    fireEvent.click(copySentenceBtn);
+
+    expect(await screen.findByText(/Sentence copied to clipboard!/i)).toBeInTheDocument();
+
+    // Educational formula strip is displayed as reference
+    expect(screen.getByLabelText(/Conversion formula/i)).toBeInTheDocument();
+  });
+
+  test('increments and decrements input values to next whole number using stepper buttons', () => {
+    render(<App />);
+    const fromInput = screen.getByLabelText(/Enter value in/i);
+    expect(fromInput.value).toBe('1');
+
+    // Increment fromInput: 1 -> 2
+    const incFromBtn = screen.getByRole('button', { name: /Increment Meter/i });
+    fireEvent.click(incFromBtn);
+    expect(fromInput.value).toBe('2');
+
+    // Decrement fromInput: 2 -> 1
+    const decFromBtn = screen.getByRole('button', { name: /Decrement Meter/i });
+    fireEvent.click(decFromBtn);
+    expect(fromInput.value).toBe('1');
+
+    // Decrement again: 1 -> 0
+    fireEvent.click(decFromBtn);
+    expect(fromInput.value).toBe('0');
+  });
+
+  test('unit search dropdown selects matching unit on Enter key', () => {
+    render(<App />);
+    const fromUnitBtn = screen.getByTitle(/Change unit from Meter/i);
+    fireEvent.click(fromUnitBtn);
+
+    const searchInput = screen.getByPlaceholderText(/Search unit\.\.\./i);
+    fireEvent.change(searchInput, { target: { value: 'inch' } });
+    fireEvent.keyDown(searchInput, { key: 'Enter', code: 'Enter' });
+
+    expect(screen.getByTitle(/Change unit from Inch/i)).toBeInTheDocument();
   });
 });
 

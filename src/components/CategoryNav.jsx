@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { CATEGORIES } from '../engine/conversions';
 import { Icon } from './Icons';
 
@@ -10,6 +10,16 @@ export function CategoryNav({ activeCategoryId, onSelectCategory }) {
       scrollRef.current.scrollBy({ left: direction * 220, behavior: 'smooth' });
     }
   };
+
+  // Keep active category tab centered in view
+  useEffect(() => {
+    if (scrollRef.current) {
+      const activeTab = scrollRef.current.querySelector('.ct-category-tab.active');
+      if (activeTab && typeof activeTab.scrollIntoView === 'function') {
+        activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }
+  }, [activeCategoryId]);
 
   return (
     <nav className="ct-category-nav" aria-label="Measurement Categories">
