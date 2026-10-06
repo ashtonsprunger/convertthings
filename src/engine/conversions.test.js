@@ -5,6 +5,8 @@ import {
   formatNumber,
   toFraction,
   parseFractionString,
+  formatFractionForDisplay,
+  isFractionLike,
   getCookingCompoundMeasure,
 } from './conversions';
 
@@ -149,6 +151,14 @@ describe('formatDisplayNumber', () => {
     expect(formatDisplayNumber('1,234,567.89')).toBe('1,234,567.89');
   });
 
+  test('formats fraction strings with clear typographic vulgar glyphs and hyphens', () => {
+    expect(formatDisplayNumber('1 3/8')).toBe('1 ⅜');
+    expect(formatDisplayNumber('3/4')).toBe('¾');
+    expect(formatDisplayNumber('1 1/2')).toBe('1 ½');
+    expect(formatDisplayNumber('1 13/16')).toBe('1-13/16');
+    expect(formatDisplayNumber('11/8')).toBe('11/8');
+  });
+
   test('handles empty, null, undefined, and non-numeric edge cases gracefully', () => {
     expect(formatDisplayNumber('')).toBe('');
     expect(formatDisplayNumber(null)).toBe('');
@@ -209,6 +219,89 @@ describe('parseFractionString', () => {
     expect(parseFractionString('3/2')).toBe(1.5);
     expect(parseFractionString('5/4')).toBe(1.25);
     expect(parseFractionString('-5/2')).toBe(-2.5);
+  });
+
+  test('parses hyphenated and plus mixed fractions', () => {
+    expect(parseFractionString('1-3/8')).toBe(1.375);
+    expect(parseFractionString('1-13/16')).toBe(1.8125);
+    expect(parseFractionString('2-1/4')).toBe(2.25);
+    expect(parseFractionString('-1-1/2')).toBe(-1.5);
+    expect(parseFractionString('1+3/8')).toBe(1.375);
+  });
+
+  test('parses Unicode vulgar fraction characters and fraction slashes', () => {
+    expect(parseFractionString('1 ⅜')).toBe(1.375);
+    expect(parseFractionString('1⅜')).toBe(1.375);
+    expect(parseFractionString('⅜')).toBe(0.375);
+    expect(parseFractionString('1 ½')).toBe(1.5);
+    expect(parseFractionString('½')).toBe(0.5);
+    expect(parseFractionString('¾')).toBe(0.75);
+    expect(parseFractionString('1 ¼')).toBe(1.25);
+    expect(parseFractionString('-1 ⅜')).toBe(-1.375);
+    expect(parseFractionString('-½')).toBe(-0.5);
+    expect(parseFractionString('1 3⁄8')).toBe(1.375); // Unicode fraction slash U+2044
+  });
+
+  test('handles empty, null, undefined, and non-numeric edge cases gracefully', () => {
+    expect(parseFractionString('')).toBe(0);
+    expect(parseFractionString(null)).toBe(0);
+    expect(parseFractionString(undefined)).toBe(0);
+    expect(parseFractionString('abc')).toBe(0);
+  });
+});
+
+describe('formatFractionForDisplay', () => {
+  test('formats mixed fractions with Unicode vulgar glyphs to eliminate optical ambiguity', () => {
+    expect(formatFractionForDisplay('1 3/8')).toBe('1 ⅜');
+    expect(formatFractionForDisplay('1 1/2')).toBe('1 ½');
+    expect(formatFractionForDisplay('2 1/4')).toBe('2 ¼');
+    expect(formatFractionForDisplay('3/4')).toBe('¾');
+    expect(formatFractionForDisplay('1/2')).toBe('½');
+    expect(formatFractionForDisplay('1/8')).toBe('⅛');
+    expect(formatFractionForDisplay('-1 3/8')).toBe('-1 ⅜');
+    expect(formatFractionForDisplay('-3/4')).toBe('-¾');
+  });
+
+  test('formats mixed 16ths and 32nds with hyphens to prevent optical misreading', () => {
+    expect(formatFractionForDisplay('1 13/16')).toBe('1-13/16');
+    expect(formatFractionForDisplay('3 9/32')).toBe('3-9/32');
+    expect(formatFractionForDisplay('-1 5/16')).toBe('-1-5/16');
+  });
+
+  test('preserves simple fractions and improper fractions without whole numbers', () => {
+    expect(formatFractionForDisplay('13/16')).toBe('13/16');
+    expect(formatFractionForDisplay('11/8')).toBe('11/8');
+    expect(formatFractionForDisplay('3/2')).toBe('3/2');
+    expect(formatFractionForDisplay('5/4')).toBe('5/4');
+  });
+
+  test('formats compound kitchen measurements with clean vulgar fractions', () => {
+    expect(formatFractionForDisplay('3/4 cup + 1 tbsp')).toBe('¾ cup + 1 tbsp');
+    expect(formatFractionForDisplay('1 tbsp + 1 1/2 tsp')).toBe('1 tbsp + 1 ½ tsp');
+    expect(formatFractionForDisplay('4 tbsp (1/4 cup)')).toBe('4 tbsp (¼ cup)');
+  });
+
+  test('leaves non-fraction numbers and strings unchanged', () => {
+    expect(formatFractionForDisplay('25')).toBe('25');
+    expect(formatFractionForDisplay('0')).toBe('0');
+    expect(formatFractionForDisplay('')).toBe('');
+    expect(formatFractionForDisplay(null)).toBe('');
+  });
+});
+
+describe('isFractionLike', () => {
+  test('detects fraction patterns accurately', () => {
+    expect(isFractionLike('1 3/8')).toBe(true);
+    expect(isFractionLike('1-3/8')).toBe(true);
+    expect(isFractionLike('1 ⅜')).toBe(true);
+    expect(isFractionLike('⅜')).toBe(true);
+    expect(isFractionLike('11/8')).toBe(true);
+    expect(isFractionLike('13/16')).toBe(true);
+    expect(isFractionLike('10')).toBe(false);
+    expect(isFractionLike('2.5')).toBe(false);
+    expect(isFractionLike('0')).toBe(false);
+    expect(isFractionLike('')).toBe(false);
+    expect(isFractionLike(null)).toBe(false);
   });
 });
 

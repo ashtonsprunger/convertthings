@@ -5,6 +5,7 @@ import {
   convertUnits,
   formatNumber,
   parseFractionString,
+  isFractionLike,
 } from './engine/conversions';
 import { parseRoute, formatRoutePath } from './engine/urlRouter';
 import { getSeoMetadata } from './engine/seo';
@@ -115,7 +116,7 @@ function App() {
         setToValue('');
         return;
       }
-      const numVal = typeof val === 'string' && val.includes('/')
+      const numVal = typeof val === 'string' && isFractionLike(val)
         ? parseFractionString(val)
         : Number(val);
 
@@ -273,7 +274,7 @@ function App() {
     // Queue history recording
     if (historyTimeoutRef.current) clearTimeout(historyTimeoutRef.current);
     historyTimeoutRef.current = setTimeout(() => {
-      const numVal = typeof newVal === 'string' && newVal.includes('/')
+      const numVal = typeof newVal === 'string' && isFractionLike(newVal)
         ? parseFractionString(newVal)
         : Number(newVal);
       if (!isNaN(numVal)) {
@@ -293,7 +294,7 @@ function App() {
       setFromValue('');
       return;
     }
-    const numVal = typeof newVal === 'string' && newVal.includes('/')
+    const numVal = typeof newVal === 'string' && isFractionLike(newVal)
       ? parseFractionString(newVal)
       : Number(newVal);
 

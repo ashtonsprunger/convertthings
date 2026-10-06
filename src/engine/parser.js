@@ -11,7 +11,7 @@
  * is strictly rejected. Prefix matching is only permitted for tokens >= 3 characters.
  */
 
-import { UNIT_DEFINITIONS, CATEGORIES, convertUnits, formatNumber, getUnit } from './conversions.js';
+import { UNIT_DEFINITIONS, CATEGORIES, convertUnits, formatNumber, getUnit, parseFractionString } from './conversions.js';
 
 // Category-indexed lookup: { [categoryId]: { [aliasKey]: unit } }
 const LOOKUP_BY_CAT = {};
@@ -202,13 +202,16 @@ export function parseConversionQuery(rawQuery) {
     query = query.replace(/(\d),(\d)/g, '$1$2');
   }
 
+  const FRACTION_GLYPHS = '½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞';
+  const VALUE_REGEX = `(?:[+-]?\\d+\\s*[-+ ]\\s*\\d+\\/\\d+|[+-]?\\d+\\s*[${FRACTION_GLYPHS}]|[+-]?[${FRACTION_GLYPHS}]|[+-]?\\d+\\/\\d+|[+-]?[0-9]*\\.?[0-9]+(?:e[+-]?[0-9]+)?)`;
+
   // Pattern 0: Natural question format: "how many [toUnit] in [val]? [fromUnit]"
-  const patternHowMany = /^(?:how many|how much)\s+([a-z0-9_°'"/²³µ\s]+?)\s+(?:in|are in|are there in)\s+(?:([+-]?[0-9]*\.?[0-9]+(?:e[+-]?[0-9]+)?)\s*)?(?:a\s+|an\s+)?([a-z0-9_°'"/²³µ\s]+)$/i;
+  const patternHowMany = new RegExp('^(?:how many|how much)\\s+([a-z0-9_°\'"/²³µ\\s]+?)\\s+(?:in|are in|are there in)\\s+(?:(' + VALUE_REGEX + ')\\s*)?(?:a\\s+|an\\s+)?([a-z0-9_°\'"/²³µ\\s]+)$', 'i');
   const matchHowMany = query.match(patternHowMany);
   if (matchHowMany) {
     const toToken = matchHowMany[1].trim();
     const rawVal = matchHowMany[2]?.trim();
-    const val = rawVal ? parseFloat(rawVal) : 1;
+    const val = rawVal ? parseFractionString(rawVal) : 1;
     const fromToken = matchHowMany[3].trim();
     if (!isNaN(val)) {
       const fromCandidates = findAllUnits(fromToken);
@@ -243,12 +246,12 @@ export function parseConversionQuery(rawQuery) {
   }
 
   // Pattern 1: [value]? [unitA] (to|in|into|as|=|convert to) [unitB]
-  const patternFull = /^([+-]?[0-9]*\.?[0-9]+(?:e[+-]?[0-9]+)?\s*)?([a-z0-9_°'"/²³µ\s]+?)\s+(?:to|in|into|as|=|convert to)\s+([a-z0-9_°'"/²³µ\s]+)$/i;
+  const patternFull = new RegExp('^(' + VALUE_REGEX + '\\s*)?([a-z0-9_°\'"/²³µ\\s]+?)\\s+(?:to|in|into|as|=|convert to)\\s+([a-z0-9_°\'"/²³µ\\s]+)$', 'i');
   const matchFull = query.match(patternFull);
 
   if (matchFull) {
     const rawVal = matchFull[1]?.trim();
-    const val = rawVal ? parseFloat(rawVal) : 1;
+    const val = rawVal ? parseFractionString(rawVal) : 1;
     if (isNaN(val)) return null;
 
     const fromToken = matchFull[2].trim();
@@ -304,10 +307,10 @@ export function parseConversionQuery(rawQuery) {
   }
 
   // Pattern 2: [value] [unitA] [unitB] (e.g. "100 km miles")
-  const patternTwoUnits = /^([+-]?[0-9]*\.?[0-9]+(?:e[+-]?[0-9]+)?)\s+([a-z°'"/²³µ]+)\s+([a-z°'"/²³µ]+)$/i;
+  const patternTwoUnits = new RegExp('^(' + VALUE_REGEX + ')\\s+([a-z°\'"/²³µ]+)\\s+([a-z°\'"/²³µ]+)$', 'i');
   const matchTwo = query.match(patternTwoUnits);
   if (matchTwo) {
-    const val = parseFloat(matchTwo[1]);
+    const val = parseFractionString(matchTwo[1]);
     if (isNaN(val)) return null;
 
     const fromToken = matchTwo[2].trim();
@@ -352,10 +355,10 @@ export function parseConversionQuery(rawQuery) {
   }
 
   // Pattern 3: [value] [unitA] -> auto convert to complementary target unit
-  const patternSingle = /^([+-]?[0-9]*\.?[0-9]+(?:e[+-]?[0-9]+)?)\s*([a-z0-9_°'"/²³µ\s]+)$/i;
+  const patternSingle = new RegExp('^(' + VALUE_REGEX + ')\\s*([a-z0-9_°\'"/²³µ\\s]+)$', 'i');
   const matchSingle = query.match(patternSingle);
   if (matchSingle) {
-    const val = parseFloat(matchSingle[1]);
+    const val = parseFractionString(matchSingle[1]);
     if (isNaN(val)) return null;
 
     const unitToken = matchSingle[2].trim();

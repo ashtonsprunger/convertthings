@@ -453,14 +453,193 @@ export function toFraction(val, maxDenominator = 32, improper = false) {
   return `${isNeg ? '-' : ''}${wStr}${bestNum}/${bestDenom}`;
 }
 
+export const VULGAR_FRACTIONS = {
+  '½': 1 / 2,
+  '⅓': 1 / 3,
+  '⅔': 2 / 3,
+  '¼': 1 / 4,
+  '¾': 3 / 4,
+  '⅕': 1 / 5,
+  '⅖': 2 / 5,
+  '⅗': 3 / 5,
+  '⅘': 4 / 5,
+  '⅙': 1 / 6,
+  '⅚': 5 / 6,
+  '⅛': 1 / 8,
+  '⅜': 3 / 8,
+  '⅝': 5 / 8,
+  '⅞': 7 / 8,
+};
+
+export const FRACTION_TO_VULGAR = {
+  '1/2': '½',
+  '1/3': '⅓',
+  '2/3': '⅔',
+  '1/4': '¼',
+  '3/4': '¾',
+  '1/5': '⅕',
+  '2/5': '⅖',
+  '3/5': '⅗',
+  '4/5': '⅘',
+  '1/6': '⅙',
+  '5/6': '⅚',
+  '1/8': '⅛',
+  '3/8': '⅜',
+  '5/8': '⅝',
+  '7/8': '⅞',
+};
+
+/**
+ * Check if a value represents or contains a fraction (slash, vulgar glyph, or mixed fraction).
+ */
+export function isFractionLike(val) {
+  if (val === null || val === undefined || val === '') return false;
+  const s = String(val).trim();
+  return (
+    s.includes('/') ||
+    s.includes('⁄') ||
+    Object.keys(VULGAR_FRACTIONS).some((g) => s.includes(g)) ||
+    /^[+-]?\d+\s*-\s*\d+\/\d+/.test(s)
+  );
+}
+
+/**
+ * Format a fraction string or compound measurement for clean, unambiguous human display.
+ * - Transforms mixed fractions like "1 3/8" into "1 ⅜" and "3/4" into "¾".
+ * - For 16ths/32nds without single Unicode glyphs, formats as "1-13/16" to eliminate
+ *   the visual optical illusion where "1 13/16" or "1 3/8" looks like "13/8" in bold text.
+ * - Preserves improper fractions like "11/8" and "3/2" as standard mathematical improper fractions.
+ *
+ * @param {string|number} val
+ * @returns {string}
+ */
+export function formatFractionForDisplay(val) {
+  if (val === null || val === undefined || val === '') return '';
+  let s = String(val).trim();
+  if (!s) return '';
+
+  // If already contains vulgar glyphs, return as-is
+  if (Object.keys(VULGAR_FRACTIONS).some((g) => s.includes(g))) {
+    return s;
+  }
+
+  // 1. Direct match: single mixed fraction e.g. "1 3/8", "-1 3/8", "1-3/8"
+  const mixedMatch = s.match(/^([+-]?\d+)\s*[- ]\s*(\d+)\/(\d+)$/);
+  if (mixedMatch) {
+    const isNeg = mixedMatch[1].startsWith('-');
+    const whole = Math.abs(parseInt(mixedMatch[1], 10));
+    const num = parseInt(mixedMatch[2], 10);
+    const den = parseInt(mixedMatch[3], 10);
+    const fracKey = `${num}/${den}`;
+
+    if (FRACTION_TO_VULGAR[fracKey]) {
+      return `${isNeg ? '-' : ''}${whole} ${FRACTION_TO_VULGAR[fracKey]}`;
+    }
+    // For non-vulgar denominators (e.g. 16, 32), format with clear hyphen
+    return `${isNeg ? '-' : ''}${whole}-${num}/${den}`;
+  }
+
+  // 2. Direct match: simple fraction e.g. "3/4", "-1/2", "13/16", "11/8"
+  const simpleMatch = s.match(/^([+-]?)(\d+)\/(\d+)$/);
+  if (simpleMatch) {
+    const sign = simpleMatch[1];
+    const num = parseInt(simpleMatch[2], 10);
+    const den = parseInt(simpleMatch[3], 10);
+    const fracKey = `${num}/${den}`;
+
+    // Only convert proper fractions to vulgar glyphs (keep improper like "11/8" intact)
+    if (FRACTION_TO_VULGAR[fracKey]) {
+      return `${sign}${FRACTION_TO_VULGAR[fracKey]}`;
+    }
+    return s;
+  }
+
+  // 3. Substring replacement for compound kitchen measurements:
+  // e.g. "3/4 cup + 1 tbsp" -> "¾ cup + 1 tbsp"
+  // e.g. "1 tbsp + 1 1/2 tsp" -> "1 tbsp + 1 ½ tsp"
+  // e.g. "4 tbsp (1/4 cup)" -> "4 tbsp (¼ cup)"
+  if (s.includes('/')) {
+    // Replace mixed fractions inside compound text first
+    s = s.replace(/(\b\d+)\s+(\d+\/\d+)\b/g, (match, whole, frac) => {
+      if (FRACTION_TO_VULGAR[frac]) {
+        return `${whole} ${FRACTION_TO_VULGAR[frac]}`;
+      }
+      return `${whole}-${frac}`;
+    });
+
+    // Replace standalone fractions inside compound text
+    s = s.replace(/\b(\d+\/\d+)\b/g, (match, frac) => {
+      if (FRACTION_TO_VULGAR[frac]) {
+        return FRACTION_TO_VULGAR[frac];
+      }
+      return match;
+    });
+    return s;
+  }
+
+  return s;
+}
+
 /**
  * Parse a number or fraction string into a numeric float.
- * e.g., "1 3/8" -> 1.375, "3/4" -> 0.75, "1.5" -> 1.5
+ * Supports:
+ * - Mixed fractions: "1 3/8", "1-3/8", "1+3/8", "-1 3/8"
+ * - Unicode vulgar fractions: "1 ⅜", "1⅜", "⅜", "1 ½", "¾", "-1 ⅜", "-½"
+ * - Simple & improper fractions: "3/4", "11/8", "13/16", "-5/2"
+ * - Fraction slash (⁄): "1 3⁄8"
+ * - Standard decimal numbers & integers: "1.5", "10", "0"
+ *
+ * @param {string|number} val
+ * @returns {number}
  */
 export function parseFractionString(val) {
   if (val === null || val === undefined || val === '') return 0;
-  const s = String(val).trim();
+  if (typeof val === 'number') return isNaN(val) ? 0 : val;
+
+  let s = String(val).trim();
+  if (!s) return 0;
+
+  // 1. Check for Unicode vulgar fraction characters
+  for (const [glyph, fracVal] of Object.entries(VULGAR_FRACTIONS)) {
+    if (s.includes(glyph)) {
+      const isNeg = s.startsWith('-');
+      const withoutSign = isNeg ? s.slice(1).trim() : s;
+      const remainder = withoutSign.replace(glyph, '').trim().replace(/[-+]$/, '');
+      if (!remainder || remainder === '+') return isNeg ? -fracVal : fracVal;
+      const whole = parseFloat(remainder);
+      if (!isNaN(whole)) {
+        return (isNeg ? -1 : 1) * (Math.abs(whole) + fracVal);
+      }
+      return isNeg ? -fracVal : fracVal;
+    }
+  }
+
+  // 2. Normalize fraction slashes (standard '/' and Unicode fraction slash '⁄')
+  s = s.replace(/⁄/g, '/');
+
   if (s.includes('/')) {
+    // Check for mixed fraction formats: e.g. "1 3/8", "1-3/8", "1+3/8", "-1 3/8", "-1-3/8"
+    const mixedMatch = s.match(/^([+-]?\d+)\s*[-+ ]\s*(\d+)\s*\/\s*(\d+)$/);
+    if (mixedMatch) {
+      const whole = parseFloat(mixedMatch[1]);
+      const num = parseFloat(mixedMatch[2]);
+      const den = parseFloat(mixedMatch[3]);
+      if (!isNaN(whole) && !isNaN(num) && den) {
+        return (whole >= 0 ? 1 : -1) * (Math.abs(whole) + num / den);
+      }
+    }
+
+    // Check for simple or improper fraction: e.g. "3/4", "11/8", "-5/2"
+    const simpleMatch = s.match(/^([+-]?\d+)\s*\/\s*(\d+)$/);
+    if (simpleMatch) {
+      const num = parseFloat(simpleMatch[1]);
+      const den = parseFloat(simpleMatch[2]);
+      if (!isNaN(num) && den) {
+        return num / den;
+      }
+    }
+
+    // Fallback split by whitespace
     const parts = s.split(/\s+/);
     if (parts.length === 2) {
       const whole = parseFloat(parts[0]);
@@ -469,14 +648,10 @@ export function parseFractionString(val) {
         return (whole >= 0 ? 1 : -1) * (Math.abs(whole) + num / den);
       }
     }
-    if (parts.length === 1) {
-      const [num, den] = parts[0].split('/').map(Number);
-      if (!isNaN(num) && den) {
-        return num / den;
-      }
-    }
   }
-  const parsed = parseFloat(val);
+
+  // 3. Fallback to standard float
+  const parsed = parseFloat(s);
   return isNaN(parsed) ? 0 : parsed;
 }
 
@@ -690,8 +865,13 @@ export function formatDisplayNumber(val) {
   const s = String(val).trim();
   if (s === '-' || s === '') return s;
 
-  // Do not format scientific notation or fraction strings
-  if (s.includes('e') || s.includes('E') || s.includes('/')) return s;
+  // Do not format scientific notation
+  if (s.includes('e') || s.includes('E')) return s;
+
+  // Format fractions cleanly for human display
+  if (s.includes('/') || s.includes('⁄') || Object.keys(VULGAR_FRACTIONS).some((g) => s.includes(g))) {
+    return formatFractionForDisplay(s);
+  }
 
   const isNegative = s.startsWith('-');
   const clean = (isNegative ? s.slice(1) : s).replace(/,/g, '');

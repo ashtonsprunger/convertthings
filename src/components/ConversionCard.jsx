@@ -8,7 +8,9 @@ import {
   convertUnits,
   filterAndSortUnits,
   formatDisplayNumber,
+  formatFractionForDisplay,
   parseFractionString,
+  isFractionLike,
   getCookingCompoundMeasure,
 } from '../engine/conversions';
 
@@ -408,7 +410,7 @@ export function ConversionCard({
 
   const rawTargetValue = (() => {
     if (!fromValue) return null;
-    const num = typeof fromValue === 'string' && fromValue.includes('/')
+    const num = typeof fromValue === 'string' && isFractionLike(fromValue)
       ? parseFractionString(fromValue)
       : parseFloat(fromValue);
     if (isNaN(num)) return null;
@@ -420,7 +422,7 @@ export function ConversionCard({
   // Calculate if the current conversion result is an approximation
   const isApproximate = (() => {
     if (!fromValue || !toValue || rawTargetValue === null) return false;
-    if (isFractionMode || (typeof toValue === 'string' && toValue.includes('/'))) {
+    if (isFractionMode || isFractionLike(toValue)) {
       const fracVal = parseFractionString(toValue);
       return Math.abs(fracVal - rawTargetValue) > 1e-4;
     }
@@ -639,7 +641,7 @@ export function ConversionCard({
               <option value="2">2 Decimals</option>
               <option value="4">4 Decimals</option>
               <option value="exact">Exact (Full Precision)</option>
-              <option value="fraction">Fractions (Mixed: 1 3/8)</option>
+              <option value="fraction">Fractions (Mixed: 1 ⅜)</option>
               <option value="fraction_improper">Fractions (Improper: 11/8)</option>
             </select>
           </div>
@@ -688,7 +690,7 @@ export function ConversionCard({
                 type={isFractionMode ? 'text' : 'number'}
                 step="any"
                 inputMode="decimal"
-                className={`ct-number-input ${getNumberFontSizeClass(fromValue)}`}
+                className={`ct-number-input ${getNumberFontSizeClass(fromValue)} ${isFractionLike(fromValue) ? 'ct-fraction-input' : ''}`}
                 value={fromValue}
                 onChange={(e) => onFromValueChange(e.target.value)}
                 onFocus={handleInputFocus}
@@ -836,7 +838,7 @@ export function ConversionCard({
                 type={isFractionMode ? 'text' : 'number'}
                 step="any"
                 inputMode="decimal"
-                className={`ct-number-input ${getNumberFontSizeClass(toValue)}`}
+                className={`ct-number-input ${getNumberFontSizeClass(toValue)} ${isFractionLike(toValue) ? 'ct-fraction-input' : ''}`}
                 value={toValue}
                 onChange={(e) => onToValueChange(e.target.value)}
                 onFocus={handleInputFocus}
@@ -981,12 +983,12 @@ export function ConversionCard({
               type="button"
               className={`ct-kitchen-badge ${copiedKitchen ? 'copied' : ''}`}
               onClick={handleCopyKitchen}
-              title={copiedKitchen ? 'Copied to clipboard!' : `Copy kitchen measure: ${kitchenCompound}`}
-              aria-label={copiedKitchen ? 'Kitchen measure copied' : `Kitchen measure: ${kitchenCompound}`}
+              title={copiedKitchen ? 'Copied to clipboard!' : `Copy kitchen measure: ${formatFractionForDisplay(kitchenCompound)}`}
+              aria-label={copiedKitchen ? 'Kitchen measure copied' : `Kitchen measure: ${formatFractionForDisplay(kitchenCompound)}`}
             >
               <Icon name="ChefHat" size={15} className="ct-kitchen-icon" />
               <span className="ct-kitchen-label">Kitchen Measure:</span>
-              <strong className="ct-kitchen-val">{kitchenCompound}</strong>
+              <strong className="ct-kitchen-val">{formatFractionForDisplay(kitchenCompound)}</strong>
               <span className="ct-kitchen-copy-icon" aria-hidden="true">
                 <Icon name={copiedKitchen ? 'Check' : 'Copy'} size={12} />
               </span>
