@@ -299,7 +299,7 @@ describe('ConvertThings UI Integration', () => {
     // Formula educational reference row inside card
     const formulaStrip = screen.getByLabelText(/Conversion formula/i);
     expect(formulaStrip).toBeInTheDocument();
-    expect(formulaStrip).toHaveTextContent(/Formula/i);
+    expect(formulaStrip).toHaveTextContent(/ft = m/i);
     expect(formulaStrip).toHaveTextContent(/Multiply the meter value by 3.2808/i);
   });
 

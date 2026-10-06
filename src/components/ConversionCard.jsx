@@ -912,10 +912,6 @@ export function ConversionCard({
         >
           <div className="ct-formula-inner">
             <div className="ct-formula-main">
-              <span className="ct-formula-strip-label">
-                <span className="ct-formula-strip-fx">f(x)</span>
-                <span>Formula</span>
-              </span>
               <span className="ct-formula-strip-val" title={formulaEquation}>
                 {renderFormulaContent(formulaEquation, fromUnit.symbol)}
               </span>
