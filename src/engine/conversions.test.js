@@ -8,6 +8,8 @@ import {
   formatFractionForDisplay,
   isFractionLike,
   getCookingCompoundMeasure,
+  formatCulinaryFraction,
+  convertUnits,
 } from './conversions';
 
 describe('filterAndSortUnits', () => {
@@ -388,5 +390,54 @@ describe('getCookingCompoundMeasure', () => {
     expect(getCookingCompoundMeasure(0.5, 'stick_butter', 'cooking')).toBe('4 tbsp (1/4 cup)');
     expect(getCookingCompoundMeasure(1.5, 'stick_butter', 'cooking')).toBe('12 tbsp (3/4 cup)');
     expect(getCookingCompoundMeasure(2, 'stick_butter', 'cooking')).toBe('16 tbsp (1 cup)');
+  });
+
+  test('converts sub-1/4 cup volumes into real-world measuring spoons (e.g. 34 mL -> 2 tbsp + 1 tsp)', () => {
+    // 34 mL in cups (~0.1437 cup = 2.299 tbsp) -> 2 tbsp + 1 tsp (98.6% accurate!)
+    const cups34mL = convertUnits(34, 'cooking', 'ml', 'cup_us');
+    expect(getCookingCompoundMeasure(cups34mL, 'cup_us', 'cooking')).toBe('2 tbsp + 1 tsp');
+
+    // 20 mL in cups (~0.0845 cup = 1.352 tbsp) -> 1 tbsp + 1 tsp
+    const cups20mL = convertUnits(20, 'cooking', 'ml', 'cup_us');
+    expect(getCookingCompoundMeasure(cups20mL, 'cup_us', 'cooking')).toBe('1 tbsp + 1 tsp');
+
+    // 50 mL in cups (~0.2113 cup = 3.38 tbsp) -> 3 tbsp + 1 tsp
+    const cups50mL = convertUnits(50, 'cooking', 'ml', 'cup_us');
+    expect(getCookingCompoundMeasure(cups50mL, 'cup_us', 'cooking')).toBe('3 tbsp + 1 tsp');
+
+    // 5 mL in cups (~1 tsp) -> 1 tsp
+    const cups5mL = convertUnits(5, 'cooking', 'ml', 'cup_us');
+    expect(getCookingCompoundMeasure(cups5mL, 'cup_us', 'cooking')).toBe('1 tsp');
+
+    // 2.5 mL in cups (~0.5 tsp) -> 1/2 tsp
+    const cups2_5mL = convertUnits(2.5, 'cooking', 'ml', 'cup_us');
+    expect(getCookingCompoundMeasure(cups2_5mL, 'cup_us', 'cooking')).toBe('1/2 tsp');
+  });
+
+  test('ensures formatNumber never outputs 5/32 or any 32nds for cooking in auto mode', () => {
+    const cups34mL = convertUnits(34, 'cooking', 'ml', 'cup_us');
+    const formatted = formatNumber(cups34mL, 'auto', 'cooking');
+    // Must be formatted as a clean decimal, NEVER bogus 5/32
+    expect(formatted).not.toContain('/32');
+    expect(formatted).not.toBe('5/32');
+    expect(parseFloat(formatted)).toBeCloseTo(0.1437, 3);
+  });
+});
+
+describe('formatCulinaryFraction', () => {
+  test('recognizes standard culinary fractions and rejects non-culinary decimals', () => {
+    expect(formatCulinaryFraction(0.5)).toBe('1/2');
+    expect(formatCulinaryFraction(0.25)).toBe('1/4');
+    expect(formatCulinaryFraction(0.75)).toBe('3/4');
+    expect(formatCulinaryFraction(0.125)).toBe('1/8');
+    expect(formatCulinaryFraction(0.375)).toBe('3/8');
+    expect(formatCulinaryFraction(0.8125)).toBe('13/16'); // exact 13 tbsp
+    expect(formatCulinaryFraction(1.3333)).toBe('1 1/3');
+    expect(formatCulinaryFraction(1.6667)).toBe('1 2/3');
+
+    // Continuous non-culinary values must return null (so formatNumber uses clean decimals)
+    expect(formatCulinaryFraction(34 / 236.588)).toBeNull(); // 34 mL to cup
+    expect(formatCulinaryFraction(20 / 236.588)).toBeNull(); // 20 mL to cup
+    expect(formatCulinaryFraction(0.1437)).toBeNull();       // not 5/32
   });
 });

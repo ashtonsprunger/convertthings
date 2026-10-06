@@ -655,6 +655,89 @@ export function parseFractionString(val) {
   return isNaN(parsed) ? 0 : parsed;
 }
 
+/**
+ * Sensible culinary fraction formatter.
+ * In a kitchen, measuring cups only come in 1, 3/4, 2/3, 1/2, 1/3, 1/4, and 1/8.
+ * Exact 16ths represent full tablespoons (e.g. 13/16 cup = 13 tbsp).
+ * Denominators of 32 NEVER exist in cooking and are banned.
+ * If the value is not within strict tolerance of a legitimate culinary fraction,
+ * returns null so it can be formatted as a clean decimal.
+ *
+ * @param {number} val
+ * @param {boolean} improper
+ * @returns {string|null}
+ */
+export function formatCulinaryFraction(val, improper = false) {
+  if (val === null || val === undefined || isNaN(val)) return null;
+  const num = Number(val);
+  if (!isFinite(num)) return null;
+
+  const isNeg = num < 0;
+  const abs = Math.abs(num);
+  const whole = Math.floor(abs);
+  const frac = abs - whole;
+
+  // Near whole number
+  if (frac < 0.005) {
+    if (whole === 0 && frac > 0.0001) return null; // tiny non-zero decimal
+    return (isNeg ? '-' : '') + whole.toString();
+  }
+  if (frac > 0.995) {
+    return (isNeg ? '-' : '') + (whole + 1).toString();
+  }
+
+  // 1. Common culinary thirds (1/3 ~ 0.3333, 2/3 ~ 0.6667) within 0.015 tolerance
+  if (Math.abs(frac - 1 / 3) < 0.015) {
+    if (improper && whole > 0) return `${isNeg ? '-' : ''}${whole * 3 + 1}/3`;
+    const wStr = whole > 0 ? `${whole} ` : '';
+    return `${isNeg ? '-' : ''}${wStr}1/3`;
+  }
+  if (Math.abs(frac - 2 / 3) < 0.015) {
+    if (improper && whole > 0) return `${isNeg ? '-' : ''}${whole * 3 + 2}/3`;
+    const wStr = whole > 0 ? `${whole} ` : '';
+    return `${isNeg ? '-' : ''}${wStr}2/3`;
+  }
+
+  // 2. Standard culinary binary fractions: halves (1/2), quarters (1/4, 3/4), eighths (1/8, 3/8, 5/8, 7/8)
+  const standardDenoms = [2, 4, 8];
+  for (const denom of standardDenoms) {
+    const numerator = Math.round(frac * denom);
+    if (numerator <= 0 || numerator >= denom) continue;
+    const diff = Math.abs(frac - numerator / denom);
+    if (diff < 0.012) {
+      const gcd = (a, b) => (b === 0 ? a : gcd(b, a % b));
+      const g = gcd(numerator, denom);
+      const reducedNum = numerator / g;
+      const reducedDenom = denom / g;
+      if (improper && whole > 0) {
+        return `${isNeg ? '-' : ''}${whole * reducedDenom + reducedNum}/${reducedDenom}`;
+      }
+      const wStr = whole > 0 ? `${whole} ` : '';
+      return `${isNeg ? '-' : ''}${wStr}${reducedNum}/${reducedDenom}`;
+    }
+  }
+
+  // 3. Exact 16ths: represents exact tablespoons (e.g. 13 tbsp -> 13/16 cup).
+  // Strictly requires diff < 0.002 (so continuous values like 34 mL or 50 mL NEVER produce 16ths!)
+  const num16 = Math.round(frac * 16);
+  if (num16 > 0 && num16 < 16) {
+    const diff16 = Math.abs(frac - num16 / 16);
+    if (diff16 < 0.002) {
+      const gcd = (a, b) => (b === 0 ? a : gcd(b, a % b));
+      const g = gcd(num16, 16);
+      const reducedNum = num16 / g;
+      const reducedDenom = 16 / g;
+      if (improper && whole > 0) {
+        return `${isNeg ? '-' : ''}${whole * reducedDenom + reducedNum}/${reducedDenom}`;
+      }
+      const wStr = whole > 0 ? `${whole} ` : '';
+      return `${isNeg ? '-' : ''}${wStr}${reducedNum}/${reducedDenom}`;
+    }
+  }
+
+  return null;
+}
+
 export function formatNumber(val, decimals = 'auto', categoryId = null) {
   if (val === null || val === undefined || isNaN(val)) return '';
   const num = Number(val);
@@ -665,12 +748,14 @@ export function formatNumber(val, decimals = 'auto', categoryId = null) {
 
   // 1. Fractions (Mixed) mode (e.g. 1 3/8, 1/2)
   if (decimals === 'fraction') {
-    return toFraction(num, 32, false);
+    const maxDenom = categoryId === 'cooking' ? 16 : 32;
+    return toFraction(num, maxDenom, false);
   }
 
   // 2. Fractions (Improper) mode (e.g. 11/8, 3/2)
   if (decimals === 'fraction_improper') {
-    return toFraction(num, 32, true);
+    const maxDenom = categoryId === 'cooking' ? 16 : 32;
+    return toFraction(num, maxDenom, true);
   }
 
   // 3. Exact (Full Precision) mode: unrounded calculation with clean IEEE 754 precision
@@ -702,10 +787,10 @@ export function formatNumber(val, decimals = 'auto', categoryId = null) {
     return parseFloat(clean.toFixed(2)).toString();
   }
 
-  // Cooking measurements in auto mode naturally format as practical culinary mixed fractions (e.g. 13 tbsp -> 13/16 cup)
+  // Cooking measurements in auto mode naturally format as practical culinary mixed fractions
   if (categoryId === 'cooking') {
-    const fracStr = toFraction(clean, 32, false);
-    if (fracStr && (fracStr.includes('/') || isFractionLike(fracStr))) {
+    const fracStr = formatCulinaryFraction(clean, false);
+    if (fracStr) {
       return fracStr;
     }
   }
@@ -726,9 +811,32 @@ export function formatNumber(val, decimals = 'auto', categoryId = null) {
 }
 
 /**
+ * Helper to format teaspoon quantities cleanly:
+ * 1 -> '1 tsp'
+ * 2 -> '2 tsp'
+ * 0.5 -> '1/2 tsp'
+ * 1.5 -> '1 1/2 tsp'
+ * 2.5 -> '2 1/2 tsp'
+ * 0.25 -> '1/4 tsp'
+ * 0.75 -> '3/4 tsp'
+ */
+function formatTsp(tsp) {
+  if (tsp === 1) return '1 tsp';
+  if (tsp === 2) return '2 tsp';
+  if (tsp === 0.5) return '1/2 tsp';
+  if (tsp === 1.5) return '1 1/2 tsp';
+  if (tsp === 2.5) return '2 1/2 tsp';
+  if (tsp === 0.25) return '1/4 tsp';
+  if (tsp === 0.75) return '3/4 tsp';
+  if (tsp <= 0.15 && tsp > 0) return '1/8 tsp (pinch)';
+  return `${tsp} tsp`;
+}
+
+/**
  * Calculates a practical kitchen compound breakdown for cooking measurements.
  * Converts odd fractional measures into real-world drawer measuring tools.
  * e.g.:
+ * - 34 mL -> "2 tbsp + 1 tsp" (exact kitchen spoons!)
  * - 13/16 cup (13 tbsp) -> "3/4 cup + 1 tbsp"
  * - 5/16 cup (5 tbsp) -> "1/4 cup + 1 tbsp"
  * - 7/16 cup (7 tbsp) -> "1/4 cup + 3 tbsp"
@@ -750,95 +858,160 @@ export function getCookingCompoundMeasure(value, toUnitId, categoryId = 'cooking
 
   // 1. Result in US Cups
   if (toUnitId === 'cup_us') {
-    // 1 cup = 16 tablespoons
     const totalTbsp = value * 16;
     const roundedTbsp = Math.round(totalTbsp * 1000) / 1000;
 
-    // Must be close to a half or whole tablespoon (within 0.03 tbsp tolerance)
-    const nearestHalf = Math.round(roundedTbsp * 2) / 2;
-    if (Math.abs(roundedTbsp - nearestHalf) > 0.03) {
+    // A. Sub-1/4 cup (< 4 tbsp / under ~60 mL):
+    // In a kitchen, measuring cups do not measure under 1/4 cup.
+    // Cooks ALWAYS reach for measuring spoons (tablespoons and teaspoons)!
+    if (roundedTbsp < 3.85) {
+      // If at least 1 tbsp
+      if (roundedTbsp >= 0.85) {
+        let wholeTbsp = Math.floor(roundedTbsp);
+        let remTbsp = roundedTbsp - wholeTbsp;
+        let remTsp = Math.round(remTbsp * 3 * 2) / 2; // nearest half teaspoon
+        if (remTsp === 3) {
+          wholeTbsp += 1;
+          remTsp = 0;
+        }
+
+        if (wholeTbsp > 0 && remTsp === 0) return `${wholeTbsp} tbsp`;
+        if (wholeTbsp === 0 && remTsp > 0) return formatTsp(remTsp);
+        return `${wholeTbsp} tbsp + ${formatTsp(remTsp)}`;
+      }
+
+      // Sub-tablespoon (< 15 mL): measure in teaspoons / pinches
+      const totalTsp = Math.round(roundedTbsp * 3 * 2) / 2;
+      if (totalTsp > 0) {
+        return formatTsp(totalTsp);
+      }
       return null;
     }
 
-    const wholeCups = Math.floor(nearestHalf / 16);
-    const remTbsp = nearestHalf % 16;
+    // B. Measurements >= 1/4 cup (>= 4 tbsp):
+    const wholeCups = Math.floor(value);
+    const remCups = value - wholeCups;
+    const remTbsp = remCups * 16;
 
-    // Standard cup fraction thresholds: 3/4 (12 tbsp), 1/2 (8 tbsp), 1/4 (4 tbsp)
+    // Check for clean single-tool standard cups (within 0.1 tbsp tolerance ~ 1/3 tsp)
+    if (wholeCups > 0 && (remTbsp < 0.1 || remTbsp > 15.9)) {
+      return null; // clean whole cups (1 cup, 2 cups, etc.)
+    }
+    if (Math.abs(remTbsp - 12) < 0.1) {
+      return wholeCups > 0 ? `${wholeCups} 3/4 cups` : null; // clean 3/4 cup
+    }
+    if (Math.abs(remTbsp - 16 * 2 / 3) < 0.1) {
+      return wholeCups > 0 ? `${wholeCups} 2/3 cups` : null; // clean 2/3 cup
+    }
+    if (Math.abs(remTbsp - 8) < 0.1) {
+      return wholeCups > 0 ? `${wholeCups} 1/2 cups` : null; // clean 1/2 cup
+    }
+    if (Math.abs(remTbsp - 16 / 3) < 0.1) {
+      return wholeCups > 0 ? `${wholeCups} 1/3 cups` : null; // clean 1/3 cup
+    }
+    if (Math.abs(remTbsp - 4) < 0.1) {
+      return wholeCups > 0 ? `${wholeCups} 1/4 cups` : null; // clean 1/4 cup
+    }
+
+    // Compound cup + spoon measurements:
+    // Determine largest base cup
     let cupFractionStr = '';
-    let standardCupTbsp = 0;
+    let baseCupTbsp = 0;
 
     if (remTbsp >= 12) {
       cupFractionStr = '3/4 cup';
-      standardCupTbsp = 12;
+      baseCupTbsp = 12;
     } else if (remTbsp >= 8) {
       cupFractionStr = '1/2 cup';
-      standardCupTbsp = 8;
+      baseCupTbsp = 8;
     } else if (remTbsp >= 4) {
       cupFractionStr = '1/4 cup';
-      standardCupTbsp = 4;
+      baseCupTbsp = 4;
     }
 
-    const leftoverTbsp = remTbsp - standardCupTbsp;
-
-    // If it's an exact clean cup fraction (1/4, 1/2, 3/4) or exact whole cup without leftover tbsp, no compound needed
-    if (leftoverTbsp === 0) {
-      return null;
+    const leftoverTbsp = remTbsp - baseCupTbsp;
+    let spoonTbsp = Math.floor(leftoverTbsp);
+    let spoonRemTbsp = leftoverTbsp - spoonTbsp;
+    let spoonTsp = Math.round(spoonRemTbsp * 3 * 2) / 2; // nearest half teaspoon
+    if (spoonTsp === 3) {
+      spoonTbsp += 1;
+      spoonTsp = 0;
     }
 
+    // Assemble parts
     const parts = [];
     if (wholeCups === 1) parts.push('1 cup');
     else if (wholeCups > 1) parts.push(`${wholeCups} cups`);
 
     if (cupFractionStr) parts.push(cupFractionStr);
 
-    if (leftoverTbsp === 1) parts.push('1 tbsp');
-    else if (leftoverTbsp === 2) parts.push('2 tbsp');
-    else if (leftoverTbsp === 3) parts.push('3 tbsp');
-    else if (leftoverTbsp === 0.5) parts.push('1 1/2 tsp');
-    else if (leftoverTbsp === 1.5) parts.push('1 tbsp + 1 1/2 tsp');
-    else if (leftoverTbsp === 2.5) parts.push('2 tbsp + 1 1/2 tsp');
+    if (spoonTbsp > 0) {
+      parts.push(`${spoonTbsp} tbsp`);
+    }
+    if (spoonTsp > 0) {
+      parts.push(formatTsp(spoonTsp));
+    }
 
     return parts.length > 0 ? parts.join(' + ') : null;
   }
 
   // 2. Result in US Tablespoons
   if (toUnitId === 'tbsp_us') {
-    // 1 tablespoon = 3 teaspoons
-    const totalTsp = value * 3;
-    const roundedTsp = Math.round(totalTsp * 1000) / 1000;
+    // Large whole cups: e.g. 16 tbsp -> 1 cup, 32 tbsp -> 2 cups
+    if (value >= 16 && Math.abs(value % 16) < 0.05) {
+      const cups = Math.round(value / 16);
+      return cups === 1 ? '1 cup (16 tbsp)' : `${cups} cups (${Math.round(value)} tbsp)`;
+    }
 
-    // Must be close to a half or whole teaspoon (within 0.03 tsp tolerance)
-    const nearestHalfTsp = Math.round(roundedTsp * 2) / 2;
-    if (Math.abs(roundedTsp - nearestHalfTsp) > 0.03) {
+    let wholeTbsp = Math.floor(value);
+    let remTbsp = value - wholeTbsp;
+    let remTsp = Math.round(remTbsp * 3 * 2) / 2;
+    if (remTsp === 3) {
+      wholeTbsp += 1;
+      remTsp = 0;
+    }
+
+    // If clean whole tablespoons without teaspoons, no compound needed
+    if (remTsp === 0) {
       return null;
     }
 
-    const wholeTbsp = Math.floor(nearestHalfTsp / 3);
-    const leftoverTsp = nearestHalfTsp % 3;
-
-    // If clean whole tablespoons, no compound needed
-    if (leftoverTsp === 0) {
-      return null;
+    if (wholeTbsp === 0) {
+      return formatTsp(remTsp);
     }
-
-    const parts = [];
-    if (wholeTbsp === 1) parts.push('1 tbsp');
-    else if (wholeTbsp > 1) parts.push(`${wholeTbsp} tbsp`);
-
-    if (leftoverTsp === 1) parts.push('1 tsp');
-    else if (leftoverTsp === 2) parts.push('2 tsp');
-    else if (leftoverTsp === 0.5) parts.push('1/2 tsp');
-    else if (leftoverTsp === 1.5) parts.push('1 1/2 tsp');
-    else if (leftoverTsp === 2.5) parts.push('2 1/2 tsp');
-
-    return parts.length > 0 ? parts.join(' + ') : null;
+    return `${wholeTbsp} tbsp + ${formatTsp(remTsp)}`;
   }
 
-  // 3. Result in Sticks of Butter
+  // 3. Result in US Teaspoons
+  if (toUnitId === 'tsp_us') {
+    // If >= 3 tsp, provide tablespoon context: e.g. 3 tsp = 1 tbsp, 6 tsp = 2 tbsp
+    if (value >= 3) {
+      let wholeTbsp = Math.floor(value / 3);
+      let remTsp = Math.round((value % 3) * 2) / 2;
+      if (remTsp === 3) {
+        wholeTbsp += 1;
+        remTsp = 0;
+      }
+      if (remTsp === 0) {
+        return `${wholeTbsp} tbsp (${Math.round(value)} tsp)`;
+      }
+      return `${wholeTbsp} tbsp + ${formatTsp(remTsp)}`;
+    }
+    // Sub-tablespoon: e.g. 1/2 tsp, 1 1/2 tsp
+    const rounded = Math.round(value * 2) / 2;
+    if (rounded === 0.5) return '1/2 tsp';
+    if (rounded === 1.5) return '1 1/2 tsp';
+    if (rounded === 2.5) return '2 1/2 tsp';
+    if (value <= 0.2) return '1/8 tsp (pinch)';
+    if (value <= 0.35) return '1/4 tsp';
+    return null;
+  }
+
+  // 4. Result in Sticks of Butter
   if (toUnitId === 'stick_butter') {
     const totalTbsp = value * 8;
     const roundedTbsp = Math.round(totalTbsp * 1000) / 1000;
-    if (Math.abs(roundedTbsp - Math.round(roundedTbsp)) < 0.03) {
+    if (Math.abs(roundedTbsp - Math.round(roundedTbsp)) < 0.05) {
       const tbsp = Math.round(roundedTbsp);
       if (tbsp === 4) return '4 tbsp (1/4 cup)';
       if (tbsp === 8) return '8 tbsp (1/2 cup)';

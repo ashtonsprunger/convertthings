@@ -449,6 +449,31 @@ describe('ConvertThings UI Integration', () => {
     expect(screen.queryByLabelText(/Conversion equations/i)).not.toBeInTheDocument();
   });
 
+  test('converts 34 mL to cups in Kitchen View as real spoons (2 tbsp + 1 tsp) and never 5/32', () => {
+    window.history.replaceState({}, '', '/convert/34-ml-to-cup_us');
+    render(<App />);
+
+    const fromInput = screen.getByLabelText(/Enter value in/i);
+    expect(fromInput.value).toBe('34');
+
+    // In Kitchen Mode (default ON):
+    const kitchenOutput = screen.getByLabelText(/Converted value in.*2 tbsp \+ 1 tsp/i);
+    expect(kitchenOutput).toHaveTextContent('2 tbsp + 1 tsp');
+    expect(kitchenOutput).not.toHaveTextContent('5/32');
+
+    // Subtitle displays clean decimal (0.1437 cup), NEVER 5/32
+    expect(kitchenOutput).toHaveTextContent(/0\.14.*cup/i);
+    expect(kitchenOutput).not.toHaveTextContent('/32');
+
+    // Toggle to Standard View:
+    const kitchenToggle = screen.getByLabelText(/Toggle Kitchen Mode/i);
+    fireEvent.click(kitchenToggle);
+
+    const toInput = screen.getByLabelText(/Converted value in/i);
+    expect(toInput.value).not.toBe('5/32');
+    expect(parseFloat(toInput.value)).toBeCloseTo(0.1437, 3);
+  });
+
   test('respects stored decimal precision on initial mount and page reload', () => {
     window.localStorage.setItem('ct-precision', JSON.stringify('2'));
     render(<App />);
