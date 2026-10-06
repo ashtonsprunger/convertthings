@@ -69,7 +69,7 @@ function App() {
   const [fromValue, setFromValue] = useState(initial.fromValue);
   const [toValue, setToValue] = useState(() => {
     const res = convertUnits(initial.fromValue, initial.categoryId, initial.fromUnitId, initial.toUnitId);
-    return res !== null ? formatNumber(res, initialPrecision) : '';
+    return res !== null ? formatNumber(res, initialPrecision, initial.categoryId) : '';
   });
   const [lastEdited, setLastEdited] = useState('from');
 
@@ -116,7 +116,7 @@ function App() {
       }
       const result = convertUnits(Number(val), catId, fUnitId, tUnitId);
       if (result !== null) {
-        setToValue(formatNumber(result, prec));
+        setToValue(formatNumber(result, prec, catId));
       } else {
         setToValue('');
       }
@@ -264,7 +264,7 @@ function App() {
     historyTimeoutRef.current = setTimeout(() => {
       const res = convertUnits(Number(newVal), categoryId, fromUnitId, toUnitId);
       if (res !== null) {
-        recordHistory(categoryId, fromUnitId, toUnitId, newVal, formatNumber(res, precision));
+        recordHistory(categoryId, fromUnitId, toUnitId, newVal, formatNumber(res, precision, categoryId));
       }
     }, 1200);
   };
@@ -279,7 +279,7 @@ function App() {
     }
     const reverseRes = convertUnits(Number(newVal), categoryId, toUnitId, fromUnitId);
     if (reverseRes !== null) {
-      const formatted = formatNumber(reverseRes, precision);
+      const formatted = formatNumber(reverseRes, precision, categoryId);
       setFromValue(formatted);
 
       if (historyTimeoutRef.current) clearTimeout(historyTimeoutRef.current);
@@ -308,7 +308,7 @@ function App() {
     if (lastEdited === 'to' && toValue !== '' && toValue !== null && !isNaN(toValue)) {
       const reverseRes = convertUnits(Number(toValue), categoryId, toUnitId, newFromId);
       if (reverseRes !== null) {
-        setFromValue(formatNumber(reverseRes, precision));
+        setFromValue(formatNumber(reverseRes, precision, categoryId));
       }
     } else {
       performCalculation(fromValue, categoryId, newFromId, toUnitId, precision);
@@ -342,7 +342,7 @@ function App() {
       if (toValue !== '' && toValue !== null && !isNaN(toValue)) {
         const reverseRes = convertUnits(Number(toValue), categoryId, toUnitId, fromUnitId);
         if (reverseRes !== null) {
-          setFromValue(formatNumber(reverseRes, newPrec));
+          setFromValue(formatNumber(reverseRes, newPrec, categoryId));
         }
       }
     } else {

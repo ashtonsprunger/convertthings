@@ -345,15 +345,11 @@ export function ConversionCard({
   })();
 
   const relOperator = isApproximate ? '≈' : '=';
-  const sentenceVerb = isApproximate ? 'is approximately' : 'equals';
 
   // Formatted equation strings for copy footer and formula
   const formulaEquation = formulaDetails.equation || formula || 'Direct calculation';
   const formulaInstruction = formulaDetails.instruction || '';
   const symbolText = `${displayFromValue} ${fromUnit.symbol} ${relOperator} ${displayToValue} ${toUnit.symbol}`;
-  const fromName = parseFloat(fromValue) === 1 ? fromUnit.name : (fromUnit.plural || fromUnit.name);
-  const toName = parseFloat(toValue) === 1 ? toUnit.name : (toUnit.plural || toUnit.name);
-  const sentenceText = `${displayFromValue} ${fromName} ${sentenceVerb} ${displayToValue} ${toName}`;
 
   // Helper to colorize formula equation components cleanly
   const renderFormulaContent = (text, fromSym) => {
@@ -860,7 +856,7 @@ export function ConversionCard({
         </div>
       </div>
 
-      {/* 2-Row Uniform Conversion Results & Copy Section */}
+      {/* Unified Conversion Result & Formula Card */}
       <div className="ct-footnote-card" aria-label="Conversion equations">
         {/* Row 1: Primary Equation (Hero) */}
         <div className="ct-footnote-row ct-footnote-row-hero">
@@ -891,54 +887,49 @@ export function ConversionCard({
           </div>
         </div>
 
-        {/* Row 2: Secondary Full Sentence */}
+        {/* Row 2: Invariant Educational Formula & Instruction (Replaces redundant sentence) */}
         <div
-          className="ct-footnote-row ct-footnote-row-sub ct-copyable-row"
-          onClick={() => onCopy(sentenceText, 'Sentence copied to clipboard!')}
-          title="Click to copy full sentence"
+          className="ct-footnote-row ct-footnote-row-sub ct-copyable-row ct-formula-row"
+          onClick={() => {
+            const copyContent = formulaInstruction
+              ? `${formulaEquation} (${formulaInstruction})`
+              : formulaEquation;
+            onCopy(copyContent, 'Formula copied to clipboard!');
+          }}
+          title="Click to copy formula"
           role="button"
           tabIndex={0}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
-              onCopy(sentenceText, 'Sentence copied to clipboard!');
+              const copyContent = formulaInstruction
+                ? `${formulaEquation} (${formulaInstruction})`
+                : formulaEquation;
+              onCopy(copyContent, 'Formula copied to clipboard!');
             }
           }}
-          aria-label="Copy sentence equation"
+          aria-label="Conversion formula"
         >
-          <div className="ct-footnote-val ct-val-sub" title={sentenceText}>
-            <span className="ct-fn-from">
-              <span className="ct-fn-num">{displayFromValue}</span>{' '}
-              <span className="ct-fn-sym">{fromName}</span>
-            </span>
-            <span className="ct-fn-operator"> {sentenceVerb} </span>
-            <span className="ct-fn-to">
-              <span className="ct-fn-num">{displayToValue}</span>{' '}
-              <span className="ct-fn-sym">{toName}</span>
-            </span>
+          <div className="ct-formula-inner">
+            <div className="ct-formula-main">
+              <span className="ct-formula-strip-label">
+                <span className="ct-formula-strip-fx">f(x)</span>
+                <span>Formula</span>
+              </span>
+              <span className="ct-formula-strip-val" title={formulaEquation}>
+                {renderFormulaContent(formulaEquation, fromUnit.symbol)}
+              </span>
+            </div>
+            {formulaInstruction && (
+              <div className="ct-formula-instruction">
+                <span className="ct-formula-instruction-bullet">↳</span>
+                <span className="ct-formula-instruction-text">
+                  {renderInstructionContent(formulaInstruction, fromUnit)}
+                </span>
+              </div>
+            )}
           </div>
         </div>
-      </div>
-
-      {/* Distinct Invariant Formula Educational Strip */}
-      <div className="ct-formula-strip" aria-label="Conversion formula">
-        <div className="ct-formula-strip-top">
-          <span className="ct-formula-strip-label">
-            <span className="ct-formula-strip-fx">f(x)</span>
-            <span>Formula</span>
-          </span>
-          <span className="ct-formula-strip-val" title={formulaEquation}>
-            {renderFormulaContent(formulaEquation, fromUnit.symbol)}
-          </span>
-        </div>
-        {formulaInstruction && (
-          <div className="ct-formula-strip-instruction">
-            <span className="ct-formula-instruction-bullet">↳</span>
-            <span className="ct-formula-instruction-text">
-              {renderInstructionContent(formulaInstruction, fromUnit)}
-            </span>
-          </div>
-        )}
       </div>
     </div>
   );

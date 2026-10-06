@@ -283,7 +283,7 @@ describe('ConvertThings UI Integration', () => {
 
     // Default 1 meter to feet (approximation)
     expect(equationCard).toHaveTextContent(/1 m (≈|=)/i);
-    expect(equationCard).toHaveTextContent(/1 meter (is approximately|equals)/i);
+    expect(equationCard).toHaveTextContent(/Multiply the meter value/i);
 
     // Linked result number copy button inside hero equation
     const copyNumBtn = screen.getByRole('button', { name: /Copy result number/i });
@@ -296,7 +296,7 @@ describe('ConvertThings UI Integration', () => {
     });
     expect(copyNumBtn).toHaveClass('copied');
 
-    // Formula educational reference strip
+    // Formula educational reference row inside card
     const formulaStrip = screen.getByLabelText(/Conversion formula/i);
     expect(formulaStrip).toBeInTheDocument();
     expect(formulaStrip).toHaveTextContent(/Formula/i);
@@ -311,10 +311,9 @@ describe('ConvertThings UI Integration', () => {
     // The input value remains the raw unformatted string '1000000' so HTML type="number" stays valid
     expect(fromInput.value).toBe('1000000');
 
-    // But the equation hero readout and sentence are formatted with commas
+    // But the equation hero readout is formatted with commas
     const equationCard = screen.getByLabelText(/Conversion equations/i);
     expect(equationCard).toHaveTextContent(/1,000,000 m/i);
-    expect(equationCard).toHaveTextContent(/1,000,000 meters/i);
 
     // Converted feet value (~3,280,839.9) has commas in the display readout
     expect(equationCard).toHaveTextContent(/3,280,839/i);
@@ -343,8 +342,8 @@ describe('ConvertThings UI Integration', () => {
 
     // The user-typed value 407 MUST remain 407 (NOT corrupted to 407.04!)
     expect(toInput.value).toBe('407');
-    // The calculated fromInput should update with full precision
-    expect(Number(fromInput.value)).toBeCloseTo(33.91666667, 5);
+    // The calculated fromInput should update with smart auto precision
+    expect(Number(fromInput.value)).toBeCloseTo(33.9167, 3);
   });
 
   test('renders footer legal links and opens legal modal', () => {
@@ -491,20 +490,17 @@ describe('ConvertThings UI Integration', () => {
     Element.prototype.getBoundingClientRect = origGetBoundingClientRect;
   });
 
-  test('clicking copy on result number or sentence triggers toast notification, and formula is displayed', async () => {
+  test('clicking copy on result number or formula triggers toast notification', async () => {
     render(<App />);
     const copyNumBtn = screen.getByRole('button', { name: /Copy result number/i });
     fireEvent.click(copyNumBtn);
 
     expect(await screen.findByText(/copied to clipboard!/i)).toBeInTheDocument();
 
-    const copySentenceBtn = screen.getByRole('button', { name: /Copy sentence equation/i });
-    fireEvent.click(copySentenceBtn);
+    const copyFormulaBtn = screen.getByRole('button', { name: /Conversion formula/i });
+    fireEvent.click(copyFormulaBtn);
 
-    expect(await screen.findByText(/Sentence copied to clipboard!/i)).toBeInTheDocument();
-
-    // Educational formula strip is displayed as reference
-    expect(screen.getByLabelText(/Conversion formula/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Formula copied to clipboard!/i)).toBeInTheDocument();
   });
 
   test('increments and decrements input values to next whole number using stepper buttons', () => {

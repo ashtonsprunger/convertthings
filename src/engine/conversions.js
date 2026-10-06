@@ -369,30 +369,59 @@ export function convertUnits(value, categoryId, fromUnitId, toUnitId) {
 
 /**
  * Format numeric output cleanly without floating point weirdness (e.g. 0.30000000000000004).
- * Supports automatic precision or fixed decimal places.
+ * Supports smart adaptive precision ('auto') or user-specified fixed decimal places.
+ *
+ * In 'auto' mode:
+ * - Extremely large (>= 1e14) or tiny (< 1e-6) numbers format in scientific notation.
+ * - Small numbers (< 1) guarantee at least 4 significant figures so they NEVER round to 0.
+ * - Standard human-scale numbers (< 1,000) round to at most 4 decimals, stripping trailing zeros.
+ * - Large numbers (>= 1,000) cap at 2 decimal places to maintain readability.
+ * - Temperature conversions round to at most 2 decimal places for clean display.
  */
-export function formatNumber(val, decimals = 'auto') {
+export function formatNumber(val, decimals = 'auto', categoryId = null) {
   if (val === null || val === undefined || isNaN(val)) return '';
   const num = Number(val);
   if (!isFinite(num)) return num.toString();
 
-  // If fixed precision requested
+  // If fixed precision requested by user (e.g. '2', '4', '6', '8')
   if (decimals !== 'auto') {
     return num.toFixed(Number(decimals)).replace(/(\.[0-9]*[1-9])0+$|\.0*$/, '$1');
   }
 
-  // Handle zero
+  // Handle exact zero
   if (num === 0) return '0';
 
-  // Scientific notation for very small or huge values
   const abs = Math.abs(num);
+
+  // Scientific notation for very small or huge values (< 1e-6 or >= 1e14)
   if (abs >= 1e14 || (abs < 1e-6 && abs > 0)) {
-    return num.toExponential(6).replace(/(\.[0-9]*[1-9])0+e/, '$1e');
+    return num.toExponential(4).replace(/(\.[0-9]*[1-9])0+e/, '$1e').replace(/\.0+e/, 'e');
   }
 
-  // Round to max 8 significant decimal places to eliminate IEEE 754 precision bugs
-  const rounded = parseFloat(num.toPrecision(10));
-  return rounded.toString();
+  // Clean IEEE 754 precision artifacts (e.g. 0.30000000000000004 -> 0.3)
+  const clean = parseFloat(num.toPrecision(12));
+  if (Number.isInteger(clean)) {
+    return clean.toString();
+  }
+
+  // Category-specific sensible formatting (e.g. temperature)
+  if (categoryId === 'temperature') {
+    return parseFloat(clean.toFixed(2)).toString();
+  }
+
+  // Small values (< 1): guarantee at least 4 significant figures so it NEVER truncates to 0
+  // e.g. 0.000123456 -> 0.0001235 (4 sig figs), 0.000001 -> 0.000001
+  if (abs < 1) {
+    return parseFloat(clean.toPrecision(4)).toString();
+  }
+
+  // Large values (>= 1,000): cap at 2 decimal places
+  if (abs >= 1000) {
+    return parseFloat(clean.toFixed(2)).toString();
+  }
+
+  // Standard human-scale numbers (1 <= abs < 1,000): cap at 4 decimal places
+  return parseFloat(clean.toFixed(4)).toString();
 }
 
 /**
@@ -553,7 +582,7 @@ export function getFormulaDetails(categoryId, fromUnitId, toUnitId) {
       }
     }
 
-    const formattedFactor = formatNumber(factor);
+    const formattedFactor = parseFloat(Number(factor).toPrecision(10)).toString();
     return {
       equation: `${to.symbol} = ${from.symbol} × ${formattedFactor}`,
       instruction: `Multiply the ${from.name.toLowerCase()} value by ${formattedFactor}`,

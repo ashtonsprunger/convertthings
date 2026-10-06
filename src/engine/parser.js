@@ -225,7 +225,7 @@ export function parseConversionQuery(rawQuery) {
               toUnit: toCand.unit,
               value: val,
               result: converted,
-              formattedResult: formatNumber(converted),
+              formattedResult: formatNumber(converted, 'auto', catId),
               query: rawQuery,
             };
           }
@@ -278,7 +278,7 @@ export function parseConversionQuery(rawQuery) {
               toUnit: uTo,
               value: val,
               result: converted,
-              formattedResult: formatNumber(converted),
+              formattedResult: formatNumber(converted, 'auto', targetCat),
               query: rawQuery,
             };
           }
@@ -327,7 +327,7 @@ export function parseConversionQuery(rawQuery) {
               toUnit: uTo,
               value: val,
               result: converted,
-              formattedResult: formatNumber(converted),
+              formattedResult: formatNumber(converted, 'auto', targetCat),
               query: rawQuery,
             };
           }
@@ -374,7 +374,7 @@ export function parseConversionQuery(rawQuery) {
             toUnit: targetUnit,
             value: val,
             result: converted,
-            formattedResult: formatNumber(converted),
+            formattedResult: formatNumber(converted, 'auto', catId),
             query: rawQuery,
           };
         }

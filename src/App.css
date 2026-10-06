@@ -1541,8 +1541,53 @@
 }
 
 /* ==========================================
-   Separate Formula Educational Reference Strip
+   Integrated Formula Educational Reference Row
    ========================================== */
+.ct-formula-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 1rem;
+  background-color: var(--bg-card-subtle);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  border-radius: 0 0 calc(var(--radius-md) - 1px) calc(var(--radius-md) - 1px);
+}
+
+.ct-formula-row:hover {
+  background-color: var(--bg-hover);
+}
+
+.ct-formula-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  text-align: center;
+}
+
+.ct-formula-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem 0.75rem;
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.ct-formula-instruction {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.45rem;
+  font-size: 0.825rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  line-height: 1.4;
+  flex-wrap: wrap;
+}
+
 .ct-formula-strip {
   display: flex;
   flex-direction: column;
@@ -1601,7 +1646,7 @@
   font-size: 0.88rem;
   font-weight: 600;
   color: var(--text-main);
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
   white-space: normal;
   word-break: break-word;
@@ -1636,6 +1681,15 @@
 }
 
 @media (max-width: 480px) {
+  .ct-formula-row {
+    padding: 0.55rem 0.75rem;
+  }
+  .ct-formula-inner {
+    gap: 0.25rem;
+  }
+  .ct-formula-instruction {
+    font-size: 0.75rem;
+  }
   .ct-formula-strip {
     padding: 0.5rem 0.75rem;
     gap: 0.3rem;
