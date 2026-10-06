@@ -171,7 +171,7 @@ function App() {
           canonical.rel = 'canonical';
           document.head.appendChild(canonical);
         }
-        canonical.href = `https://convertthings.com${routePath === '/' ? '' : routePath}`;
+        canonical.href = `https://www.convertthings.com${routePath === '/' ? '' : routePath}`;
 
         // Sync browser URL path without page reloading
         if (window.location.pathname !== routePath) {

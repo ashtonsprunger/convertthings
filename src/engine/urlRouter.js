@@ -181,7 +181,7 @@ export function getAllUnitPairs() {
  * @param {string} domain Base domain (defaults to 'https://convertthings.com')
  * @returns {string} Valid XML sitemap string
  */
-export function generateSitemapXml(domain = 'https://convertthings.com') {
+export function generateSitemapXml(domain = 'https://www.convertthings.com') {
   const today = new Date().toISOString().split('T')[0];
   const pairs = getAllUnitPairs();
 

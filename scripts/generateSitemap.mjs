@@ -11,7 +11,7 @@ import { generateSitemapXml, getAllUnitPairs } from '../src/engine/urlRouter.js'
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const xml = generateSitemapXml('https://convertthings.com');
+const xml = generateSitemapXml('https://www.convertthings.com');
 const outputPath = path.resolve(__dirname, '../public/sitemap.xml');
 
 fs.writeFileSync(outputPath, xml, 'utf8');

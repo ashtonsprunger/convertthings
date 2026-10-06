@@ -89,11 +89,11 @@ describe('ConvertThings URL Router', () => {
   });
 
   test('generates valid XML sitemap containing homepage, categories, and unit pairs', () => {
-    const xml = generateSitemapXml('https://convertthings.com');
+    const xml = generateSitemapXml('https://www.convertthings.com');
     expect(xml).toContain('<?xml version="1.0" encoding="UTF-8"?>');
     expect(xml).toContain('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">');
-    expect(xml).toContain('<loc>https://convertthings.com/</loc>');
-    expect(xml).toContain('<loc>https://convertthings.com/length</loc>');
-    expect(xml).toContain('<loc>https://convertthings.com/convert/m-to-ft</loc>');
+    expect(xml).toContain('<loc>https://www.convertthings.com/</loc>');
+    expect(xml).toContain('<loc>https://www.convertthings.com/length</loc>');
+    expect(xml).toContain('<loc>https://www.convertthings.com/convert/m-to-ft</loc>');
   });
 });
