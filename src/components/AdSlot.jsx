@@ -30,15 +30,51 @@ export function AdSlot({
     // Only attempt to request ad if we have a valid slotId and haven't pushed yet
     if (!slotId || pushedRef.current) return;
 
-    try {
-      if (typeof window !== 'undefined') {
-        (window.adsbygoogle = window.adsbygoogle || []).push({});
-        pushedRef.current = true;
+    const el = adRef.current;
+    if (!el) return;
+
+    const tryPush = () => {
+      if (pushedRef.current) return;
+      // AdSense throws "No slot size for availableWidth=0" if element or parent has width 0 (e.g. display: none on mobile)
+      if (el.offsetWidth > 0 && el.offsetHeight > 0) {
+        try {
+          if (typeof window !== 'undefined') {
+            (window.adsbygoogle = window.adsbygoogle || []).push({});
+            pushedRef.current = true;
+          }
+        } catch (e) {
+          console.debug('AdSense unit push skipped or blocked:', e);
+        }
       }
-    } catch (e) {
-      // In development, test environments, or when blocked by AdBlock, silently ignore
-      console.debug('AdSense unit push skipped or blocked:', e);
+    };
+
+    // If container already has a positive layout width, push immediately
+    if (el.offsetWidth > 0 && el.offsetHeight > 0) {
+      tryPush();
+      return;
     }
+
+    // Otherwise, monitor via ResizeObserver until container becomes visible (e.g. desktop viewport)
+    let observer = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.contentRect && entry.contentRect.width > 0) {
+            tryPush();
+            if (pushedRef.current && observer) {
+              observer.disconnect();
+            }
+          }
+        }
+      });
+      observer.observe(el);
+    }
+
+    return () => {
+      if (observer) {
+        observer.disconnect();
+      }
+    };
   }, [slotId]);
 
   // If no slotId configured yet, keep container hidden to maintain clean UI
