@@ -491,12 +491,12 @@ describe('ConvertThings UI Integration', () => {
     Element.prototype.getBoundingClientRect = origGetBoundingClientRect;
   });
 
-  test('clicking copy button on symbol or sentence triggers toast notification, and formula is displayed', async () => {
+  test('clicking copy on result number or sentence triggers toast notification, and formula is displayed', async () => {
     render(<App />);
-    const copySymbolBtn = screen.getByRole('button', { name: /Copy symbol equation/i });
-    fireEvent.click(copySymbolBtn);
+    const copyNumBtn = screen.getByRole('button', { name: /Copy result number/i });
+    fireEvent.click(copyNumBtn);
 
-    expect(await screen.findByText(/Equation copied to clipboard!/i)).toBeInTheDocument();
+    expect(await screen.findByText(/copied to clipboard!/i)).toBeInTheDocument();
 
     const copySentenceBtn = screen.getByRole('button', { name: /Copy sentence equation/i });
     fireEvent.click(copySentenceBtn);

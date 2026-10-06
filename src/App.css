@@ -499,6 +499,26 @@
   color: #ffffff;
 }
 
+@media (max-width: 600px) {
+  .ct-nav-arrow {
+    display: none;
+  }
+  .ct-category-nav-inner {
+    padding: 0.2rem 0.35rem;
+    gap: 0;
+  }
+  .ct-category-scroll {
+    padding: 0 0.2rem;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+  }
+  .ct-category-tab {
+    scroll-snap-align: center;
+    padding: 0.45rem 0.7rem;
+    font-size: 0.8rem;
+  }
+}
+
 /* ==========================================
    Favorites Bar
    ========================================== */
@@ -1142,9 +1162,9 @@
 
   .ct-unit-block {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 44px;
+    grid-template-columns: minmax(0, 1fr) 38px;
     grid-template-rows: 1fr 1fr;
-    gap: 4px 8px;
+    gap: 4px 6px;
     align-items: stretch;
     width: 100%;
     min-width: 0;
@@ -1195,6 +1215,37 @@
   }
 }
 
+@media (max-width: 480px) {
+  .ct-card {
+    padding: 1rem 0.75rem;
+  }
+
+  .ct-number-input {
+    padding: 0.75rem 0.35rem 0.75rem 0.65rem;
+  }
+
+  .ct-number-input.ct-font-large {
+    font-size: 1.35rem;
+  }
+
+  .ct-number-input.ct-font-medium {
+    font-size: 1.15rem;
+  }
+
+  .ct-number-input.ct-font-compact {
+    font-size: 0.95rem;
+  }
+
+  .ct-integrated-unit-btn {
+    padding: 0.5rem 0.6rem;
+    gap: 0.25rem;
+  }
+
+  .ct-integrated-unit-symbol {
+    font-size: 0.9rem;
+  }
+}
+
 /* ==========================================
    2-Row Result & Equation Card
    ========================================== */
@@ -1237,19 +1288,35 @@
   border-bottom: none;
 }
 
+.ct-footnote-row-sub.ct-copyable-row {
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  border-radius: 0 0 calc(var(--radius-md) - 1px) calc(var(--radius-md) - 1px);
+}
+
+.ct-footnote-row-sub.ct-copyable-row:hover {
+  background-color: var(--bg-hover);
+}
+
+.ct-footnote-row-sub.ct-copyable-row:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
 .ct-footnote-val {
   font-family: var(--font-sans);
   color: var(--text-main);
   text-align: center;
   margin: 0 auto;
-  padding: 0 4.25rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ct-footnote-row-hero .ct-footnote-val {
-  overflow: visible;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem 0.4rem;
+  max-width: 100%;
+  word-break: break-word;
+  line-height: 1.45;
 }
 
 .ct-val-hero {
@@ -1453,63 +1520,23 @@
   border-color: #065f46 transparent transparent transparent;
 }
 
-.ct-footnote-copy-btn {
-  position: absolute;
-  right: 1rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.35rem;
-  padding: 0.3rem 0.65rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-color);
-  background-color: var(--bg-card-subtle);
-  color: var(--text-secondary);
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  flex-shrink: 0;
-  min-width: 68px;
-}
-
-.ct-footnote-row-hero .ct-footnote-copy-btn {
-  background-color: var(--bg-card);
-}
-
-.ct-footnote-copy-btn:hover {
-  background-color: var(--primary);
-  color: #ffffff;
-  border-color: var(--primary);
-  transform: translateY(-1px);
-}
-
-.ct-footnote-copy-btn:active {
-  transform: translateY(0);
-}
-
 @media (max-width: 480px) {
   .ct-footnote-row {
-    padding: 0.55rem 0.75rem;
+    padding: 0.55rem 0.65rem;
   }
   .ct-footnote-row-hero {
-    padding: 0.75rem 0.75rem;
-    min-height: 50px;
+    padding: 0.65rem 0.65rem;
+    min-height: 48px;
   }
   .ct-val-hero {
     font-size: 1.15rem;
   }
   .ct-val-sub {
-    font-size: 0.82rem;
+    font-size: 0.85rem;
   }
   .ct-footnote-val {
-    padding: 0 3.25rem;
-  }
-  .ct-footnote-copy-btn {
-    right: 0.75rem;
-    padding: 0.25rem 0.5rem;
-    font-size: 0.7rem;
-    min-width: 58px;
+    padding: 0;
+    gap: 0.2rem 0.3rem;
   }
 }
 
@@ -1534,8 +1561,9 @@
 .ct-formula-strip-top {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem 0.75rem;
   min-width: 0;
+  flex-wrap: wrap;
 }
 
 .ct-formula-strip-label {
@@ -1573,11 +1601,11 @@
   font-size: 0.88rem;
   font-weight: 600;
   color: var(--text-main);
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.45;
 }
 
 .ct-formula-strip-instruction {

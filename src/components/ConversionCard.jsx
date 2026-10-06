@@ -864,7 +864,7 @@ export function ConversionCard({
       <div className="ct-footnote-card" aria-label="Conversion equations">
         {/* Row 1: Primary Equation (Hero) */}
         <div className="ct-footnote-row ct-footnote-row-hero">
-          <span className="ct-footnote-val ct-val-hero" title={symbolText}>
+          <div className="ct-footnote-val ct-val-hero" title={symbolText}>
             <span className="ct-fn-from">
               <span className="ct-fn-num">{displayFromValue}</span>{' '}
               <span className="ct-fn-sym">{fromUnit.symbol}</span>
@@ -888,22 +888,25 @@ export function ConversionCard({
               </button>{' '}
               <span className="ct-fn-sym">{toUnit.symbol}</span>
             </span>
-          </span>
-          <button
-            type="button"
-            className="ct-footnote-copy-btn"
-            onClick={() => onCopy(symbolText, 'Equation copied to clipboard!')}
-            title="Copy symbol equation"
-            aria-label="Copy symbol equation"
-          >
-            <Icon name="Copy" size={13} />
-            <span>Copy</span>
-          </button>
+          </div>
         </div>
 
         {/* Row 2: Secondary Full Sentence */}
-        <div className="ct-footnote-row ct-footnote-row-sub">
-          <span className="ct-footnote-val ct-val-sub" title={sentenceText}>
+        <div
+          className="ct-footnote-row ct-footnote-row-sub ct-copyable-row"
+          onClick={() => onCopy(sentenceText, 'Sentence copied to clipboard!')}
+          title="Click to copy full sentence"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              onCopy(sentenceText, 'Sentence copied to clipboard!');
+            }
+          }}
+          aria-label="Copy sentence equation"
+        >
+          <div className="ct-footnote-val ct-val-sub" title={sentenceText}>
             <span className="ct-fn-from">
               <span className="ct-fn-num">{displayFromValue}</span>{' '}
               <span className="ct-fn-sym">{fromName}</span>
@@ -913,17 +916,7 @@ export function ConversionCard({
               <span className="ct-fn-num">{displayToValue}</span>{' '}
               <span className="ct-fn-sym">{toName}</span>
             </span>
-          </span>
-          <button
-            type="button"
-            className="ct-footnote-copy-btn"
-            onClick={() => onCopy(sentenceText, 'Sentence copied to clipboard!')}
-            title="Copy sentence equation"
-            aria-label="Copy sentence equation"
-          >
-            <Icon name="Copy" size={13} />
-            <span>Copy</span>
-          </button>
+          </div>
         </div>
       </div>
 
