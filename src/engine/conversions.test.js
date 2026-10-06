@@ -202,6 +202,12 @@ describe('toFraction', () => {
     expect(toFraction(-1.5)).toBe('-1 1/2');
     expect(toFraction(-0.25)).toBe('-1/4');
   });
+
+  test('returns 0 for values too small to represent as standard fractions without claiming 1/1', () => {
+    expect(toFraction(3 / 384)).toBe('0'); // 3 dashes in cup (0.0078125)
+    expect(toFraction(1 / 384)).toBe('0'); // 1 dash in cup (0.002604)
+    expect(toFraction(0.001)).toBe('0');
+  });
 });
 
 describe('parseFractionString', () => {
@@ -339,6 +345,8 @@ describe('formatNumber precision modes', () => {
     expect(formatNumber(0.33333333, 'auto', 'cooking')).toBe('1/3'); // 1 tsp to tbsp
     expect(formatNumber(16, 'auto', 'cooking')).toBe('16');        // 1 cup to tbsp
     expect(formatNumber(3, 'auto', 'cooking')).toBe('3');          // 1 tbsp to tsp
+    expect(formatNumber(3 / 384, 'auto', 'cooking')).toBe('0.007813'); // 3 dashes to cup: never 1/1
+    expect(formatNumber(1 / 384, 'auto', 'cooking')).toBe('0.002604'); // 1 dash to cup: never 1/1
   });
 });
 

@@ -418,7 +418,7 @@ export function toFraction(val, maxDenominator = 32, improper = false) {
   }
 
   // Search standard binary denominators: 2, 4, 8, 16, 32
-  let bestNum = 1;
+  let bestNum = 0;
   let bestDenom = 1;
   let minDiff = Infinity;
 
@@ -705,7 +705,7 @@ export function formatNumber(val, decimals = 'auto', categoryId = null) {
   // Cooking measurements in auto mode naturally format as practical culinary mixed fractions (e.g. 13 tbsp -> 13/16 cup)
   if (categoryId === 'cooking') {
     const fracStr = toFraction(clean, 32, false);
-    if (fracStr && (fracStr !== '0' || clean === 0)) {
+    if (fracStr && (fracStr.includes('/') || isFractionLike(fracStr))) {
       return fracStr;
     }
   }

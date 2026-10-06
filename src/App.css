@@ -842,9 +842,6 @@
 
 .ct-number-input.ct-fraction-input {
   letter-spacing: 0.035em;
-  font-variant-numeric: diagonal-fractions;
-  -webkit-font-feature-settings: "frac" 1;
-  font-feature-settings: "frac" 1;
 }
 
 /* Remove number spinners */
@@ -1332,16 +1329,6 @@
 
 .ct-fn-num {
   font-weight: 800;
-  letter-spacing: 0.015em;
-  font-variant-numeric: diagonal-fractions;
-  -webkit-font-feature-settings: "frac" 1;
-  font-feature-settings: "frac" 1;
-}
-
-.ct-kitchen-val {
-  font-variant-numeric: diagonal-fractions;
-  -webkit-font-feature-settings: "frac" 1;
-  font-feature-settings: "frac" 1;
 }
 
 .ct-fn-sym {
