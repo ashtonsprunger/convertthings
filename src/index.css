@@ -32,15 +32,27 @@
   --success: #10b981;
   --danger: #ef4444;
 
-  /* Live Readout Highlight Tokens */
-  --readout-bg: #f8fafc;
-  --readout-border: #e2e8f0;
-  --readout-from-text: #0e7490;
-  --readout-from-bg: #ecfeff;
-  --readout-from-border: #a5f3fc;
+  /* Conversion Input Highlight Tokens (Light Mode) */
+  /* Electric Violet (From / Source Input) */
+  --from-primary: #8b5cf6;
+  --from-primary-hover: #7c3aed;
+  --from-primary-light: #f5f3ff;
+  --from-primary-glow: rgba(139, 92, 246, 0.22);
+  --readout-from-text: #6d28d9;
+  --readout-from-bg: #f5f3ff;
+  --readout-from-border: #8b5cf6;
+
+  /* Vivid Emerald (To / Target Output) */
+  --to-primary: #10b981;
+  --to-primary-hover: #059669;
+  --to-primary-light: #ecfdf5;
+  --to-primary-glow: rgba(16, 185, 129, 0.22);
   --readout-to-text: #065f46;
   --readout-to-bg: #ecfdf5;
-  --readout-to-border: #a7f3d0;
+  --readout-to-border: #10b981;
+
+  --readout-bg: #f8fafc;
+  --readout-border: #e2e8f0;
 
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -52,8 +64,9 @@
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
   --shadow-card: 0 10px 25px -5px rgba(15, 23, 42, 0.06), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
 
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  --font-brand: 'Outfit', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;
 }
@@ -87,15 +100,27 @@
   --success: #34d399;
   --danger: #f87171;
 
-  /* Live Readout Highlight Tokens (Dark Mode) */
-  --readout-bg: #131d31;
-  --readout-border: #1e293b;
-  --readout-from-text: #22d3ee;
-  --readout-from-bg: rgba(6, 182, 212, 0.18);
-  --readout-from-border: rgba(6, 182, 212, 0.45);
+  /* Conversion Input Highlight Tokens (Dark Mode) */
+  /* Electric Violet (From / Source Input - Dark Mode) */
+  --from-primary: #a78bfa;
+  --from-primary-hover: #c4b5fd;
+  --from-primary-light: rgba(139, 92, 246, 0.16);
+  --from-primary-glow: rgba(139, 92, 246, 0.35);
+  --readout-from-text: #c4b5fd;
+  --readout-from-bg: rgba(139, 92, 246, 0.2);
+  --readout-from-border: rgba(167, 139, 250, 0.65);
+
+  /* Vivid Emerald (To / Target Output - Dark Mode) */
+  --to-primary: #34d399;
+  --to-primary-hover: #6ee7b7;
+  --to-primary-light: rgba(16, 185, 129, 0.16);
+  --to-primary-glow: rgba(16, 185, 129, 0.35);
   --readout-to-text: #6ee7b7;
   --readout-to-bg: rgba(16, 185, 129, 0.2);
-  --readout-to-border: rgba(16, 185, 129, 0.4);
+  --readout-to-border: rgba(52, 211, 153, 0.65);
+
+  --readout-bg: #131d31;
+  --readout-border: #1e293b;
 
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);

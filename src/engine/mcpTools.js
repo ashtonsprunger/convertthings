@@ -149,7 +149,7 @@ function resolveUnit(token, categoryHint = null) {
   }
 
   // Fallback to universal parser lookup
-  return findUnit(token);
+  return findUnit(token, categoryHint);
 }
 
 /**

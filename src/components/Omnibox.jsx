@@ -35,7 +35,7 @@ export function Omnibox({ onSelectConversion }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (parsed && parsed.success) {
+    if (parsed && parsed.success && parsed.formattedResult) {
       onSelectConversion({
         categoryId: parsed.categoryId,
         fromUnitId: parsed.fromUnit.id,
@@ -85,7 +85,7 @@ export function Omnibox({ onSelectConversion }) {
       </form>
 
       {/* Live parsing result preview */}
-      {parsed && parsed.success && (
+      {parsed && parsed.success && parsed.formattedResult && (
         <div
           className="ct-omnibox-preview"
           onClick={() => {

@@ -35,7 +35,7 @@ export function parseRoute(pathname = '', search = '') {
         const toToken = pairMatch[3];
 
         const fromMatch = findUnit(fromToken);
-        const toMatch = findUnit(toToken);
+        const toMatch = findUnit(toToken, fromMatch ? fromMatch.categoryId : null);
 
         if (fromMatch && toMatch) {
           let categoryId = null;

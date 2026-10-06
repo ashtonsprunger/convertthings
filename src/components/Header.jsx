@@ -6,11 +6,13 @@ export function Header({ theme, onToggleTheme, onShare }) {
     <header className="ct-header">
       <div className="ct-header-inner">
         <div className="ct-brand">
-          <div className="ct-logo-badge" aria-hidden="true">
-            <Icon name="BrandLogo" size={28} />
+          <div className="ct-logo-wrap" aria-hidden="true">
+            <Icon name="BrandLogo" size={36} />
           </div>
           <div className="ct-brand-text">
-            <h1 className="ct-brand-title">ConvertThings</h1>
+            <h1 className="ct-brand-title" aria-label="ConvertThings">
+              <span className="ct-brand-name">Convert</span><span className="ct-brand-accent">Things</span>
+            </h1>
             <span className="ct-brand-tagline">Fast, Accurate Unit Converter</span>
           </div>
         </div>

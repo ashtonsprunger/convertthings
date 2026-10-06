@@ -1,4 +1,6 @@
 import React from 'react';
+import logoBlack from '../assets/logo-black.png';
+import logoWhite from '../assets/logo-white.png';
 
 export function Icon({ name, size = 18, className = '', ...props }) {
   const defaultProps = {
@@ -238,19 +240,24 @@ export function Icon({ name, size = 18, className = '', ...props }) {
       );
     case 'BrandLogo':
       return (
-        <svg
-          width={size}
-          height={size}
-          viewBox="0 0 48 48"
-          fill="currentColor"
+        <span
           className={`ct-icon ct-icon-BrandLogo ${className}`}
+          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: size, height: size }}
           {...props}
         >
-          {/* Top Arrow: pointing right */}
-          <path d="M5 14h26V8l12 8.75L31 25.5v-6H5z" />
-          {/* Bottom Arrow: pointing left */}
-          <path d="M43 34H17v6L5 31.25 17 22.5v6h26z" />
-        </svg>
+          <img
+            src={logoBlack}
+            alt="ConvertThings logo"
+            className="ct-logo-img ct-logo-light"
+            style={{ width: size, height: size, objectFit: 'contain' }}
+          />
+          <img
+            src={logoWhite}
+            alt="ConvertThings logo"
+            className="ct-logo-img ct-logo-dark"
+            style={{ width: size, height: size, objectFit: 'contain' }}
+          />
+        </span>
       );
     case 'BookOpen':
       return (

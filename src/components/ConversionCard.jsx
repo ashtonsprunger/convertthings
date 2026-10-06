@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { Icon } from './Icons';
 import {
   getUnitsForCategory,
@@ -34,12 +34,54 @@ export function ConversionCard({
   const [showFromDropdown, setShowFromDropdown] = useState(false);
   const [showToDropdown, setShowToDropdown] = useState(false);
   const [isSwapping, setIsSwapping] = useState(false);
+  const [copiedNumber, setCopiedNumber] = useState(false);
 
   const fromDropdownRef = useRef(null);
   const toDropdownRef = useRef(null);
+  const fromBlockRef = useRef(null);
+  const toBlockRef = useRef(null);
+  const swapBtnRef = useRef(null);
+  const activeAnimationsRef = useRef([]);
+  const prevUnitsRef = useRef({ fromUnitId, toUnitId });
+  const isInitialMount = useRef(true);
+  const copiedTimeoutRef = useRef(null);
 
   const formulaDetails = getFormulaDetails(categoryId, fromUnit.id, toUnit.id);
   const formula = formulaDetails.equation || getFormulaString(categoryId, fromUnit.id, toUnit.id);
+
+  // Reset copied state when values change
+  useEffect(() => {
+    setCopiedNumber(false);
+  }, [fromValue, toValue, fromUnitId, toUnitId]);
+
+  // Clean up timer and running animations on unmount
+  useEffect(() => {
+    return () => {
+      if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
+      activeAnimationsRef.current.forEach((a) => {
+        try {
+          a.cancel();
+        } catch (e) {
+          // ignore
+        }
+      });
+      activeAnimationsRef.current = [];
+    };
+  }, []);
+
+  const handleCopyNumber = (e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    const valToCopy = toValue || '0';
+    onCopy(valToCopy, `${valToCopy} copied to clipboard!`);
+    setCopiedNumber(true);
+    if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
+    copiedTimeoutRef.current = setTimeout(() => {
+      setCopiedNumber(false);
+    }, 1600);
+  };
 
   // Close dropdowns on click outside
   useEffect(() => {
@@ -106,11 +148,158 @@ export function ConversionCard({
     }
   };
 
+  // Physical Swap Animation using FLIP delta and Web Animations API
+  const triggerSwapAnimation = () => {
+    setShowFromDropdown(false);
+    setShowToDropdown(false);
+
+    const fromEl = fromBlockRef.current;
+    const toEl = toBlockRef.current;
+    if (!fromEl || !toEl) return;
+
+    // Check for user reduced motion preference
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (prefersReducedMotion) return;
+
+    const fromRect = fromEl.getBoundingClientRect();
+    const toRect = toEl.getBoundingClientRect();
+    const dx = toRect.left - fromRect.left;
+    const dy = toRect.top - fromRect.top;
+
+    // Exit safely in jsdom or unrendered layout
+    if (dx === 0 && dy === 0) return;
+    if (typeof fromEl.animate !== 'function') return;
+
+    // Cancel any previous in-flight swap animations
+    activeAnimationsRef.current.forEach((a) => {
+      try {
+        a.cancel();
+      } catch (e) {
+        // ignore
+      }
+    });
+    activeAnimationsRef.current = [];
+
+    setIsSwapping(true);
+
+    const isMobile = Math.abs(dy) > Math.abs(dx);
+    const arcX = isMobile ? 12 : 0;
+    const arcY = isMobile ? 0 : -8;
+
+    // From element (Left / Top slot): starts at previous To position (dx, dy), glides to resting (0, 0)
+    const fromAnim = fromEl.animate(
+      [
+        {
+          transform: `translate3d(${dx}px, ${dy}px, 0) scale(1)`,
+          zIndex: 12,
+        },
+        {
+          transform: `translate3d(${dx * 0.5 + arcX}px, ${dy * 0.5 + arcY}px, 0) scale(1.025)`,
+          zIndex: 12,
+          offset: 0.5,
+        },
+        {
+          transform: 'translate3d(0, 0, 0) scale(1)',
+          zIndex: 12,
+        },
+      ],
+      {
+        duration: 320,
+        easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+        fill: 'none',
+      }
+    );
+
+    // To element (Right / Bottom slot): starts at previous From position (-dx, -dy), glides to resting (0, 0)
+    const toAnim = toEl.animate(
+      [
+        {
+          transform: `translate3d(${-dx}px, ${-dy}px, 0) scale(1)`,
+          zIndex: 6,
+          opacity: 0.95,
+        },
+        {
+          transform: `translate3d(${-dx * 0.5 - arcX}px, ${-dy * 0.5 - arcY}px, 0) scale(0.975)`,
+          zIndex: 6,
+          opacity: 0.9,
+          offset: 0.5,
+        },
+        {
+          transform: 'translate3d(0, 0, 0) scale(1)',
+          zIndex: 6,
+          opacity: 1,
+        },
+      ],
+      {
+        duration: 320,
+        easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+        fill: 'none',
+      }
+    );
+
+    activeAnimationsRef.current.push(fromAnim, toAnim);
+
+    // Center Swap Button animation
+    if (swapBtnRef.current && typeof swapBtnRef.current.animate === 'function') {
+      const btnAnim = swapBtnRef.current.animate(
+        [
+          { transform: 'rotate(0deg) scale(1)' },
+          { transform: 'rotate(90deg) scale(1.18)', offset: 0.5 },
+          { transform: 'rotate(180deg) scale(1)' },
+        ],
+        {
+          duration: 320,
+          easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+          fill: 'none',
+        }
+      );
+      activeAnimationsRef.current.push(btnAnim);
+    }
+
+    const handleAnimDone = () => {
+      setIsSwapping(false);
+      activeAnimationsRef.current = [];
+    };
+
+    fromAnim.onfinish = handleAnimDone;
+    fromAnim.oncancel = handleAnimDone;
+
+    // Safety timeout in case window backgrounded or tab hidden
+    setTimeout(() => {
+      setIsSwapping(false);
+    }, 360);
+  };
+
+  // Detect unit swaps (from button, Alt+S, favorites) and trigger physical animation
+  useLayoutEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      prevUnitsRef.current = { fromUnitId, toUnitId };
+      return;
+    }
+
+    const prev = prevUnitsRef.current;
+    const isSwap =
+      prev.fromUnitId === toUnitId &&
+      prev.toUnitId === fromUnitId &&
+      fromUnitId !== toUnitId;
+
+    prevUnitsRef.current = { fromUnitId, toUnitId };
+
+    if (isSwap) {
+      triggerSwapAnimation();
+    }
+  }, [fromUnitId, toUnitId]);
+
   // Swap animation trigger
   const handleSwapClick = () => {
-    setIsSwapping(true);
+    setShowFromDropdown(false);
+    setShowToDropdown(false);
     onSwap();
-    setTimeout(() => setIsSwapping(false), 300);
   };
 
   // Field selection helper (selects all text on focus and click)
@@ -401,9 +590,12 @@ export function ConversionCard({
       </div>
 
       {/* Main Conversion Grid with Up/Down Steppers */}
-      <div className="ct-conversion-grid">
-        {/* FIRST UNIT BLOCK (FROM - CYAN) */}
-        <div className="ct-unit-block ct-unit-block-from">
+      <div className={`ct-conversion-grid ${isSwapping ? 'ct-grid-swapping' : ''}`}>
+        {/* FIRST UNIT BLOCK (FROM - VIOLET) */}
+        <div
+          ref={fromBlockRef}
+          className={`ct-unit-block ct-unit-block-from ${isSwapping ? 'ct-is-swapping' : ''}`}
+        >
           <div className="ct-stepper-outer ct-stepper-outer-up">
             <button
               type="button"
@@ -532,18 +724,26 @@ export function ConversionCard({
         {/* CENTER SWAP BUTTON */}
         <div className="ct-swap-column">
           <button
+            ref={swapBtnRef}
             type="button"
-            className="ct-swap-btn"
+            className={`ct-swap-btn ${isSwapping ? 'ct-swap-active' : ''}`}
             onClick={handleSwapClick}
             title="Swap units (Alt + S)"
             aria-label="Swap from and to units"
           >
-            <Icon name="Swap" size={20} className={isSwapping ? 'ct-swap-icon-spin' : ''} />
+            <Icon
+              name="Swap"
+              size={20}
+              className={isSwapping && typeof swapBtnRef.current?.animate !== 'function' ? 'ct-swap-icon-spin' : ''}
+            />
           </button>
         </div>
 
         {/* SECOND UNIT BLOCK (TO - EMERALD) */}
-        <div className="ct-unit-block ct-unit-block-to">
+        <div
+          ref={toBlockRef}
+          className={`ct-unit-block ct-unit-block-to ${isSwapping ? 'ct-is-swapping' : ''}`}
+        >
           <div className="ct-stepper-outer ct-stepper-outer-up">
             <button
               type="button"
@@ -681,7 +881,21 @@ export function ConversionCard({
             </span>
             <span className="ct-fn-operator"> {relOperator} </span>
             <span className="ct-fn-to">
-              <span className="ct-fn-num">{toValue || '0'}</span>{' '}
+              <button
+                type="button"
+                className={`ct-num-copy-btn ${copiedNumber ? 'copied' : ''}`}
+                onClick={handleCopyNumber}
+                title={copiedNumber ? 'Copied to clipboard!' : `Copy ${toValue || '0'}`}
+                aria-label={copiedNumber ? 'Number copied to clipboard' : `Copy result number ${toValue || '0'}`}
+              >
+                <span className="ct-fn-num">{toValue || '0'}</span>
+                <span className="ct-num-copy-icon" aria-hidden="true">
+                  <Icon name={copiedNumber ? 'Check' : 'Copy'} size={13} />
+                </span>
+                <span className="ct-num-tooltip" role="tooltip" aria-hidden="true">
+                  {copiedNumber ? 'Copied!' : (toValue && toValue.toString().length <= 10 ? `Copy ${toValue}` : 'Copy number')}
+                </span>
+              </button>{' '}
               <span className="ct-fn-sym">{toUnit.symbol}</span>
             </span>
           </span>
@@ -730,7 +944,7 @@ export function ConversionCard({
             <span className="ct-formula-strip-fx">f(x)</span>
             <span>Formula</span>
           </span>
-          <span className="ct-formula-strip-val ct-font-mono" title={formulaEquation}>
+          <span className="ct-formula-strip-val" title={formulaEquation}>
             {renderFormulaContent(formulaEquation, fromUnit.symbol)}
           </span>
         </div>

@@ -70,6 +70,7 @@ function App() {
     const res = convertUnits(initial.fromValue, initial.categoryId, initial.fromUnitId, initial.toUnitId);
     return res !== null ? formatNumber(res, initialPrecision) : '';
   });
+  const [lastEdited, setLastEdited] = useState('from');
 
   const [precision, setPrecision] = useLocalStorage('ct-precision', initialPrecision);
   const [favorites, setFavorites] = useLocalStorage('ct-favorites', DEFAULT_FAVORITES);
@@ -227,6 +228,7 @@ function App() {
 
   // Handle From Value changes
   const handleFromValueChange = (newVal) => {
+    setLastEdited('from');
     setFromValue(newVal);
     performCalculation(newVal, categoryId, fromUnitId, toUnitId, precision);
 
@@ -242,6 +244,7 @@ function App() {
 
   // Handle To Value changes (Reverse calculation)
   const handleToValueChange = (newVal) => {
+    setLastEdited('to');
     setToValue(newVal);
     if (newVal === '' || newVal === null || isNaN(newVal)) {
       setFromValue('');
@@ -265,6 +268,7 @@ function App() {
     const catDef = CATEGORIES.find((c) => c.id === newCatId);
     if (!catDef) return;
 
+    setLastEdited('from');
     setCategoryId(newCatId);
     setFromUnitId(catDef.defaultFrom);
     setToUnitId(catDef.defaultTo);
@@ -274,17 +278,26 @@ function App() {
   // Switch From unit
   const handleFromUnitChange = (newFromId) => {
     setFromUnitId(newFromId);
-    performCalculation(fromValue, categoryId, newFromId, toUnitId, precision);
+    if (lastEdited === 'to' && toValue !== '' && toValue !== null && !isNaN(toValue)) {
+      const reverseRes = convertUnits(Number(toValue), categoryId, toUnitId, newFromId);
+      if (reverseRes !== null) {
+        setFromValue(formatNumber(reverseRes, precision));
+      }
+    } else {
+      performCalculation(fromValue, categoryId, newFromId, toUnitId, precision);
+    }
   };
 
   // Switch To unit
   const handleToUnitChange = (newToId) => {
     setToUnitId(newToId);
     performCalculation(fromValue, categoryId, fromUnitId, newToId, precision);
+    setLastEdited('from');
   };
 
   // Swap units (⇄) and invert equation values
   const handleSwap = () => {
+    setLastEdited('from');
     const nextFrom = toUnitId;
     const nextTo = fromUnitId;
     const nextVal = (toValue !== '' && toValue !== null && !isNaN(toValue)) ? toValue : fromValue;
@@ -298,11 +311,21 @@ function App() {
   // Change precision
   const handlePrecisionChange = (newPrec) => {
     setPrecision(newPrec);
-    performCalculation(fromValue, categoryId, fromUnitId, toUnitId, newPrec);
+    if (lastEdited === 'to') {
+      if (toValue !== '' && toValue !== null && !isNaN(toValue)) {
+        const reverseRes = convertUnits(Number(toValue), categoryId, toUnitId, fromUnitId);
+        if (reverseRes !== null) {
+          setFromValue(formatNumber(reverseRes, newPrec));
+        }
+      }
+    } else {
+      performCalculation(fromValue, categoryId, fromUnitId, toUnitId, newPrec);
+    }
   };
 
   // Handle Natural Language / Omnibox selection
   const handleSelectConversion = ({ categoryId: cId, fromUnitId: fId, toUnitId: tId, value: val }) => {
+    setLastEdited('from');
     setCategoryId(cId);
     setFromUnitId(fId);
     setToUnitId(tId);

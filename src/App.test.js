@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import App from './App';
 import {
   convertUnits,
@@ -105,6 +105,67 @@ describe('Natural Language Omnibox Parser', () => {
     expect(res.fromUnit.id).toBe('lb');
     expect(res.toUnit.id).toBe('kg');
   });
+
+  test('strictly rejects incompatible cross-category conversions', () => {
+    expect(parseConversionQuery('1 feet to se')).toBeNull();
+    expect(parseConversionQuery('1 feet to sec')).toBeNull();
+    expect(parseConversionQuery('1 feet to seconds')).toBeNull();
+    expect(parseConversionQuery('100 km to kg')).toBeNull();
+    expect(parseConversionQuery('100 km kg')).toBeNull();
+    expect(parseConversionQuery('50 mph to celsius')).toBeNull();
+    expect(parseConversionQuery('100 gb to psi')).toBeNull();
+  });
+
+  test('prevents premature prefix matching on short single-letter or invalid 2-letter tokens', () => {
+    expect(parseConversionQuery('100 a')).toBeNull();
+    expect(parseConversionQuery('100 p')).toBeNull();
+    expect(parseConversionQuery('100 e')).toBeNull();
+    expect(parseConversionQuery('100 u')).toBeNull();
+  });
+
+  test('correctly converts valid single and multi-token queries', () => {
+    const resM = parseConversionQuery('1 feet to m');
+    expect(resM).not.toBeNull();
+    expect(resM.fromUnit.id).toBe('ft');
+    expect(resM.toUnit.id).toBe('m');
+    expect(parseFloat(resM.result)).toBeCloseTo(0.3048, 4);
+
+    const resIn = parseConversionQuery('1 feet to in');
+    expect(resIn).not.toBeNull();
+    expect(resIn.toUnit.id).toBe('in');
+    expect(parseFloat(resIn.result)).toBeCloseTo(12, 5);
+    expect(resIn.formattedResult).toBe('12');
+
+    const resTemp = parseConversionQuery('100 c to f');
+    expect(resTemp).not.toBeNull();
+    expect(resTemp.result).toBe(212);
+
+    const resCook = parseConversionQuery('2 c to tbsp');
+    expect(resCook).not.toBeNull();
+    expect(resCook.fromUnit.id).toBe('cup_us');
+    expect(resCook.toUnit.id).toBe('tbsp_us');
+    expect(parseFloat(resCook.result)).toBeCloseTo(32, 5);
+    expect(resCook.formattedResult).toBe('32');
+  });
+
+  test('parses natural language "convert" and "how many" queries', () => {
+    const resHowMany = parseConversionQuery('how many miles in 100 km');
+    expect(resHowMany).not.toBeNull();
+    expect(resHowMany.fromUnit.id).toBe('km');
+    expect(resHowMany.toUnit.id).toBe('mi');
+    expect(parseFloat(resHowMany.result)).toBeCloseTo(62.137, 2);
+
+    const resFeetInMeter = parseConversionQuery('how many feet in a meter');
+    expect(resFeetInMeter).not.toBeNull();
+    expect(resFeetInMeter.fromUnit.id).toBe('m');
+    expect(resFeetInMeter.toUnit.id).toBe('ft');
+    expect(parseFloat(resFeetInMeter.result)).toBeCloseTo(3.2808, 3);
+
+    const resConvert = parseConversionQuery('convert 100 km to miles');
+    expect(resConvert).not.toBeNull();
+    expect(resConvert.fromUnit.id).toBe('km');
+    expect(resConvert.toUnit.id).toBe('mi');
+  });
 });
 
 describe('ConvertThings UI Integration', () => {
@@ -195,7 +256,7 @@ describe('ConvertThings UI Integration', () => {
     expect(screen.getByRole('heading', { level: 3, name: /Frequently Asked Questions/i })).toBeInTheDocument();
   });
 
-  test('displays conversion equations card and separate formula reference strip', () => {
+  test('displays conversion equations card, formula reference strip, and linked result number copy button', async () => {
     render(<App />);
     const equationCard = screen.getByLabelText(/Conversion equations/i);
     expect(equationCard).toBeInTheDocument();
@@ -204,11 +265,49 @@ describe('ConvertThings UI Integration', () => {
     expect(equationCard).toHaveTextContent(/1 m (≈|=)/i);
     expect(equationCard).toHaveTextContent(/1 meter (is approximately|equals)/i);
 
+    // Linked result number copy button inside hero equation
+    const copyNumBtn = screen.getByRole('button', { name: /Copy result number/i });
+    expect(copyNumBtn).toBeInTheDocument();
+    expect(copyNumBtn).toHaveAttribute('title');
+
+    // Click result number copy button
+    await act(async () => {
+      fireEvent.click(copyNumBtn);
+    });
+    expect(copyNumBtn).toHaveClass('copied');
+
     // Formula educational reference strip
     const formulaStrip = screen.getByLabelText(/Conversion formula/i);
     expect(formulaStrip).toBeInTheDocument();
     expect(formulaStrip).toHaveTextContent(/Formula/i);
     expect(formulaStrip).toHaveTextContent(/Multiply the meter value by 3.2808/i);
+  });
+
+  test('preserves user input in second field when changing precision (bidirectional source of truth)', () => {
+    window.history.replaceState({}, '', '/convert/feet-to-inches');
+    render(<App />);
+
+    const precisionSelect = screen.getByLabelText(/Decimal Precision/i);
+    const fromInput = screen.getByLabelText(/Enter value in/i);
+    const toInput = screen.getByLabelText(/Converted value in/i);
+
+    // 1. Set to 2 decimals
+    fireEvent.change(precisionSelect, { target: { value: '2' } });
+
+    // 2. Type 407 into second input (inches)
+    fireEvent.change(toInput, { target: { value: '407' } });
+
+    // 407 in = 33.91666... ft, rounded to 2 decimals is 33.92
+    expect(toInput.value).toBe('407');
+    expect(fromInput.value).toBe('33.92');
+
+    // 3. Switch precision to auto decimals
+    fireEvent.change(precisionSelect, { target: { value: 'auto' } });
+
+    // The user-typed value 407 MUST remain 407 (NOT corrupted to 407.04!)
+    expect(toInput.value).toBe('407');
+    // The calculated fromInput should update with full precision
+    expect(Number(fromInput.value)).toBeCloseTo(33.91666667, 5);
   });
 
   test('renders footer legal links and opens legal modal', () => {
@@ -319,6 +418,40 @@ describe('ConvertThings UI Integration', () => {
 
     // Star should STILL be active because the pair is in favorites regardless of order
     expect(starBtn).toHaveClass('active');
+  });
+
+  test('triggers physical swap animation using Web Animations API when supported', () => {
+    const animateMock = jest.fn().mockReturnValue({
+      onfinish: null,
+      oncancel: null,
+      cancel: jest.fn(),
+    });
+    Element.prototype.animate = animateMock;
+
+    const origGetBoundingClientRect = Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = function () {
+      if (this.classList && this.classList.contains('ct-unit-block-from')) {
+        return { left: 100, top: 200, width: 300, height: 100, right: 400, bottom: 300 };
+      }
+      if (this.classList && this.classList.contains('ct-unit-block-to')) {
+        return { left: 450, top: 200, width: 300, height: 100, right: 750, bottom: 300 };
+      }
+      return { left: 0, top: 0, width: 0, height: 0, right: 0, bottom: 0 };
+    };
+
+    render(<App />);
+
+    const swapButton = screen.getByLabelText(/Swap from and to units/i);
+    fireEvent.click(swapButton);
+
+    // Verify animate was called for fromEl, toEl, and swapBtn
+    expect(animateMock).toHaveBeenCalled();
+    const calls = animateMock.mock.calls;
+    expect(calls.length).toBeGreaterThanOrEqual(2);
+
+    // Clean up mocks
+    delete Element.prototype.animate;
+    Element.prototype.getBoundingClientRect = origGetBoundingClientRect;
   });
 
   test('clicking copy button on symbol or sentence triggers toast notification, and formula is displayed', async () => {
