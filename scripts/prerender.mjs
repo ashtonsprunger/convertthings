@@ -3,13 +3,14 @@
  * Runs after `react-scripts build` to generate pre-rendered static HTML files
  * for all 1,200+ unit pairs, category landing pages, and popular aliases.
  *
- * Guarantees zero-delay indexing for Googlebot, Bing, Twitter Cards, Discord, and iMessage previews.
+ * Guarantees zero-delay indexing for Googlebot, Bing, Twitter Cards, Discord, and iMessage previews,
+ * and eliminates Cumulative Layout Shift (CLS) and LCP delay on mobile devices.
  */
 
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { CATEGORIES } from '../src/engine/conversions.js';
+import { CATEGORIES, getUnit } from '../src/engine/conversions.js';
 import { getAllUnitPairs } from '../src/engine/urlRouter.js';
 import { getSeoMetadata } from '../src/engine/seo.js';
 
@@ -25,7 +26,7 @@ if (!fs.existsSync(indexHtmlPath)) {
 
 const templateHtml = fs.readFileSync(indexHtmlPath, 'utf8');
 
-function renderPageHtml(seo) {
+function renderPageHtml({ seo, fromUnit, toUnit, categoryName }) {
   let html = templateHtml;
 
   // 1. Replace Title
@@ -67,21 +68,78 @@ function renderPageHtml(seo) {
     `<meta name="twitter:description" content="${seo.ogDescription.replace(/"/g, '&quot;')}" />`
   );
 
-  // 6. Inject Server-Side Semantic Fallback inside <div id="root">
-  const staticFallback = `
-    <div id="root">
-      <main class="ct-static-seo-shell" style="padding:2rem 1rem;max-width:880px;margin:0 auto;font-family:system-ui,-apple-system,sans-serif;">
-        <h1 style="font-size:1.85rem;margin-bottom:0.75rem;color:#0f172a;">${seo.h1}</h1>
-        <p style="font-size:1.05rem;line-height:1.6;color:#334155;margin-bottom:1rem;">${seo.description}</p>
+  // 6. Inject Server-Side Semantic App Shell inside <div id="root"> matching actual production layout
+  let contentHtml = '';
+  if (fromUnit && toUnit) {
+    contentHtml = `
+      <div class="ct-card">
+        <div class="ct-footnote-card">
+          <div class="ct-footnote-row ct-footnote-row-hero">
+            <span class="ct-footnote-val ct-val-hero">
+              <span class="ct-fn-from"><span class="ct-fn-num">1</span> <span class="ct-fn-sym">${fromUnit.symbol}</span></span>
+              <span class="ct-fn-operator"> = </span>
+              <span class="ct-fn-to"><span class="ct-fn-num">${seo.baselineAnswer}</span> <span class="ct-fn-sym">${toUnit.symbol}</span></span>
+            </span>
+          </div>
+          <div class="ct-footnote-row ct-footnote-row-sub">
+            <span class="ct-footnote-val ct-val-sub">
+              1 ${fromUnit.name} equals ${seo.baselineAnswer} ${toUnit.plural || toUnit.name}
+            </span>
+          </div>
+        </div>
+      </div>
+      <article class="ct-seo-section">
+        <header class="ct-seo-header">
+          <h1 class="ct-seo-title">${seo.h1}</h1>
+          <p class="ct-seo-lead">${seo.description}</p>
+        </header>
         ${
-          seo.directAnswer
-            ? `<div style="background:#f1f5f9;border-left:4px solid #06b6d4;padding:0.85rem 1.25rem;border-radius:4px;margin-bottom:1rem;">
-                <strong style="color:#0f172a;">Quick Answer:</strong> <span style="font-family:monospace;font-size:1.1rem;font-weight:600;">${seo.directAnswer}</span>
-                ${seo.formulaEquation ? `<br/><span style="font-size:0.9rem;color:#64748b;">Formula: ${seo.formulaEquation}</span>` : ''}
+          seo.formulaEquation
+            ? `<div class="ct-guide-spotlight">
+                <h4 class="ct-spotlight-title">How to Convert ${fromUnit.plural || fromUnit.name} to ${toUnit.plural || toUnit.name} (${fromUnit.symbol} to ${toUnit.symbol})</h4>
+                <p class="ct-spotlight-lead"><strong>1 ${fromUnit.name} (${fromUnit.symbol})</strong> is equal to <strong>${seo.baselineAnswer} ${toUnit.plural || toUnit.name} (${toUnit.symbol})</strong>. ${seo.formulaInstruction || ''}</p>
+                <div class="ct-spotlight-quickfacts">
+                  <div class="ct-spotlight-fact"><span class="ct-fact-label">Quick Answer</span> <span class="ct-fact-value">1 ${fromUnit.symbol} = ${seo.baselineAnswer} ${toUnit.symbol}</span></div>
+                  <div class="ct-spotlight-fact"><span class="ct-fact-label">Formula</span> <span class="ct-fact-value">${seo.formulaEquation}</span></div>
+                </div>
               </div>`
             : ''
         }
-      </main>
+      </article>
+    `.trim();
+  } else {
+    contentHtml = `
+      <article class="ct-seo-section">
+        <header class="ct-seo-header">
+          <h1 class="ct-seo-title">${seo.h1}</h1>
+          <p class="ct-seo-lead">${seo.description}</p>
+        </header>
+      </article>
+    `.trim();
+  }
+
+  const staticFallback = `
+    <div id="root">
+      <div class="ct-app">
+        <header class="ct-header">
+          <div class="ct-header-inner">
+            <a class="ct-brand" href="/" aria-label="ConvertThings Home">
+              <div class="ct-brand-icon">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m16 3 4 4-4 4"/>
+                  <path d="M20 7H4"/>
+                  <path d="m8 21-4-4 4-4"/>
+                  <path d="M4 17h16"/>
+                </svg>
+              </div>
+              <span class="ct-wordmark"><span class="ct-wm-convert">Convert</span><span class="ct-wm-things">Things</span></span>
+            </a>
+          </div>
+        </header>
+        <main class="ct-main">
+          ${contentHtml}
+        </main>
+      </div>
     </div>
   `.trim();
 
@@ -105,7 +163,7 @@ let count = 0;
 // 1. Pre-render Category landing pages (e.g. build/length/index.html)
 CATEGORIES.forEach((cat) => {
   const seo = getSeoMetadata({ categoryId: cat.id });
-  const html = renderPageHtml(seo);
+  const html = renderPageHtml({ seo, categoryName: cat.name });
   writeHtml(path.resolve(buildDir, cat.id, 'index.html'), html);
   count++;
 });
@@ -113,13 +171,15 @@ CATEGORIES.forEach((cat) => {
 // 2. Pre-render All Standard Unit Pairs (e.g. build/convert/lb-to-kg/index.html)
 const pairs = getAllUnitPairs();
 pairs.forEach((pair) => {
+  const fromUnit = getUnit(pair.categoryId, pair.fromUnitId);
+  const toUnit = getUnit(pair.categoryId, pair.toUnitId);
   const seo = getSeoMetadata({
     categoryId: pair.categoryId,
     fromUnitId: pair.fromUnitId,
     toUnitId: pair.toUnitId,
     value: '1',
   });
-  const html = renderPageHtml(seo);
+  const html = renderPageHtml({ seo, fromUnit, toUnit, categoryName: pair.categoryName });
   writeHtml(path.resolve(buildDir, 'convert', `${pair.fromUnitId}-to-${pair.toUnitId}`, 'index.html'), html);
   count++;
 });
@@ -145,13 +205,15 @@ const POPULAR_ALIASES = [
 ];
 
 POPULAR_ALIASES.forEach((alias) => {
+  const fromUnit = getUnit(alias.cat, alias.fromId);
+  const toUnit = getUnit(alias.cat, alias.toId);
   const seo = getSeoMetadata({
     categoryId: alias.cat,
     fromUnitId: alias.fromId,
     toUnitId: alias.toId,
     value: '1',
   });
-  const html = renderPageHtml(seo);
+  const html = renderPageHtml({ seo, fromUnit, toUnit });
   writeHtml(path.resolve(buildDir, 'convert', `${alias.from}-to-${alias.to}`, 'index.html'), html);
   count++;
 });

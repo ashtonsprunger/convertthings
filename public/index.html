@@ -47,22 +47,37 @@
 
     <title>ConvertThings - Instant, Accurate Unit Converter</title>
 
-    <!-- Google AdSense (Configured for future monetization) -->
-    <script
-      async
-      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2469761428575146"
-      crossorigin="anonymous"
-    ></script>
-
-    <!-- Google Fonts (Outfit, Plus Jakarta Sans & JetBrains Mono) -->
+    <!-- Google Fonts (Outfit, Plus Jakarta Sans & JetBrains Mono) - Non-render-blocking -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,500;0,600;0,700;1,500&family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Outfit:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
     />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Outfit:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Outfit:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      />
+    </noscript>
 
-    <!-- Preconnect for performance -->
+    <!-- Google AdSense - Deferred initialization to prevent main-thread blocking on initial paint -->
+    <script>
+      window.addEventListener('load', function() {
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2469761428575146";
+        s.crossOrigin = "anonymous";
+        document.head.appendChild(s);
+      });
+    </script>
     <link rel="dns-prefetch" href="https://pagead2.googlesyndication.com" />
   </head>
   <body>
