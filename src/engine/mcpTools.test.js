@@ -2,7 +2,7 @@ import { MCP_TOOLS, MCP_SERVER_INFO, executeTool } from './mcpTools';
 
 describe('MCP Tools Engine', () => {
   test('exports server info and 4 defined tools', () => {
-    expect(MCP_SERVER_INFO.name).toBe('convertthings-mcp');
+    expect(MCP_SERVER_INFO.name).toBe('ConvertThings');
     expect(MCP_TOOLS.length).toBe(4);
 
     const toolNames = MCP_TOOLS.map((t) => t.name);

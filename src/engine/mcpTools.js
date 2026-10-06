@@ -16,10 +16,26 @@ import {
 import { findUnit, parseConversionQuery } from './parser.js';
 
 export const MCP_SERVER_INFO = {
-  name: 'convertthings-mcp',
+  name: 'ConvertThings',
   version: '1.0.0',
   description: 'High-precision unit conversion MCP server and API for ConvertThings.com across 15 physical & computational measurement domains.',
   homepage: 'https://www.convertthings.com',
+  icons: [
+    {
+      src: 'https://www.convertthings.com/logo512.png',
+      mimeType: 'image/png',
+      sizes: '512x512',
+    },
+    {
+      src: 'https://www.convertthings.com/logo192.png',
+      mimeType: 'image/png',
+      sizes: '192x192',
+    },
+    {
+      src: 'https://www.convertthings.com/favicon.svg',
+      mimeType: 'image/svg+xml',
+    },
+  ],
 };
 
 export const MCP_TOOLS = [

@@ -20,8 +20,9 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "prebuild": "node scripts/generateSitemap.mjs",
+    "prebuild": "node scripts/generateIcons.mjs && node scripts/generateSitemap.mjs",
     "build": "react-scripts build",
+    "icons": "node scripts/generateIcons.mjs",
     "sitemap": "node scripts/generateSitemap.mjs",
     "test": "react-scripts test",
     "test:api": "node scripts/test-api.mjs",
@@ -50,6 +51,7 @@
     ]
   },
   "devDependencies": {
-    "gh-pages": "^4.0.0"
+    "gh-pages": "^4.0.0",
+    "sharp": "^0.35.5"
   }
 }

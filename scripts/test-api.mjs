@@ -121,7 +121,7 @@ async function runTests() {
     await mcpHandler(req, res);
     const { statusCode, responseData } = res._getData();
     assert(statusCode === 200, 'POST /api/mcp initialize returns 200');
-    assert(responseData.result?.serverInfo?.name === 'convertthings-mcp', 'Returns serverInfo convertthings-mcp');
+    assert(responseData.result?.serverInfo?.name === 'ConvertThings', 'Returns serverInfo ConvertThings');
   }
 
   // 8. Test /api/mcp POST JSON-RPC tools/list
