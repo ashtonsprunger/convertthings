@@ -426,6 +426,24 @@ export function ConversionCard({
     ? formatFractionForDisplay(kitchenCompound)
     : (formatDisplayNumber(toValue || '0') || '0');
 
+  const kitchenSubtext = (() => {
+    if (!kitchenCompound || !toValue || toValue === kitchenDisplayText) return null;
+    // If toValue is an exact fraction (e.g. "13/16")
+    if (isFractionLike(toValue)) {
+      return `(${formatDisplayNumber(toValue)} ${toUnit.symbol})`;
+    }
+    // If toValue is numeric decimal (e.g. "0.1437")
+    const num = parseFloat(toValue);
+    if (!isNaN(num)) {
+      const rounded = parseFloat(num.toFixed(2)).toString();
+      const isSubCup = toUnit.id === 'cup_us' && num < 0.25;
+      return isSubCup
+        ? `≈ ${rounded} ${toUnit.symbol} (spoon measure)`
+        : `≈ ${rounded} ${toUnit.symbol}`;
+    }
+    return `(${formatDisplayNumber(toValue)} ${toUnit.symbol})`;
+  })();
+
   const handleCopyKitchenOutput = () => {
     if (!kitchenDisplayText) return;
     const textToCopy = kitchenCompound
@@ -893,9 +911,9 @@ export function ConversionCard({
                   >
                     {kitchenDisplayText}
                   </span>
-                  {kitchenCompound && toValue && toValue !== kitchenDisplayText && (
-                    <span className="ct-kitchen-output-sub" title="Exact single unit equivalent">
-                      ({formatDisplayNumber(toValue)} {toUnit.symbol})
+                  {kitchenSubtext && (
+                    <span className="ct-kitchen-output-sub" title="Target unit context">
+                      {kitchenSubtext}
                     </span>
                   )}
                 </div>
