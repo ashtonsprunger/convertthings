@@ -472,6 +472,37 @@ describe('ConvertThings UI Integration', () => {
     const toInput = screen.getByLabelText(/Converted value in/i);
     expect(toInput.value).not.toBe('5/32');
     expect(parseFloat(toInput.value)).toBeCloseTo(0.1437, 3);
+
+    // Kitchen Measure helper badge is visible in Standard View with spoon measurement
+    const kitchenBadge = screen.getByLabelText(/Kitchen measure: 2 tbsp \+ 1 tsp/i);
+    expect(kitchenBadge).toBeInTheDocument();
+  });
+
+  test('always shows the smart Kitchen measure helper badge in Cooking Standard View for clean and compound values', () => {
+    // 1. 1 stick of butter to cups -> "½ cup"
+    window.history.replaceState({}, '', '/convert/1-stick_butter-to-cup_us');
+    const { unmount } = render(<App />);
+
+    // Toggle to Standard View
+    const kitchenToggle = screen.getByLabelText(/Toggle Kitchen Mode/i);
+    fireEvent.click(kitchenToggle);
+
+    // Kitchen Measure badge should be displayed with "½ cup"
+    expect(screen.getByRole('button', { name: /Kitchen measure: ½ cup/i })).toBeInTheDocument();
+
+    unmount();
+
+    // 2. 1 cup to tablespoons: shows smart equivalence context "16 tbsp (1 cup)"
+    window.history.replaceState({}, '', '/convert/1-cup_us-to-tbsp_us');
+    render(<App />);
+
+    // Ensure we are in Standard View (localStorage persisted or toggle)
+    const toggle2 = screen.getByLabelText(/Toggle Kitchen Mode/i);
+    if (toggle2.getAttribute('aria-pressed') === 'true') {
+      fireEvent.click(toggle2);
+    }
+
+    expect(screen.getByRole('button', { name: /Kitchen measure: 1 cup \(16 tbsp\)/i })).toBeInTheDocument();
   });
 
   test('respects stored decimal precision on initial mount and page reload', () => {

@@ -10,6 +10,7 @@ import {
   filterAndSortUnits,
   formatDisplayNumber,
   formatFractionForDisplay,
+  formatCulinaryFraction,
   parseFractionString,
   isFractionLike,
   getCookingCompoundMeasure,
@@ -132,20 +133,6 @@ export function ConversionCard({
     if (copiedFormulaTimeoutRef.current) clearTimeout(copiedFormulaTimeoutRef.current);
     copiedFormulaTimeoutRef.current = setTimeout(() => {
       setCopiedFormula(false);
-    }, 1600);
-  };
-
-  const handleCopyKitchen = (e) => {
-    if (e) {
-      e.stopPropagation();
-      e.preventDefault();
-    }
-    if (!kitchenCompound) return;
-    onCopy(kitchenCompound, `${kitchenCompound} copied to clipboard!`);
-    setCopiedKitchen(true);
-    if (copiedKitchenTimeoutRef.current) clearTimeout(copiedKitchenTimeoutRef.current);
-    copiedKitchenTimeoutRef.current = setTimeout(() => {
-      setCopiedKitchen(false);
     }, 1600);
   };
 
@@ -422,34 +409,151 @@ export function ConversionCard({
 
   const kitchenCompound = getCookingCompoundMeasure(rawTargetValue, toUnit.id, categoryId);
 
+  const smartKitchenMeasure = (() => {
+    if (categoryId !== 'cooking' || !toValue || toValue === '') return null;
+    if (kitchenCompound) return formatFractionForDisplay(kitchenCompound);
+
+    const targetNum = rawTargetValue !== null && !isNaN(rawTargetValue)
+      ? rawTargetValue
+      : (typeof toValue === 'string' && isFractionLike(toValue)
+          ? parseFractionString(toValue)
+          : parseFloat(toValue));
+
+    if (isNaN(targetNum) || targetNum <= 0) {
+      return targetNum === 0 ? `0 ${toUnit.symbol}` : null;
+    }
+
+    const fracStr = formatCulinaryFraction(targetNum);
+    const dispVal = fracStr ? formatFractionForDisplay(fracStr) : formatDisplayNumber(toValue);
+
+    if (toUnit.id === 'cup_us') {
+      if (Math.abs(targetNum - 1) < 0.05) return '1 cup';
+      if (targetNum < 1) return `${dispVal} cup`;
+      return `${dispVal} cups`;
+    }
+    if (toUnit.id === 'tbsp_us') {
+      if (Math.abs(targetNum - 16) < 0.1) return '16 tbsp (1 cup)';
+      if (Math.abs(targetNum - 12) < 0.1) return '12 tbsp (¾ cup)';
+      if (Math.abs(targetNum - 8) < 0.1) return '8 tbsp (½ cup)';
+      if (Math.abs(targetNum - 4) < 0.1) return '4 tbsp (¼ cup)';
+      if (Math.abs(targetNum - 2) < 0.1) return '2 tbsp (⅛ cup)';
+      if (Math.abs(targetNum - 1) < 0.1) return '1 tbsp';
+      return `${dispVal} tbsp`;
+    }
+    if (toUnit.id === 'tsp_us') {
+      if (Math.abs(targetNum - 3) < 0.1) return '3 tsp (1 tbsp)';
+      if (Math.abs(targetNum - 6) < 0.1) return '6 tsp (2 tbsp)';
+      if (Math.abs(targetNum - 1) < 0.1) return '1 tsp';
+      return `${dispVal} tsp`;
+    }
+    if (toUnit.id === 'stick_butter') {
+      if (Math.abs(targetNum - 1) < 0.1) return '1 stick of butter (½ cup)';
+      if (Math.abs(targetNum - 2) < 0.1) return '2 sticks of butter (1 cup)';
+      if (Math.abs(targetNum - 0.5) < 0.1) return '½ stick of butter (¼ cup)';
+      if (Math.abs(targetNum - 4) < 0.1) return '4 sticks of butter (1 lb / 2 cups)';
+      if (Math.abs(targetNum - 0.25) < 0.1) return '¼ stick of butter (2 tbsp)';
+      return targetNum === 1 ? '1 stick of butter' : `${dispVal} sticks of butter`;
+    }
+    if (toUnit.id === 'floz_us') {
+      if (Math.abs(targetNum - 8) < 0.1) return '8 fl oz (1 cup)';
+      if (Math.abs(targetNum - 4) < 0.1) return '4 fl oz (½ cup)';
+      if (Math.abs(targetNum - 2) < 0.1) return '2 fl oz (¼ cup / 4 tbsp)';
+      if (Math.abs(targetNum - 1) < 0.1) return '1 fl oz (2 tbsp)';
+      return `${dispVal} fl oz`;
+    }
+    if (toUnit.id === 'pinch') {
+      if (Math.abs(targetNum - 8) < 0.1) return '8 pinches (1 tsp)';
+      if (Math.abs(targetNum - 4) < 0.1) return '4 pinches (½ tsp)';
+      if (Math.abs(targetNum - 2) < 0.1) return '2 pinches (¼ tsp)';
+      if (Math.abs(targetNum - 1) < 0.1) return '1 pinch (⅛ tsp)';
+      return targetNum === 1 ? '1 pinch' : `${dispVal} pinches`;
+    }
+    if (toUnit.id === 'dash') {
+      if (Math.abs(targetNum - 1) < 0.1) return '1 dash (approx. ⅛ tsp)';
+      if (Math.abs(targetNum - 2) < 0.1) return '2 dashes (¼ tsp)';
+      return targetNum === 1 ? '1 dash' : `${dispVal} dashes`;
+    }
+    if (toUnit.id === 'drop') {
+      if (Math.abs(targetNum - 60) < 3) return 'approx. 60 drops (1 tsp)';
+      return targetNum === 1 ? '1 drop' : `${dispVal} drops`;
+    }
+    return `${dispVal} ${toUnit.symbol}`;
+  })();
+
   const kitchenDisplayText = kitchenCompound
     ? formatFractionForDisplay(kitchenCompound)
     : (formatDisplayNumber(toValue || '0') || '0');
 
   const kitchenSubtext = (() => {
-    if (!kitchenCompound || !toValue || toValue === kitchenDisplayText) return null;
-    // If toValue is an exact fraction (e.g. "13/16")
-    if (isFractionLike(toValue)) {
+    if (kitchenCompound) {
+      if (!toValue || toValue === kitchenDisplayText) return null;
+      // If toValue is an exact fraction (e.g. "13/16")
+      if (isFractionLike(toValue)) {
+        return `(${formatDisplayNumber(toValue)} ${toUnit.symbol})`;
+      }
+      // If toValue is numeric decimal (e.g. "0.1437")
+      const num = parseFloat(toValue);
+      if (!isNaN(num)) {
+        const rounded = parseFloat(num.toFixed(2)).toString();
+        const isSubCup = toUnit.id === 'cup_us' && num < 0.25;
+        return isSubCup
+          ? `≈ ${rounded} ${toUnit.symbol} (spoon measure)`
+          : `≈ ${rounded} ${toUnit.symbol}`;
+      }
       return `(${formatDisplayNumber(toValue)} ${toUnit.symbol})`;
     }
-    // If toValue is numeric decimal (e.g. "0.1437")
-    const num = parseFloat(toValue);
-    if (!isNaN(num)) {
-      const rounded = parseFloat(num.toFixed(2)).toString();
-      const isSubCup = toUnit.id === 'cup_us' && num < 0.25;
-      return isSubCup
-        ? `≈ ${rounded} ${toUnit.symbol} (spoon measure)`
-        : `≈ ${rounded} ${toUnit.symbol}`;
+
+    // Contextual equivalence subtext when not compound
+    const targetNum = rawTargetValue !== null && !isNaN(rawTargetValue)
+      ? rawTargetValue
+      : (typeof toValue === 'string' && isFractionLike(toValue)
+          ? parseFractionString(toValue)
+          : parseFloat(toValue));
+
+    if (isNaN(targetNum)) return null;
+
+    if (toUnit.id === 'tbsp_us') {
+      if (Math.abs(targetNum - 16) < 0.1) return '(1 cup)';
+      if (Math.abs(targetNum - 12) < 0.1) return '(¾ cup)';
+      if (Math.abs(targetNum - 8) < 0.1) return '(½ cup)';
+      if (Math.abs(targetNum - 4) < 0.1) return '(¼ cup)';
+      if (Math.abs(targetNum - 2) < 0.1) return '(⅛ cup)';
     }
-    return `(${formatDisplayNumber(toValue)} ${toUnit.symbol})`;
+    if (toUnit.id === 'stick_butter') {
+      if (Math.abs(targetNum - 1) < 0.1) return '(½ cup / 8 tbsp)';
+      if (Math.abs(targetNum - 2) < 0.1) return '(1 cup / 16 tbsp)';
+      if (Math.abs(targetNum - 0.5) < 0.1) return '(¼ cup / 4 tbsp)';
+      if (Math.abs(targetNum - 4) < 0.1) return '(1 lb / 2 cups)';
+    }
+    if (toUnit.id === 'tsp_us') {
+      if (Math.abs(targetNum - 3) < 0.1) return '(1 tbsp)';
+      if (Math.abs(targetNum - 6) < 0.1) return '(2 tbsp)';
+    }
+    if (toUnit.id === 'floz_us') {
+      if (Math.abs(targetNum - 8) < 0.1) return '(1 cup)';
+      if (Math.abs(targetNum - 4) < 0.1) return '(½ cup)';
+      if (Math.abs(targetNum - 2) < 0.1) return '(¼ cup / 4 tbsp)';
+      if (Math.abs(targetNum - 1) < 0.1) return '(2 tbsp)';
+    }
+    return null;
   })();
 
   const handleCopyKitchenOutput = () => {
     if (!kitchenDisplayText) return;
-    const textToCopy = kitchenCompound
+    const textToCopy = smartKitchenMeasure || (kitchenCompound
       ? kitchenDisplayText
-      : `${kitchenDisplayText} ${toUnit.symbol}`;
+      : `${kitchenDisplayText} ${toUnit.symbol}`);
     onCopy(textToCopy, `${textToCopy} copied to clipboard!`);
+    setCopiedKitchen(true);
+    if (copiedKitchenTimeoutRef.current) clearTimeout(copiedKitchenTimeoutRef.current);
+    copiedKitchenTimeoutRef.current = setTimeout(() => {
+      setCopiedKitchen(false);
+    }, 1600);
+  };
+
+  const handleCopyKitchen = () => {
+    if (!smartKitchenMeasure) return;
+    onCopy(smartKitchenMeasure, `${smartKitchenMeasure} copied to clipboard!`);
     setCopiedKitchen(true);
     if (copiedKitchenTimeoutRef.current) clearTimeout(copiedKitchenTimeoutRef.current);
     copiedKitchenTimeoutRef.current = setTimeout(() => {
@@ -1071,19 +1175,19 @@ export function ConversionCard({
             </div>
           </div>
 
-          {/* Kitchen Compound Measure Breakdown */}
-          {kitchenCompound && (
+          {/* Kitchen Measure Breakdown (Always shown in Cooking domain) */}
+          {categoryId === 'cooking' && smartKitchenMeasure && (
             <div className="ct-kitchen-measure-row" aria-label="Kitchen measuring breakdown">
               <button
                 type="button"
                 className={`ct-kitchen-badge ${copiedKitchen ? 'copied' : ''}`}
                 onClick={handleCopyKitchen}
-                title={copiedKitchen ? 'Copied to clipboard!' : `Copy kitchen measure: ${formatFractionForDisplay(kitchenCompound)}`}
-                aria-label={copiedKitchen ? 'Kitchen measure copied' : `Kitchen measure: ${formatFractionForDisplay(kitchenCompound)}`}
+                title={copiedKitchen ? 'Copied to clipboard!' : `Copy kitchen measure: ${smartKitchenMeasure}`}
+                aria-label={copiedKitchen ? 'Kitchen measure copied' : `Kitchen measure: ${smartKitchenMeasure}`}
               >
                 <Icon name="ChefHat" size={15} className="ct-kitchen-icon" />
                 <span className="ct-kitchen-label">Kitchen Measure:</span>
-                <strong className="ct-kitchen-val">{formatFractionForDisplay(kitchenCompound)}</strong>
+                <strong className="ct-kitchen-val">{smartKitchenMeasure}</strong>
                 <span className="ct-kitchen-copy-icon" aria-hidden="true">
                   <Icon name={copiedKitchen ? 'Check' : 'Copy'} size={12} />
                 </span>
