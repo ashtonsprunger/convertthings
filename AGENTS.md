@@ -6,11 +6,13 @@
 
 ## 1. Project Overview
 
-**ConvertThings** is a modern, high-precision, real-time unit conversion web application built with React 18. It provides instantaneous bidirectional unit conversion across 15 physical and computational measurement domains with over 120 standardized units, universal natural language query parsing, zero cumulative layout shift (CLS), dark/light mode, dynamic SEO metadata, and Schema.org rich snippet schemas.
+**ConvertThings** is a modern, high-precision, real-time unit conversion web platform built with React 18, Vercel Serverless Functions, and native Model Context Protocol (MCP) server integration. It provides instantaneous bidirectional unit conversion across 15 physical and computational measurement domains with over 120 standardized units, universal natural language query parsing, zero cumulative layout shift (CLS), dark/light mode, dynamic SEO metadata, Schema.org rich snippet schemas, a public REST API, and native AI agent tooling.
 
 - **Repository:** [https://github.com/ashtonsprunger/convertthings.git](https://github.com/ashtonsprunger/convertthings.git)
-- **Production URL / Homepage:** [https://convertthings.com](https://convertthings.com)
-- **Deployment Platform:** GitHub Pages (via `gh-pages` branch deployment)
+- **Production URL / Homepage:** [https://www.convertthings.com](https://www.convertthings.com)
+- **Remote MCP Endpoint:** `https://www.convertthings.com/api/mcp`
+- **Public REST API:** `https://www.convertthings.com/api/convert`
+- **Deployment Platform:** Vercel (Edge serverless functions + React SPA) & GitHub Pages (`gh-pages` branch)
 
 ---
 
@@ -23,28 +25,38 @@
    - Dynamic step-by-step formula generation for every unit pair.
    - Generates instant comparison benchmark tables (1 to 1,000) and all-units equivalence grids.
 
-2. **Universal Omnibox & Natural Language Query Parser (`src/engine/parser.js`)**:
+2. **Model Context Protocol (MCP) Server (`src/engine/mcpTools.js`, `api/mcp.js`, `bin/mcp.mjs`)**:
+   - Full MCP implementation supporting 4 AI agent tools: `convert_units`, `parse_and_convert`, `list_units`, `get_reference_table`.
+   - Dual transport support:
+     - **Stdio transport** (`bin/mcp.mjs`) for local desktop environments (Claude Desktop, Cursor, Antigravity).
+     - **HTTP JSON-RPC 2.0 transport** (`api/mcp.js`) on Vercel Serverless Functions for remote web agents and microservices.
+
+3. **Public Serverless REST API (`api/convert.js`, `api/units.js`)**:
+   - Free, CORS-enabled endpoints on Vercel.
+   - Natural language queries: `GET /api/convert?q=100+km+to+miles`.
+   - Structured unit queries: `GET /api/convert?from=km&to=mi&val=100`.
+   - Unit directory: `GET /api/units?cat=temperature`.
+
+4. **Universal Omnibox & Natural Language Query Parser (`src/engine/parser.js`)**:
    - Parses natural queries on the fly: `"100 km to miles"`, `"72 f in c"`, `"150 lbs into kg"`, `"1 cup to ml"`, `"500 sq ft to m²"`.
    - Omnibox with hotkey (`/`) focus and live preview match banner.
 
-3. **SEO & Discoverability (`src/components/SeoContent.jsx`, `public/index.html`)**:
-   - Synchronizes current state to URL query parameters (`?cat=length&from=km&to=mi&v=100`) via `history.replaceState`.
-   - Dynamically updates `document.title` and `<meta name="description">` on every unit or value change.
-   - Injects structured JSON-LD schema (`WebApplication` and `FAQPage`) dynamically into `<head>` for Google search rich snippets and FAQ carousels.
-   - Comprehensive educational guides, unit history, and conversion formulas indexed for search bots.
+5. **SEO & Clean Route Architecture (`src/engine/urlRouter.js`, `scripts/generateSitemap.mjs`)**:
+   - Programmatic unit-pair URLs (`/convert/:from-to-:to`, `/convert/:val-:from-to-:to`).
+   - Dynamic document title and meta description updates.
+   - Automated sitemap generator indexing 1,244 pair URLs in `public/sitemap.xml`.
+   - Injects structured JSON-LD schema (`WebApplication` and `FAQPage`) dynamically into `<head>` for Google search rich snippets.
 
-4. **Clean, Modern UI/UX (`src/App.css`, `src/index.css`)**:
+6. **Clean, Modern UI/UX (`src/App.css`, `src/index.css`)**:
    - Full dark and light mode with automatic system preference detection and localStorage persistence.
-   - **Immediate Color-Highlighted Equation Readout**: Prominent live conversion statement (e.g. `1 ft = 12 in`) with high-contrast color badges and full-name captions right on the card for effortless reading.
-   - Tactile animated swap button (`⇄`, shortcut: `Alt + S` or `s`).
-   - Quick value modifiers (`= 1`, `+1`, `+10`, `2×`, `10×`, `½`).
-   - One-click copy result (`📋`) with toast feedback.
-   - Starred favorites bar with localStorage persistence.
-   - Recent conversion history with one-click reload and clear.
-   - Searchable, filterable unit selector dropdowns.
+   - **Immediate Color-Highlighted Equation Readout**: Prominent live conversion statement (e.g. `1 ft = 12 in`) with high-contrast color badges and full-name captions.
+   - Developer Modal (`src/components/DeveloperModal.jsx`) with live interactive API tester and 1-click Claude Desktop configs.
+   - Starred favorites bar, recent history drawer, and searchable unit dropdowns.
 
-5. **Monetization Readiness (`src/components/AdSlot.jsx`)**:
-   - Prepared zero-CLS ad placement slots (`top-banner`, `mid-content`) ready for Google AdSense or display networks when monetization is activated.
+7. **Monetization & AdSense Readiness (`src/components/AdSlot.jsx`, `public/ads.txt`)**:
+   - Google AdSense verified with authorized `ads.txt` publisher record (`pub-2469761428575146`).
+   - Prepared zero-CLS ad placement slots (`side-rail` slot `8779651833`, `mid-content` slot `1723113883`).
+   - Compliant Privacy Policy and Terms of Service modals.
 
 ---
 
@@ -52,14 +64,25 @@
 
 ```
 convertThings/
-├── build/                 # Production distribution bundle
-├── public/                # Static public assets
+├── api/
+│   ├── convert.js             # Vercel serverless REST API endpoint
+│   ├── mcp.js                 # Vercel serverless MCP JSON-RPC 2.0 remote endpoint
+│   └── units.js               # Vercel serverless units directory endpoint
+├── bin/
+│   ├── cli.mjs                # Standalone CLI converter (node bin/cli.mjs "100 km to miles")
+│   └── mcp.mjs                # Stdio MCP Server executable for Claude Desktop / Cursor
+├── build/                     # Production distribution bundle
+├── public/                    # Static public assets
+│   ├── ads.txt                # Google AdSense publisher verification
 │   ├── favicon.ico
-│   ├── index.html         # SEO-optimized HTML5 shell with OpenGraph, Twitter, AdSense
-│   ├── logo192.png
-│   ├── logo512.png
-│   ├── manifest.json      # Progressive Web App manifest
-│   └── robots.txt
+│   ├── index.html             # SEO-optimized HTML5 shell with OpenGraph, Twitter, AdSense
+│   ├── privacy.html           # Standalone legal privacy policy
+│   ├── robots.txt             # Crawl directives with sitemap index
+│   ├── sitemap.xml            # 1,244 auto-generated unit pair URLs
+│   └── terms.html             # Standalone terms of service
+├── scripts/
+│   ├── generateSitemap.mjs    # Automated sitemap generation script
+│   └── test-api.mjs           # Serverless API and MCP integration test suite
 ├── src/
 │   ├── components/
 │   │   ├── AdSlot.jsx             # Non-intrusive reserved ad containers (zero CLS)
@@ -67,30 +90,38 @@ convertThings/
 │   │   ├── ConversionCard.jsx     # Core interactive bidirectional conversion panel
 │   │   ├── ConversionHistory.jsx  # Recent conversion drawer with 1-click reload
 │   │   ├── ConversionTable.jsx    # Benchmark value comparison & all-units equivalence
+│   │   ├── DeveloperModal.jsx     # Developer & AI MCP modal with live API playground
 │   │   ├── FavoritesBar.jsx       # Pinned conversions bar
 │   │   ├── Footer.jsx             # Accessible footer with category index and standards
-│   │   ├── Header.jsx             # Branding, dark/light theme switch, link sharing
+│   │   ├── Header.jsx             # Branding, AI & API modal trigger, theme switch
 │   │   ├── Icons.jsx              # Standalone, zero-dependency SVG icon system
+│   │   ├── LegalModal.jsx         # Accessible Privacy, Terms, and About modal dialog
 │   │   ├── Omnibox.jsx            # Universal natural language search bar with shortcut '/'
 │   │   ├── SeoContent.jsx         # Category guides, FAQs, and Schema.org JSON-LD injection
 │   │   └── Toast.jsx              # Accessible non-intrusive alert toasts
 │   ├── engine/
 │   │   ├── conversions.js         # Core measurement definitions, NIST factors, formatters
-│   │   └── parser.js              # Natural language query tokenizer and matching engine
+│   │   ├── mcpTools.js            # MCP tool definitions and execution dispatcher
+│   │   ├── mcpTools.test.js       # Jest tests for MCP engine
+│   │   ├── parser.js              # Natural language query tokenizer and matching engine
+│   │   ├── urlRouter.js           # Bidirectional URL slug and query parser/formatter
+│   │   └── urlRouter.test.js      # Jest tests for URL router
 │   ├── hooks/
 │   │   ├── useLocalStorage.js     # Safe localStorage state persistence hook
 │   │   └── useTheme.js            # Dark/light theme state & document attribute manager
 │   ├── App.css                    # Modern CSS variable design system & responsive layout
 │   ├── App.jsx                    # Root state coordinator, URL synchronization, and events
-│   ├── App.test.js                # 17-point automated test suite (Jest + React Testing Library)
+│   ├── App.test.js                # Core web integration and unit test suite
 │   ├── index.css                  # CSS resets, typography, and CSS theme tokens
 │   ├── index.js                   # Application entry point (React 18 createRoot)
 │   ├── reportWebVitals.js         # Core Web Vitals monitor
 │   └── setupTests.js              # Jest DOM matcher setup
 ├── .gitignore
 ├── AGENTS.md                      # AI agent & developer guide
-├── package.json                   # Dependencies and npm scripts
-└── README.md
+├── FUTURE.md                      # Long-term scaling & monetization roadmap
+├── package.json                   # Dependencies, binary definitions, and npm scripts
+├── README.md                      # Public project documentation & quickstart
+└── vercel.json                    # Vercel deployment rewrites for API and SPA
 ```
 
 ---
@@ -117,10 +148,6 @@ convertThings/
 
 ## 5. Development Workflow & Scripts
 
-### Prerequisites
-- Node.js (v16+, v18+, or v20+)
-- `npm`
-
 ### Commands
 - **Install Dependencies:**
   ```powershell
@@ -130,23 +157,24 @@ convertThings/
   ```powershell
   npm start
   ```
-  Runs at [http://localhost:3000](http://localhost:3000).
-
-- **Execute Test Suite:**
+- **Execute Test Suite (Jest):**
   ```powershell
   $env:CI="true"; npm test
   ```
-  Runs all 18 integration and unit tests without hanging.
-
+  Runs all 41 unit and integration tests across 3 suites without hanging.
+- **Execute API & MCP Test Suite:**
+  ```powershell
+  npm run test:api
+  ```
+- **Run Local MCP Server (Stdio):**
+  ```powershell
+  npm run mcp
+  ```
 - **Compile Production Build:**
   ```powershell
   npm run build
   ```
-  Generates production-optimized bundle in `build/` with zero warnings.
-
-- **Deployment Options:**
-  - **Vercel (Recommended)**: Connect repository to Vercel. Continuous deployment triggers on every push to `main` with automatic edge caching, SSL, and SPA rewrite support via `vercel.json`.
-  - **GitHub Pages**: Run `npm run deploy` to compile and deploy to the `gh-pages` branch.
+  Prebuild generates sitemap with 1,244 URLs and creates optimized bundle with zero warnings.
 
 ---
 
@@ -157,7 +185,8 @@ convertThings/
    - Use `formatNumber` from `src/engine/conversions.js` to ensure clean representation without floating-point artifacts.
 2. **Keep Zero-CLS Guarantee:**
    - All layout elements, cards, and ad placeholders must maintain stable layout dimensions to guarantee a 100% Core Web Vitals score.
-3. **SEO Continuity:**
-   - Maintain Schema.org JSON-LD generation and dynamic `document.title` and meta tags whenever modifying routing or state.
+3. **SEO & Routing Integrity:**
+   - Any modifications to URL parsing in `src/engine/urlRouter.js` must be covered by unit tests in `src/engine/urlRouter.test.js`.
+   - Never break static files (`ads.txt`, `sitemap.xml`, `robots.txt`).
 4. **Test Everything:**
-   - Always run `$env:CI="true"; npm test` before committing or concluding turns.
+   - Always run `$env:CI="true"; npm test` and `npm run test:api` before committing or concluding turns.

@@ -1,70 +1,147 @@
-# Getting Started with Create React App
+# ConvertThings ⚡
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+> Modern, high-precision unit conversion platform with universal natural language parsing, zero cumulative layout shift (CLS), a public REST API, and a Model Context Protocol (MCP) server for Claude Desktop, Cursor, Antigravity, and autonomous AI agents.
 
-## Available Scripts
+🌐 **Live Website:** [https://www.convertthings.com](https://www.convertthings.com)  
+🤖 **MCP Remote Endpoint:** `https://www.convertthings.com/api/mcp`  
+🔌 **Public REST API:** `https://www.convertthings.com/api/convert`
 
-In the project directory, you can run:
+---
 
-### `npm start`
+## Features
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **15 Measurement Categories & 120+ Units**: Length, Weight/Mass, Temperature, Area, Volume, Speed, Time, Digital Storage, Data Transfer Rate, Pressure, Energy, Power, Angle, Fuel Economy, Cooking.
+- **Exact NIST / SI Standards**: Zero-dependency calculation engine eliminating IEEE 754 floating-point inaccuracies.
+- **Model Context Protocol (MCP) Server**: Native support for Anthropic's Model Context Protocol. Connect Claude Desktop, Cursor, and agent frameworks to eliminate conversion hallucinations.
+- **Serverless Public REST API**: Fast, zero-config endpoints deployed on Vercel Serverless Edge with natural language query parsing.
+- **Natural Language Parsing**: Omnibox and APIs understand queries like *"100 km to miles"*, *"72 f in c"*, *"150 lbs into kg"*, and *"1 cup to ml"*.
+- **Zero Cumulative Layout Shift (CLS)**: Perfectly stable layout with 100% Core Web Vitals score.
+- **SEO & Discoverability**: Programmatic URL pair routing (`/convert/celsius-to-fahrenheit`, `/convert/100-km-to-miles`), dynamic JSON-LD Schema.org metadata, and automated 1,244-URL XML sitemap.
+- **Dark & Light Mode**: Seamless theme switching with system preference detection and localStorage persistence.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+---
 
-### `npm test`
+## 🤖 Model Context Protocol (MCP) Integration
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+ConvertThings runs an MCP server that exposes 4 tools to AI models:
+1. `convert_units`: High-precision bidirectional conversion with step-by-step formula.
+2. `parse_and_convert`: Natural language conversion for queries like *"100 km to miles"*.
+3. `list_units`: Unit discovery across all 15 domains.
+4. `get_reference_table`: Benchmark value equivalence tables (1 to 1,000).
 
-### `npm run build`
+### Claude Desktop Configuration
+Add the following to your `claude_desktop_config.json`:
+- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```json
+{
+  "mcpServers": {
+    "convertthings": {
+      "command": "node",
+      "args": ["<path-to-repo>/bin/mcp.mjs"]
+    }
+  }
+}
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Remote MCP over HTTP (JSON-RPC 2.0)
+You can connect remote agents directly to the hosted server:
+```bash
+curl -X POST "https://www.convertthings.com/api/mcp" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "convert_units",
+      "arguments": { "value": 100, "from": "km", "to": "mi" }
+    }
+  }'
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+---
 
-### `npm run eject`
+## 🌐 Public REST API
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+ConvertThings provides free, high-performance, CORS-enabled endpoints:
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### 1. Natural Language Query
+```bash
+curl -s "https://www.convertthings.com/api/convert?q=100+km+to+miles"
+```
+**Response:**
+```json
+{
+  "success": true,
+  "value": 100,
+  "result": 62.13711922,
+  "formattedResult": "62.13711922",
+  "readout": "100 km = 62.13711922 mi",
+  "category": "length",
+  "formula": "Multiply the kilometer value by 0.6213711922",
+  "url": "https://www.convertthings.com/convert/100-km-to-mi"
+}
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### 2. Structured Parameters
+```bash
+curl -s "https://www.convertthings.com/api/convert?from=c&to=f&val=100"
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### 3. List Units and Categories
+```bash
+curl -s "https://www.convertthings.com/api/units?cat=temperature"
+```
 
-## Learn More
+---
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## 💻 CLI Usage
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+You can run conversions instantly from your terminal:
 
-### Code Splitting
+```bash
+# Natural query
+node bin/cli.mjs "100 km to miles"
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+# Direct values
+node bin/cli.mjs 72 f c
 
-### Analyzing the Bundle Size
+# Benchmark table
+node bin/cli.mjs --table km mi
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+# List categories and units
+node bin/cli.mjs --list temperature
+```
 
-### Making a Progressive Web App
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+## 🛠️ Development & Testing
 
-### Advanced Configuration
+```bash
+# Install dependencies
+npm install
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+# Start local React development server
+npm start
 
-### Deployment
+# Run unit and integration tests (Jest)
+npm test
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+# Run API and MCP serverless tests
+npm run test:api
 
-### `npm run build` fails to minify
+# Run local MCP server
+npm run mcp
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+# Compile production build with sitemap generation
+npm run build
+```
+
+---
+
+## 📄 License & Standards
+
+- Calibrated to official **NIST Special Publication 811** and **ISO 80000** standards.
+- MIT License.

@@ -1,7 +1,7 @@
 import React from 'react';
 import { CATEGORIES } from '../engine/conversions';
 
-export function Footer({ onSelectCategory, onOpenLegal }) {
+export function Footer({ onSelectCategory, onOpenLegal, onOpenDevModal }) {
   const handleLegalClick = (e, tab) => {
     if (onOpenLegal) {
       e.preventDefault();
@@ -51,6 +51,19 @@ export function Footer({ onSelectCategory, onOpenLegal }) {
           </p>
 
           <div className="ct-footer-legal-links">
+            <a
+              href="/api/mcp"
+              className="ct-footer-legal-link ct-footer-api-link"
+              onClick={(e) => {
+                if (onOpenDevModal) {
+                  e.preventDefault();
+                  onOpenDevModal();
+                }
+              }}
+            >
+              ⚡ AI &amp; Developer API
+            </a>
+            <span className="ct-dot">&bull;</span>
             <a
               href="/privacy.html"
               className="ct-footer-legal-link"

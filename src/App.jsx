@@ -16,6 +16,7 @@ import { ConversionHistory } from './components/ConversionHistory';
 import { SeoContent } from './components/SeoContent';
 import { Footer } from './components/Footer';
 import { LegalModal } from './components/LegalModal';
+import { DeveloperModal } from './components/DeveloperModal';
 import { AdSlot } from './components/AdSlot';
 import { Toast } from './components/Toast';
 import { useLocalStorage } from './hooks/useLocalStorage';
@@ -68,13 +69,16 @@ function App() {
   const [history, setHistory] = useLocalStorage('ct-history', []);
   const [toast, setToast] = useState({ message: '', visible: false });
   const [legalModal, setLegalModal] = useState({ isOpen: false, tab: 'privacy' });
+  const [devModalOpen, setDevModalOpen] = useState(false);
 
-  // Open modal if URL has hash (#privacy, #terms, #about)
+  // Open modal if URL has hash (#privacy, #terms, #about, #api, #mcp, #developer)
   useEffect(() => {
     try {
       const hash = window.location.hash.toLowerCase();
       if (hash === '#privacy' || hash === '#terms' || hash === '#about') {
         setLegalModal({ isOpen: true, tab: hash.replace('#', '') });
+      } else if (hash === '#api' || hash === '#mcp' || hash === '#developer') {
+        setDevModalOpen(true);
       }
     } catch (e) {
       // ignore
@@ -389,6 +393,7 @@ function App() {
         theme={theme}
         onToggleTheme={toggleTheme}
         onShare={handleShare}
+        onOpenDevModal={() => setDevModalOpen(true)}
       />
 
       <main className="ct-main">
@@ -477,6 +482,12 @@ function App() {
       <Footer
         onSelectCategory={handleSelectCategory}
         onOpenLegal={(tab) => setLegalModal({ isOpen: true, tab })}
+        onOpenDevModal={() => setDevModalOpen(true)}
+      />
+
+      <DeveloperModal
+        isOpen={devModalOpen}
+        onClose={() => setDevModalOpen(false)}
       />
 
       <LegalModal

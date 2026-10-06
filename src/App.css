@@ -1761,3 +1761,231 @@
 .ct-modal-done-btn:hover {
   background-color: var(--primary-hover);
 }
+
+/* ==========================================
+   Developer & MCP Modal & Header Button
+   ========================================== */
+.ct-btn-pill-api {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.12), rgba(14, 165, 233, 0.18));
+  border: 1px solid rgba(6, 182, 212, 0.35);
+  color: var(--primary);
+  font-size: 0.825rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ct-btn-pill-api:hover {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.22), rgba(14, 165, 233, 0.28));
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.ct-api-pill-icon {
+  font-size: 0.85rem;
+}
+
+.ct-footer-api-link {
+  color: var(--primary) !important;
+  font-weight: 600;
+}
+
+.ct-dev-modal {
+  max-width: 680px;
+}
+
+.ct-dev-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.ct-dev-content p {
+  font-size: 0.925rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.ct-dev-card {
+  background-color: var(--bg-card-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.15rem;
+}
+
+.ct-dev-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.65rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.ct-btn-copy-code {
+  padding: 0.25rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ct-btn-copy-code:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.ct-code-block {
+  background-color: #0f172a;
+  color: #e2e8f0;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-sm);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.825rem;
+  line-height: 1.5;
+  overflow-x: auto;
+  margin: 0;
+  white-space: pre;
+}
+
+.ct-code-block-small {
+  background-color: #0f172a;
+  color: #38bdf8;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-sm);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.775rem;
+  line-height: 1.45;
+  overflow-x: auto;
+  margin-top: 0.5rem;
+  white-space: pre;
+}
+
+.ct-dev-hint {
+  font-size: 0.8rem !important;
+  color: var(--text-muted) !important;
+  margin-top: 0.5rem !important;
+}
+
+.ct-dev-hint code {
+  background-color: var(--bg-card);
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.ct-dev-tools-list h4 {
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-main);
+}
+
+.ct-dev-tools-list ul {
+  padding-left: 1.25rem;
+  margin: 0;
+}
+
+.ct-dev-tools-list li {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.4rem;
+  line-height: 1.5;
+}
+
+.ct-dev-tools-list code {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.ct-tester-bar {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.ct-tester-input {
+  flex: 1;
+  padding: 0.65rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-card);
+  color: var(--text-main);
+  font-size: 0.9rem;
+}
+
+.ct-tester-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.ct-tester-btn {
+  padding: 0.65rem 1.25rem;
+  font-size: 0.875rem;
+}
+
+.ct-quick-test-pills {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.ct-pills-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.ct-pill-btn {
+  padding: 0.2rem 0.55rem;
+  font-size: 0.775rem;
+  border-radius: 9999px;
+  background-color: var(--bg-card-subtle);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ct-pill-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.ct-tester-result {
+  background-color: var(--bg-card-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+}
+
+.ct-tester-result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.ct-badge-json {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #10b981;
+  background-color: rgba(16, 185, 129, 0.1);
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  margin-top: 0.5rem;
+}
