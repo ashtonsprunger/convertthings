@@ -68,15 +68,33 @@
       />
     </noscript>
 
-    <!-- Google AdSense - Deferred initialization to prevent main-thread blocking on initial paint -->
+    <!-- Google AdSense - Lazy-loaded on idle / first interaction to guarantee 100% Core Web Vitals & fast LCP -->
     <script>
-      window.addEventListener('load', function() {
-        var s = document.createElement('script');
-        s.async = true;
-        s.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2469761428575146";
-        s.crossOrigin = "anonymous";
-        document.head.appendChild(s);
-      });
+      (function() {
+        var loaded = false;
+        function loadAdSense() {
+          if (loaded) return;
+          loaded = true;
+          var s = document.createElement('script');
+          s.async = true;
+          s.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2469761428575146";
+          s.crossOrigin = "anonymous";
+          document.head.appendChild(s);
+        }
+        var events = ['scroll', 'touchstart', 'mousemove', 'keydown', 'click'];
+        function trigger() {
+          loadAdSense();
+          events.forEach(function(e) { window.removeEventListener(e, trigger); });
+        }
+        events.forEach(function(e) { window.addEventListener(e, trigger, { passive: true, once: true }); });
+        if ('requestIdleCallback' in window) {
+          window.addEventListener('load', function() {
+            requestIdleCallback(function() { setTimeout(loadAdSense, 2000); }, { timeout: 3500 });
+          });
+        } else {
+          window.addEventListener('load', function() { setTimeout(loadAdSense, 2500); });
+        }
+      })();
     </script>
     <link rel="dns-prefetch" href="https://pagead2.googlesyndication.com" />
   </head>

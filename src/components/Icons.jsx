@@ -1,6 +1,6 @@
 import React from 'react';
-import logoBlack from '../assets/logo-black.png';
-import logoWhite from '../assets/logo-white.png';
+import logoBlack from '../assets/logo-black.svg';
+import logoWhite from '../assets/logo-white.svg';
 
 export function Icon({ name, size = 18, className = '', ...props }) {
   const defaultProps = {
