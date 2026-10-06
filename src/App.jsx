@@ -486,6 +486,11 @@ function App() {
           fromUnitId={fromUnitId}
           toUnitId={toUnitId}
           fromValue={fromValue}
+          onSelectTargetUnit={(targetUnitId) => {
+            setToUnitId(targetUnitId);
+            performCalculation(fromValue || '1', categoryId, fromUnitId, targetUnitId, precision);
+            focusAndSelectFromInput();
+          }}
         />
 
         {/* Conversion History */}
@@ -514,6 +519,15 @@ function App() {
           categoryId={categoryId}
           fromUnitId={fromUnitId}
           toUnitId={toUnitId}
+          onSelectPair={(catId, fUnitId, tUnitId) => {
+            if (catId !== categoryId) {
+              setCategoryId(catId);
+            }
+            setFromUnitId(fUnitId);
+            setToUnitId(tUnitId);
+            performCalculation(fromValue || '1', catId, fUnitId, tUnitId, precision);
+            focusAndSelectFromInput();
+          }}
         />
       </main>
 

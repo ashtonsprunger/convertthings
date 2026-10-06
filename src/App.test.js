@@ -368,5 +368,47 @@ describe('ConvertThings UI Integration', () => {
 
     expect(screen.getByTitle(/Change unit from Inch/i)).toBeInTheDocument();
   });
+
+  test('renders semantic footer category links with valid href paths for SEO crawlers', () => {
+    render(<App />);
+    const tempCategoryLink = screen.getByRole('link', { name: /^Temperature$/i });
+    expect(tempCategoryLink).toBeInTheDocument();
+    expect(tempCategoryLink).toHaveAttribute('href', '/temperature');
+
+    // Clicking switches active category
+    fireEvent.click(tempCategoryLink);
+    const tempTab = screen.getByRole('tab', { name: /Temperature/i });
+    expect(tempTab).toHaveClass('active');
+  });
+
+  test('renders SEO common pair cards as semantic anchor links and switches conversion pair on click', () => {
+    render(<App />);
+    // In length category, "Kilometers ⇄ Miles" card should have href /convert/km-to-mi
+    const kmMiLink = screen.getByRole('link', { name: /Convert Kilometers to Miles/i });
+    expect(kmMiLink).toBeInTheDocument();
+    expect(kmMiLink).toHaveAttribute('href', '/convert/km-to-mi');
+
+    fireEvent.click(kmMiLink);
+    const toInput = screen.getByLabelText(/Converted value in/i);
+    // 1 km to miles = ~0.621371
+    expect(Number(toInput.value)).toBeCloseTo(0.621371, 3);
+  });
+
+  test('renders all units breakdown cards as semantic anchor links and updates target unit on click', () => {
+    render(<App />);
+    // "All Meter Conversions" tab
+    const allTab = screen.getByRole('tab', { name: /All Meter Conversions/i });
+    fireEvent.click(allTab);
+
+    // Inches card should have href /convert/m-to-in
+    const inchCardLink = screen.getByRole('link', { name: /Convert Meters to Inches/i });
+    expect(inchCardLink).toBeInTheDocument();
+    expect(inchCardLink).toHaveAttribute('href', '/convert/m-to-in');
+
+    fireEvent.click(inchCardLink);
+    const toInput = screen.getByLabelText(/Converted value in/i);
+    // 1 m to inches = ~39.3701
+    expect(Number(toInput.value)).toBeCloseTo(39.37, 1);
+  });
 });
 

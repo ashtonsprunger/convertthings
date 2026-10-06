@@ -1533,12 +1533,33 @@
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  transition: border-color var(--transition-fast);
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.ct-unit-stat-card:hover {
+  border-color: var(--primary);
+  background-color: var(--bg-hover);
+  text-decoration: none;
+  transform: translateY(-1px);
 }
 
 .ct-unit-stat-card.active {
   border-color: var(--primary);
   background-color: var(--primary-light);
+}
+
+.ct-unit-stat-card.source-unit {
+  opacity: 0.75;
+  cursor: default;
+}
+
+.ct-unit-stat-card.source-unit:hover {
+  transform: none;
+  border-color: var(--border-color);
+  background-color: var(--bg-card-subtle);
 }
 
 .ct-stat-header {
@@ -1740,6 +1761,17 @@
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.ct-pair-card:hover {
+  border-color: var(--primary);
+  background-color: var(--bg-hover);
+  text-decoration: none;
+  transform: translateY(-1px);
 }
 
 .ct-pair-name {
@@ -1875,11 +1907,18 @@
   text-align: left;
   font-size: 0.85rem;
   color: var(--text-muted);
+  text-decoration: none;
+  display: inline-block;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
   transition: color var(--transition-fast);
 }
 
 .ct-footer-cat-link:hover {
   color: var(--primary);
+  text-decoration: none;
 }
 
 .ct-footer-bottom {

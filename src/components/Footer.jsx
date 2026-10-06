@@ -28,17 +28,18 @@ export function Footer({ onSelectCategory, onOpenLegal, onOpenDevModal }) {
           <h4 className="ct-footer-heading">Conversion Categories</h4>
           <div className="ct-footer-category-grid">
             {CATEGORIES.map((cat) => (
-              <button
+              <a
                 key={cat.id}
-                type="button"
+                href={`/${cat.id}`}
                 className="ct-footer-cat-link"
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
                   onSelectCategory(cat.id);
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
               >
                 {cat.name}
-              </button>
+              </a>
             ))}
           </div>
         </div>
