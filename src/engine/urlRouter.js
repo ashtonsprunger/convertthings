@@ -5,7 +5,7 @@
  */
 
 import { CATEGORIES, UNIT_DEFINITIONS, getUnit } from './conversions.js';
-import { findUnit } from './parser.js';
+import { findUnit, findAllUnits } from './parser.js';
 
 /**
  * Parses current location (pathname and search) into structured conversion state.
@@ -36,28 +36,51 @@ export function parseRoute(pathname = '', search = '') {
         const fromToken = pairMatch[2];
         const toToken = pairMatch[3];
 
-        const fromMatch = findUnit(fromToken);
-        const toMatch = findUnit(toToken, fromMatch ? fromMatch.categoryId : null);
+        const fromCandidates = findAllUnits(fromToken);
+        let fromMatch = null;
+        let toMatch = null;
+
+        for (const fromCand of fromCandidates) {
+          const toCand = findUnit(toToken, fromCand.categoryId);
+          if (
+            toCand &&
+            (toCand.categoryId === fromCand.categoryId ||
+              getUnit(fromCand.categoryId, toCand.unit.id) ||
+              getUnit(toCand.categoryId, fromCand.unit.id))
+          ) {
+            fromMatch = fromCand;
+            toMatch = toCand;
+            break;
+          }
+        }
 
         if (fromMatch && toMatch) {
           let categoryId = null;
           let fromUnitId = null;
           let toUnitId = null;
 
-          if (fromMatch.categoryId === toMatch.categoryId) {
+          let fromId = fromMatch.unit.id;
+          let toId = toMatch.unit.id;
+
+          // If both units exist in cooking (e.g. tbsp, tsp, cup, stick of butter), prioritize cooking category
+          if (getUnit('cooking', fromId) && getUnit('cooking', toId)) {
+            categoryId = 'cooking';
+            fromUnitId = fromId;
+            toUnitId = toId;
+          } else if (fromMatch.categoryId === toMatch.categoryId) {
             categoryId = fromMatch.categoryId;
-            fromUnitId = fromMatch.unit.id;
-            toUnitId = toMatch.unit.id;
-          } else if (getUnit(fromMatch.categoryId, toMatch.unit.id)) {
+            fromUnitId = fromId;
+            toUnitId = toId;
+          } else if (getUnit(fromMatch.categoryId, toId)) {
             // Target unit also exists in fromUnit's category (e.g., cooking/volume overlap)
             categoryId = fromMatch.categoryId;
-            fromUnitId = fromMatch.unit.id;
-            toUnitId = toMatch.unit.id;
-          } else if (getUnit(toMatch.categoryId, fromMatch.unit.id)) {
+            fromUnitId = fromId;
+            toUnitId = toId;
+          } else if (getUnit(toMatch.categoryId, fromId)) {
             // Source unit also exists in toUnit's category
             categoryId = toMatch.categoryId;
-            fromUnitId = fromMatch.unit.id;
-            toUnitId = toMatch.unit.id;
+            fromUnitId = fromId;
+            toUnitId = toId;
           }
 
           if (categoryId && fromUnitId && toUnitId) {

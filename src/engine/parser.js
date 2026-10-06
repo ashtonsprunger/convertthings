@@ -216,16 +216,24 @@ export function parseConversionQuery(rawQuery) {
         const catId = fromCand.categoryId;
         const toCand = findUnit(toToken, catId);
         if (toCand && toCand.categoryId === catId) {
-          const converted = convertUnits(val, catId, fromCand.unit.id, toCand.unit.id);
+          let targetCat = catId;
+          let uFrom = fromCand.unit;
+          let uTo = toCand.unit;
+          if (getUnit('cooking', uFrom.id) && getUnit('cooking', uTo.id)) {
+            targetCat = 'cooking';
+            uFrom = getUnit('cooking', uFrom.id);
+            uTo = getUnit('cooking', uTo.id);
+          }
+          const converted = convertUnits(val, targetCat, uFrom.id, uTo.id);
           if (converted !== null && !isNaN(converted) && isFinite(converted)) {
             return {
               success: true,
-              categoryId: catId,
-              fromUnit: fromCand.unit,
-              toUnit: toCand.unit,
+              categoryId: targetCat,
+              fromUnit: uFrom,
+              toUnit: uTo,
               value: val,
               result: converted,
-              formattedResult: formatNumber(converted, 'auto', catId),
+              formattedResult: formatNumber(converted, 'auto', targetCat),
               query: rawQuery,
             };
           }
@@ -258,13 +266,19 @@ export function parseConversionQuery(rawQuery) {
         let uFrom = getUnit(targetCat, fromCand.unit.id);
         let uTo = getUnit(targetCat, toCand.unit.id);
 
-        // Support cooking <-> volume cross-category unit overlap
-        if (!uTo && (catId === 'cooking' || catId === 'volume')) {
-          const altCat = catId === 'cooking' ? 'volume' : 'cooking';
-          if (getUnit(altCat, fromCand.unit.id) && getUnit(altCat, toCand.unit.id)) {
-            targetCat = altCat;
-            uFrom = getUnit(altCat, fromCand.unit.id);
-            uTo = getUnit(altCat, toCand.unit.id);
+        // Support cooking <-> volume cross-category unit overlap, prioritizing cooking for culinary units
+        if (catId === 'cooking' || catId === 'volume') {
+          if (getUnit('cooking', fromCand.unit.id) && getUnit('cooking', toCand.unit.id)) {
+            targetCat = 'cooking';
+            uFrom = getUnit('cooking', fromCand.unit.id);
+            uTo = getUnit('cooking', toCand.unit.id);
+          } else if (!uTo) {
+            const altCat = catId === 'cooking' ? 'volume' : 'cooking';
+            if (getUnit(altCat, fromCand.unit.id) && getUnit(altCat, toCand.unit.id)) {
+              targetCat = altCat;
+              uFrom = getUnit(altCat, fromCand.unit.id);
+              uTo = getUnit(altCat, toCand.unit.id);
+            }
           }
         }
 

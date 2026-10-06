@@ -153,7 +153,17 @@ function writeHtml(targetPath, html) {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
-  fs.writeFileSync(targetPath, html, 'utf8');
+  let retries = 4;
+  while (retries > 0) {
+    try {
+      fs.writeFileSync(targetPath, html, 'utf8');
+      break;
+    } catch (err) {
+      retries--;
+      if (retries === 0) throw err;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 60);
+    }
+  }
 }
 
 console.log('[prerender] Starting static HTML generation...');

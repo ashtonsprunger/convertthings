@@ -135,7 +135,7 @@ export const UNIT_DEFINITIONS = {
       { id: 'qt_us', name: 'US Quart', plural: 'US Quarts', symbol: 'qt (US)', factor: 0.946352946, aliases: ['quart', 'quarts', 'qt'] },
       { id: 'pt_us', name: 'US Pint', plural: 'US Pints', symbol: 'pt (US)', factor: 0.473176473, aliases: ['pint', 'pints', 'pt'] },
       { id: 'cup_us', name: 'US Cup', plural: 'US Cups', symbol: 'cup', factor: 0.2365882365, aliases: ['cup', 'cups'] },
-      { id: 'floz_us', name: 'US Fluid Ounce', plural: 'US Fluid Ounces', symbol: 'fl oz (US)', factor: 0.0295735295625, aliases: ['fluid ounce', 'fluid ounces', 'fl oz', 'floz'] },
+      { id: 'floz_us', name: 'US Fluid Ounce', plural: 'US Fluid Ounces', symbol: 'fl oz (US)', factor: 0.0295735295625, aliases: ['fluid ounce', 'fluid ounces', 'fl oz', 'floz', 'oz', 'ounce', 'ounces', 'fl. oz'] },
       { id: 'tbsp_us', name: 'US Tablespoon', plural: 'US Tablespoons', symbol: 'tbsp', factor: 0.01478676478125, aliases: ['tablespoon', 'tablespoons', 'tbsp', 'tbs'] },
       { id: 'tsp_us', name: 'US Teaspoon', plural: 'US Teaspoons', symbol: 'tsp', factor: 0.00492892159375, aliases: ['teaspoon', 'teaspoons', 'tsp'] },
       { id: 'gal_uk', name: 'Imperial Gallon', plural: 'Imperial Gallons', symbol: 'gal (UK)', factor: 4.54609, aliases: ['imperial gallon', 'uk gallon', 'gal uk'] },
@@ -300,7 +300,7 @@ export const UNIT_DEFINITIONS = {
       { id: 'cup_us', name: 'US Cup', plural: 'US Cups', symbol: 'cup', factor: 236.5882365, aliases: ['cup', 'cups', 'c'] },
       { id: 'tbsp_us', name: 'US Tablespoon', plural: 'US Tablespoons', symbol: 'tbsp', factor: 14.78676478125, aliases: ['tablespoon', 'tablespoons', 'tbsp', 'tbs', 'tb'] },
       { id: 'tsp_us', name: 'US Teaspoon', plural: 'US Teaspoons', symbol: 'tsp', factor: 4.92892159375, aliases: ['teaspoon', 'teaspoons', 'tsp', 't'] },
-      { id: 'floz_us', name: 'Fluid Ounce', plural: 'Fluid Ounces', symbol: 'fl oz', factor: 29.5735295625, aliases: ['fluid ounce', 'fluid ounces', 'fl oz', 'floz'] },
+      { id: 'floz_us', name: 'Fluid Ounce', plural: 'Fluid Ounces', symbol: 'fl oz', factor: 29.5735295625, aliases: ['fluid ounce', 'fluid ounces', 'fl oz', 'floz', 'oz', 'ounce', 'ounces', 'fl. oz', 'fluid oz'] },
       { id: 'pinch', name: 'Pinch', plural: 'Pinches', symbol: 'pinch', factor: 0.3080575996, aliases: ['pinch', 'pinches'] },
       { id: 'dash', name: 'Dash', plural: 'Dashes', symbol: 'dash', factor: 0.6161151992, aliases: ['dash', 'dashes'] },
       { id: 'drop', name: 'Drop', plural: 'Drops', symbol: 'drop', factor: 0.05, aliases: ['drop', 'drops', 'gtt'] },
@@ -378,23 +378,141 @@ export function convertUnits(value, categoryId, fromUnitId, toUnitId) {
  * - Large numbers (>= 1,000) cap at 2 decimal places to maintain readability.
  * - Temperature conversions round to at most 2 decimal places for clean display.
  */
+/**
+ * Convert a decimal number to a practical mixed or improper fraction string.
+ * e.g., 1.375 -> "1 3/8" (mixed) or "11/8" (improper), 0.75 -> "3/4", 2 -> "2"
+ * Snaps to standard tape-measure and culinary denominators (2, 3, 4, 8, 16, 32).
+ */
+export function toFraction(val, maxDenominator = 32, improper = false) {
+  if (val === null || val === undefined || isNaN(val)) return '';
+  const num = Number(val);
+  if (!isFinite(num)) return num.toString();
+
+  const isNeg = num < 0;
+  const abs = Math.abs(num);
+  const whole = Math.floor(abs);
+  const frac = abs - whole;
+
+  // Exact or near-exact whole number
+  if (frac < 0.005) {
+    return (isNeg ? '-' : '') + whole.toString();
+  }
+  if (frac > 0.995) {
+    return (isNeg ? '-' : '') + (whole + 1).toString();
+  }
+
+  // Common thirds check: 1/3 ~ 0.3333, 2/3 ~ 0.6667
+  if (Math.abs(frac - 1 / 3) < 0.015) {
+    if (improper && whole > 0) {
+      return `${isNeg ? '-' : ''}${whole * 3 + 1}/3`;
+    }
+    const wStr = whole > 0 ? `${whole} ` : '';
+    return `${isNeg ? '-' : ''}${wStr}1/3`;
+  }
+  if (Math.abs(frac - 2 / 3) < 0.015) {
+    if (improper && whole > 0) {
+      return `${isNeg ? '-' : ''}${whole * 3 + 2}/3`;
+    }
+    const wStr = whole > 0 ? `${whole} ` : '';
+    return `${isNeg ? '-' : ''}${wStr}2/3`;
+  }
+
+  // Search standard binary denominators: 2, 4, 8, 16, 32
+  let bestNum = 1;
+  let bestDenom = 1;
+  let minDiff = Infinity;
+
+  for (let denom = 2; denom <= maxDenominator; denom *= 2) {
+    const numerator = Math.round(frac * denom);
+    if (numerator <= 0 || numerator >= denom) continue;
+    const diff = Math.abs(frac - numerator / denom);
+    if (diff < minDiff) {
+      minDiff = diff;
+      bestNum = numerator;
+      bestDenom = denom;
+      if (diff < 0.0001) break;
+    }
+  }
+
+  if (bestNum <= 0) {
+    return whole > 0 ? `${isNeg ? '-' : ''}${whole}` : '0';
+  }
+
+  // Reduce fraction by greatest common divisor
+  const gcd = (a, b) => (b === 0 ? a : gcd(b, a % b));
+  const common = gcd(bestNum, bestDenom);
+  bestNum /= common;
+  bestDenom /= common;
+
+  if (improper && whole > 0) {
+    const impNum = whole * bestDenom + bestNum;
+    return `${isNeg ? '-' : ''}${impNum}/${bestDenom}`;
+  }
+
+  const wStr = whole > 0 ? `${whole} ` : '';
+  return `${isNeg ? '-' : ''}${wStr}${bestNum}/${bestDenom}`;
+}
+
+/**
+ * Parse a number or fraction string into a numeric float.
+ * e.g., "1 3/8" -> 1.375, "3/4" -> 0.75, "1.5" -> 1.5
+ */
+export function parseFractionString(val) {
+  if (val === null || val === undefined || val === '') return 0;
+  const s = String(val).trim();
+  if (s.includes('/')) {
+    const parts = s.split(/\s+/);
+    if (parts.length === 2) {
+      const whole = parseFloat(parts[0]);
+      const [num, den] = parts[1].split('/').map(Number);
+      if (!isNaN(whole) && !isNaN(num) && den) {
+        return (whole >= 0 ? 1 : -1) * (Math.abs(whole) + num / den);
+      }
+    }
+    if (parts.length === 1) {
+      const [num, den] = parts[0].split('/').map(Number);
+      if (!isNaN(num) && den) {
+        return num / den;
+      }
+    }
+  }
+  const parsed = parseFloat(val);
+  return isNaN(parsed) ? 0 : parsed;
+}
+
 export function formatNumber(val, decimals = 'auto', categoryId = null) {
   if (val === null || val === undefined || isNaN(val)) return '';
   const num = Number(val);
   if (!isFinite(num)) return num.toString();
 
-  // If fixed precision requested by user (e.g. '2', '4', '6', '8')
-  if (decimals !== 'auto') {
-    return num.toFixed(Number(decimals)).replace(/(\.[0-9]*[1-9])0+$|\.0*$/, '$1');
-  }
-
   // Handle exact zero
   if (num === 0) return '0';
 
+  // 1. Fractions (Mixed) mode (e.g. 1 3/8, 1/2)
+  if (decimals === 'fraction') {
+    return toFraction(num, 32, false);
+  }
+
+  // 2. Fractions (Improper) mode (e.g. 11/8, 3/2)
+  if (decimals === 'fraction_improper') {
+    return toFraction(num, 32, true);
+  }
+
+  // 3. Exact (Full Precision) mode: unrounded calculation with clean IEEE 754 precision
+  if (decimals === 'exact') {
+    if (Number.isInteger(num)) return num.toString();
+    return parseFloat(num.toPrecision(10)).toString();
+  }
+
+  // 4. Fixed precision requested by user (e.g. '2', '4', '6', '8')
+  if (decimals !== 'auto' && !isNaN(Number(decimals))) {
+    return num.toFixed(Number(decimals)).replace(/(\.[0-9]*[1-9])0+$|\.0*$/, '$1');
+  }
+
   const abs = Math.abs(num);
 
-  // Scientific notation for very small or huge values (< 1e-6 or >= 1e14)
-  if (abs >= 1e14 || (abs < 1e-6 && abs > 0)) {
+  // Scientific notation mode or for very small or huge values (< 1e-6 or >= 1e14)
+  if (decimals === 'scientific' || abs >= 1e14 || (abs < 1e-6 && abs > 0)) {
     return num.toExponential(4).replace(/(\.[0-9]*[1-9])0+e/, '$1e').replace(/\.0+e/, 'e');
   }
 
@@ -407,6 +525,14 @@ export function formatNumber(val, decimals = 'auto', categoryId = null) {
   // Category-specific sensible formatting (e.g. temperature)
   if (categoryId === 'temperature') {
     return parseFloat(clean.toFixed(2)).toString();
+  }
+
+  // Cooking measurements in auto mode naturally format as practical culinary mixed fractions (e.g. 13 tbsp -> 13/16 cup)
+  if (categoryId === 'cooking') {
+    const fracStr = toFraction(clean, 32, false);
+    if (fracStr && (fracStr !== '0' || clean === 0)) {
+      return fracStr;
+    }
   }
 
   // Small values (< 1): guarantee at least 4 significant figures so it NEVER truncates to 0
@@ -425,6 +551,132 @@ export function formatNumber(val, decimals = 'auto', categoryId = null) {
 }
 
 /**
+ * Calculates a practical kitchen compound breakdown for cooking measurements.
+ * Converts odd fractional measures into real-world drawer measuring tools.
+ * e.g.:
+ * - 13/16 cup (13 tbsp) -> "3/4 cup + 1 tbsp"
+ * - 5/16 cup (5 tbsp) -> "1/4 cup + 1 tbsp"
+ * - 7/16 cup (7 tbsp) -> "1/4 cup + 3 tbsp"
+ * - 9/16 cup (9 tbsp) -> "1/2 cup + 1 tbsp"
+ * - 11/16 cup (11 tbsp) -> "1/2 cup + 3 tbsp"
+ * - 15/16 cup (15 tbsp) -> "3/4 cup + 3 tbsp"
+ * - 4/3 tbsp (1.333 tbsp) -> "1 tbsp + 1 tsp"
+ * - 5/3 tbsp (1.667 tbsp) -> "1 tbsp + 2 tsp"
+ * - 1.5 tbsp -> "1 tbsp + 1 1/2 tsp"
+ *
+ * @param {number} value Converted numeric result
+ * @param {string} toUnitId Target unit identifier
+ * @param {string} categoryId Active category identifier
+ * @returns {string|null} Compound kitchen measurement breakdown or null
+ */
+export function getCookingCompoundMeasure(value, toUnitId, categoryId = 'cooking') {
+  if (value === null || value === undefined || isNaN(value) || value <= 0) return null;
+  if (categoryId !== 'cooking' && categoryId !== 'volume') return null;
+
+  // 1. Result in US Cups
+  if (toUnitId === 'cup_us') {
+    // 1 cup = 16 tablespoons
+    const totalTbsp = value * 16;
+    const roundedTbsp = Math.round(totalTbsp * 1000) / 1000;
+
+    // Must be close to a half or whole tablespoon (within 0.03 tbsp tolerance)
+    const nearestHalf = Math.round(roundedTbsp * 2) / 2;
+    if (Math.abs(roundedTbsp - nearestHalf) > 0.03) {
+      return null;
+    }
+
+    const wholeCups = Math.floor(nearestHalf / 16);
+    const remTbsp = nearestHalf % 16;
+
+    // Standard cup fraction thresholds: 3/4 (12 tbsp), 1/2 (8 tbsp), 1/4 (4 tbsp)
+    let cupFractionStr = '';
+    let standardCupTbsp = 0;
+
+    if (remTbsp >= 12) {
+      cupFractionStr = '3/4 cup';
+      standardCupTbsp = 12;
+    } else if (remTbsp >= 8) {
+      cupFractionStr = '1/2 cup';
+      standardCupTbsp = 8;
+    } else if (remTbsp >= 4) {
+      cupFractionStr = '1/4 cup';
+      standardCupTbsp = 4;
+    }
+
+    const leftoverTbsp = remTbsp - standardCupTbsp;
+
+    // If it's an exact clean cup fraction (1/4, 1/2, 3/4) or exact whole cup without leftover tbsp, no compound needed
+    if (leftoverTbsp === 0) {
+      return null;
+    }
+
+    const parts = [];
+    if (wholeCups === 1) parts.push('1 cup');
+    else if (wholeCups > 1) parts.push(`${wholeCups} cups`);
+
+    if (cupFractionStr) parts.push(cupFractionStr);
+
+    if (leftoverTbsp === 1) parts.push('1 tbsp');
+    else if (leftoverTbsp === 2) parts.push('2 tbsp');
+    else if (leftoverTbsp === 3) parts.push('3 tbsp');
+    else if (leftoverTbsp === 0.5) parts.push('1 1/2 tsp');
+    else if (leftoverTbsp === 1.5) parts.push('1 tbsp + 1 1/2 tsp');
+    else if (leftoverTbsp === 2.5) parts.push('2 tbsp + 1 1/2 tsp');
+
+    return parts.length > 0 ? parts.join(' + ') : null;
+  }
+
+  // 2. Result in US Tablespoons
+  if (toUnitId === 'tbsp_us') {
+    // 1 tablespoon = 3 teaspoons
+    const totalTsp = value * 3;
+    const roundedTsp = Math.round(totalTsp * 1000) / 1000;
+
+    // Must be close to a half or whole teaspoon (within 0.03 tsp tolerance)
+    const nearestHalfTsp = Math.round(roundedTsp * 2) / 2;
+    if (Math.abs(roundedTsp - nearestHalfTsp) > 0.03) {
+      return null;
+    }
+
+    const wholeTbsp = Math.floor(nearestHalfTsp / 3);
+    const leftoverTsp = nearestHalfTsp % 3;
+
+    // If clean whole tablespoons, no compound needed
+    if (leftoverTsp === 0) {
+      return null;
+    }
+
+    const parts = [];
+    if (wholeTbsp === 1) parts.push('1 tbsp');
+    else if (wholeTbsp > 1) parts.push(`${wholeTbsp} tbsp`);
+
+    if (leftoverTsp === 1) parts.push('1 tsp');
+    else if (leftoverTsp === 2) parts.push('2 tsp');
+    else if (leftoverTsp === 0.5) parts.push('1/2 tsp');
+    else if (leftoverTsp === 1.5) parts.push('1 1/2 tsp');
+    else if (leftoverTsp === 2.5) parts.push('2 1/2 tsp');
+
+    return parts.length > 0 ? parts.join(' + ') : null;
+  }
+
+  // 3. Result in Sticks of Butter
+  if (toUnitId === 'stick_butter') {
+    const totalTbsp = value * 8;
+    const roundedTbsp = Math.round(totalTbsp * 1000) / 1000;
+    if (Math.abs(roundedTbsp - Math.round(roundedTbsp)) < 0.03) {
+      const tbsp = Math.round(roundedTbsp);
+      if (tbsp === 4) return '4 tbsp (1/4 cup)';
+      if (tbsp === 8) return '8 tbsp (1/2 cup)';
+      if (tbsp === 12) return '12 tbsp (3/4 cup)';
+      if (tbsp === 16) return '16 tbsp (1 cup)';
+      if (tbsp > 0 && tbsp !== 8) return `${tbsp} tbsp`;
+    }
+  }
+
+  return null;
+}
+
+/**
  * Format a number for human-readable display with thousands separators (commas).
  * Only formats the integer portion (e.g. 1000000.1234 -> "1,000,000.1234").
  * Preserves exponential notation without injecting commas (e.g. "9.46073e15").
@@ -438,8 +690,8 @@ export function formatDisplayNumber(val) {
   const s = String(val).trim();
   if (s === '-' || s === '') return s;
 
-  // Do not format scientific notation
-  if (s.includes('e') || s.includes('E')) return s;
+  // Do not format scientific notation or fraction strings
+  if (s.includes('e') || s.includes('E') || s.includes('/')) return s;
 
   const isNegative = s.startsWith('-');
   const clean = (isNegative ? s.slice(1) : s).replace(/,/g, '');

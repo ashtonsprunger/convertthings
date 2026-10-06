@@ -1,4 +1,12 @@
-import { filterAndSortUnits, getUnitsForCategory, formatDisplayNumber } from './conversions';
+import {
+  filterAndSortUnits,
+  getUnitsForCategory,
+  formatDisplayNumber,
+  formatNumber,
+  toFraction,
+  parseFractionString,
+  getCookingCompoundMeasure,
+} from './conversions';
 
 describe('filterAndSortUnits', () => {
   test('returns all units in original order when search query is empty or whitespace', () => {
@@ -146,5 +154,138 @@ describe('formatDisplayNumber', () => {
     expect(formatDisplayNumber(null)).toBe('');
     expect(formatDisplayNumber(undefined)).toBe('');
     expect(formatDisplayNumber('-')).toBe('-');
+  });
+});
+
+describe('toFraction', () => {
+  test('converts exact decimal fractions to mixed fractions', () => {
+    expect(toFraction(1.5)).toBe('1 1/2');
+    expect(toFraction(0.5)).toBe('1/2');
+    expect(toFraction(1.25)).toBe('1 1/4');
+    expect(toFraction(0.75)).toBe('3/4');
+    expect(toFraction(1.375)).toBe('1 3/8');
+    expect(toFraction(0.125)).toBe('1/8');
+    expect(toFraction(0.0625)).toBe('1/16');
+    expect(toFraction(0.3125)).toBe('5/16');
+  });
+
+  test('snaps near fractions to nearest tape measure and culinary increments', () => {
+    expect(toFraction(1.37795)).toBe('1 3/8'); // 35mm in inches
+    expect(toFraction(0.3333)).toBe('1/3');
+    expect(toFraction(0.6667)).toBe('2/3');
+    expect(toFraction(1.251)).toBe('1 1/4');
+  });
+
+  test('converts decimal fractions to improper fractions when requested', () => {
+    expect(toFraction(1.5, 32, true)).toBe('3/2');
+    expect(toFraction(1.375, 32, true)).toBe('11/8');
+    expect(toFraction(0.75, 32, true)).toBe('3/4');
+    expect(toFraction(2.5, 32, true)).toBe('5/2');
+    expect(toFraction(1.3333, 32, true)).toBe('4/3');
+    expect(toFraction(-1.25, 32, true)).toBe('-5/4');
+    expect(toFraction(5, 32, true)).toBe('5');
+  });
+
+  test('handles whole numbers, zero, and negative values', () => {
+    expect(toFraction(0)).toBe('0');
+    expect(toFraction(5)).toBe('5');
+    expect(toFraction(-1.5)).toBe('-1 1/2');
+    expect(toFraction(-0.25)).toBe('-1/4');
+  });
+});
+
+describe('parseFractionString', () => {
+  test('parses mixed fractions, simple fractions, and decimals', () => {
+    expect(parseFractionString('1 1/2')).toBe(1.5);
+    expect(parseFractionString('3/4')).toBe(0.75);
+    expect(parseFractionString('1 3/8')).toBe(1.375);
+    expect(parseFractionString('2.5')).toBe(2.5);
+    expect(parseFractionString('10')).toBe(10);
+    expect(parseFractionString('-1 1/4')).toBe(-1.25);
+  });
+
+  test('parses improper fractions', () => {
+    expect(parseFractionString('11/8')).toBe(1.375);
+    expect(parseFractionString('3/2')).toBe(1.5);
+    expect(parseFractionString('5/4')).toBe(1.25);
+    expect(parseFractionString('-5/2')).toBe(-2.5);
+  });
+});
+
+describe('formatNumber precision modes', () => {
+  test('formats numbers using scientific notation mode', () => {
+    expect(formatNumber(1000, 'scientific')).toBe('1e+3');
+    expect(formatNumber(0.00045, 'scientific')).toBe('4.5e-4');
+    expect(formatNumber(263.64, 'scientific')).toBe('2.6364e+2');
+  });
+
+  test('formats numbers using fraction mode', () => {
+    expect(formatNumber(1.375, 'fraction')).toBe('1 3/8');
+    expect(formatNumber(0.5, 'fraction')).toBe('1/2');
+    expect(formatNumber(2, 'fraction')).toBe('2');
+  });
+
+  test('formats numbers using improper fraction mode', () => {
+    expect(formatNumber(1.375, 'fraction_improper')).toBe('11/8');
+    expect(formatNumber(0.5, 'fraction_improper')).toBe('1/2');
+    expect(formatNumber(2.5, 'fraction_improper')).toBe('5/2');
+    expect(formatNumber(2, 'fraction_improper')).toBe('2');
+  });
+
+  test('formats numbers using exact full precision mode', () => {
+    expect(formatNumber(1.25, 'exact')).toBe('1.25');
+    expect(formatNumber(0.2641720524, 'exact')).toBe('0.2641720524');
+    expect(formatNumber(10, 'exact')).toBe('10');
+  });
+
+  test('formats numbers using auto mode for cooking as practical culinary fractions', () => {
+    expect(formatNumber(0.8125, 'auto', 'cooking')).toBe('13/16'); // 13 tbsp to cup
+    expect(formatNumber(0.5, 'auto', 'cooking')).toBe('1/2');      // 1 stick butter to cup
+    expect(formatNumber(1.375, 'auto', 'cooking')).toBe('1 3/8');
+    expect(formatNumber(0.0625, 'auto', 'cooking')).toBe('1/16');  // 1 tbsp to cup
+    expect(formatNumber(0.33333333, 'auto', 'cooking')).toBe('1/3'); // 1 tsp to tbsp
+    expect(formatNumber(16, 'auto', 'cooking')).toBe('16');        // 1 cup to tbsp
+    expect(formatNumber(3, 'auto', 'cooking')).toBe('3');          // 1 tbsp to tsp
+  });
+});
+
+describe('getCookingCompoundMeasure', () => {
+  test('returns practical compound kitchen measures for odd 16th cup fractions', () => {
+    expect(getCookingCompoundMeasure(13 / 16, 'cup_us', 'cooking')).toBe('3/4 cup + 1 tbsp');
+    expect(getCookingCompoundMeasure(7 / 16, 'cup_us', 'cooking')).toBe('1/4 cup + 3 tbsp');
+    expect(getCookingCompoundMeasure(5 / 16, 'cup_us', 'cooking')).toBe('1/4 cup + 1 tbsp');
+    expect(getCookingCompoundMeasure(9 / 16, 'cup_us', 'cooking')).toBe('1/2 cup + 1 tbsp');
+    expect(getCookingCompoundMeasure(11 / 16, 'cup_us', 'cooking')).toBe('1/2 cup + 3 tbsp');
+    expect(getCookingCompoundMeasure(15 / 16, 'cup_us', 'cooking')).toBe('3/4 cup + 3 tbsp');
+    expect(getCookingCompoundMeasure(1 / 16, 'cup_us', 'cooking')).toBe('1 tbsp');
+    expect(getCookingCompoundMeasure(2 / 16, 'cup_us', 'cooking')).toBe('2 tbsp');
+    expect(getCookingCompoundMeasure(3 / 16, 'cup_us', 'cooking')).toBe('3 tbsp');
+    expect(getCookingCompoundMeasure(17 / 16, 'cup_us', 'cooking')).toBe('1 cup + 1 tbsp');
+    expect(getCookingCompoundMeasure(29 / 16, 'cup_us', 'cooking')).toBe('1 cup + 3/4 cup + 1 tbsp');
+  });
+
+  test('returns null for exact standard measuring cups that require no compound breakdown', () => {
+    expect(getCookingCompoundMeasure(0.25, 'cup_us', 'cooking')).toBeNull(); // 1/4 cup
+    expect(getCookingCompoundMeasure(0.5, 'cup_us', 'cooking')).toBeNull();  // 1/2 cup
+    expect(getCookingCompoundMeasure(0.75, 'cup_us', 'cooking')).toBeNull(); // 3/4 cup
+    expect(getCookingCompoundMeasure(1, 'cup_us', 'cooking')).toBeNull();    // 1 cup
+    expect(getCookingCompoundMeasure(2, 'cup_us', 'cooking')).toBeNull();    // 2 cups
+  });
+
+  test('returns practical tablespoon and teaspoon breakdowns for fractional tablespoons', () => {
+    expect(getCookingCompoundMeasure(4 / 3, 'tbsp_us', 'cooking')).toBe('1 tbsp + 1 tsp');
+    expect(getCookingCompoundMeasure(5 / 3, 'tbsp_us', 'cooking')).toBe('1 tbsp + 2 tsp');
+    expect(getCookingCompoundMeasure(1.5, 'tbsp_us', 'cooking')).toBe('1 tbsp + 1 1/2 tsp');
+    expect(getCookingCompoundMeasure(1 / 3, 'tbsp_us', 'cooking')).toBe('1 tsp');
+    expect(getCookingCompoundMeasure(2 / 3, 'tbsp_us', 'cooking')).toBe('2 tsp');
+    expect(getCookingCompoundMeasure(0.5, 'tbsp_us', 'cooking')).toBe('1 1/2 tsp');
+    expect(getCookingCompoundMeasure(1 / 6, 'tbsp_us', 'cooking')).toBe('1/2 tsp');
+    expect(getCookingCompoundMeasure(2, 'tbsp_us', 'cooking')).toBeNull(); // clean 2 tbsp
+  });
+
+  test('returns practical tablespoon breakdowns for fractional butter sticks', () => {
+    expect(getCookingCompoundMeasure(0.5, 'stick_butter', 'cooking')).toBe('4 tbsp (1/4 cup)');
+    expect(getCookingCompoundMeasure(1.5, 'stick_butter', 'cooking')).toBe('12 tbsp (3/4 cup)');
+    expect(getCookingCompoundMeasure(2, 'stick_butter', 'cooking')).toBe('16 tbsp (1 cup)');
   });
 });

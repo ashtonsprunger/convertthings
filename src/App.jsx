@@ -4,6 +4,7 @@ import {
   getUnit,
   convertUnits,
   formatNumber,
+  parseFractionString,
 } from './engine/conversions';
 import { parseRoute, formatRoutePath } from './engine/urlRouter';
 import { getSeoMetadata } from './engine/seo';
@@ -110,11 +111,19 @@ function App() {
   // Recalculate toValue when fromValue, units, or precision changes
   const performCalculation = useCallback(
     (val, catId, fUnitId, tUnitId, prec) => {
-      if (val === '' || val === null || isNaN(val)) {
+      if (val === '' || val === null) {
         setToValue('');
         return;
       }
-      const result = convertUnits(Number(val), catId, fUnitId, tUnitId);
+      const numVal = typeof val === 'string' && val.includes('/')
+        ? parseFractionString(val)
+        : Number(val);
+
+      if (isNaN(numVal)) {
+        setToValue('');
+        return;
+      }
+      const result = convertUnits(numVal, catId, fUnitId, tUnitId);
       if (result !== null) {
         setToValue(formatNumber(result, prec, catId));
       } else {
@@ -127,7 +136,9 @@ function App() {
   // Record conversion to history safely (debounced)
   const recordHistory = useCallback(
     (catId, fUnitId, tUnitId, fVal, tVal) => {
-      if (!fVal || !tVal || isNaN(fVal)) return;
+      if (!fVal || !tVal) return;
+      const numF = typeof fVal === 'string' && fVal.includes('/') ? parseFractionString(fVal) : Number(fVal);
+      if (isNaN(numF)) return;
 
       const fUnit = getUnit(catId, fUnitId);
       const tUnit = getUnit(catId, tUnitId);
@@ -262,9 +273,14 @@ function App() {
     // Queue history recording
     if (historyTimeoutRef.current) clearTimeout(historyTimeoutRef.current);
     historyTimeoutRef.current = setTimeout(() => {
-      const res = convertUnits(Number(newVal), categoryId, fromUnitId, toUnitId);
-      if (res !== null) {
-        recordHistory(categoryId, fromUnitId, toUnitId, newVal, formatNumber(res, precision, categoryId));
+      const numVal = typeof newVal === 'string' && newVal.includes('/')
+        ? parseFractionString(newVal)
+        : Number(newVal);
+      if (!isNaN(numVal)) {
+        const res = convertUnits(numVal, categoryId, fromUnitId, toUnitId);
+        if (res !== null) {
+          recordHistory(categoryId, fromUnitId, toUnitId, newVal, formatNumber(res, precision, categoryId));
+        }
       }
     }, 1200);
   };
@@ -273,11 +289,19 @@ function App() {
   const handleToValueChange = (newVal) => {
     setLastEdited('to');
     setToValue(newVal);
-    if (newVal === '' || newVal === null || isNaN(newVal)) {
+    if (newVal === '' || newVal === null) {
       setFromValue('');
       return;
     }
-    const reverseRes = convertUnits(Number(newVal), categoryId, toUnitId, fromUnitId);
+    const numVal = typeof newVal === 'string' && newVal.includes('/')
+      ? parseFractionString(newVal)
+      : Number(newVal);
+
+    if (isNaN(numVal)) {
+      setFromValue('');
+      return;
+    }
+    const reverseRes = convertUnits(numVal, categoryId, toUnitId, fromUnitId);
     if (reverseRes !== null) {
       const formatted = formatNumber(reverseRes, precision, categoryId);
       setFromValue(formatted);
@@ -327,7 +351,7 @@ function App() {
     setLastEdited('from');
     const nextFrom = toUnitId;
     const nextTo = fromUnitId;
-    const nextVal = (toValue !== '' && toValue !== null && !isNaN(toValue)) ? toValue : fromValue;
+    const nextVal = (toValue !== '' && toValue !== null) ? toValue : fromValue;
     setFromUnitId(nextFrom);
     setToUnitId(nextTo);
     setFromValue(nextVal);
@@ -339,10 +363,15 @@ function App() {
   const handlePrecisionChange = (newPrec) => {
     setPrecision(newPrec);
     if (lastEdited === 'to') {
-      if (toValue !== '' && toValue !== null && !isNaN(toValue)) {
-        const reverseRes = convertUnits(Number(toValue), categoryId, toUnitId, fromUnitId);
-        if (reverseRes !== null) {
-          setFromValue(formatNumber(reverseRes, newPrec, categoryId));
+      if (toValue !== '' && toValue !== null) {
+        const numVal = typeof toValue === 'string' && toValue.includes('/')
+          ? parseFractionString(toValue)
+          : Number(toValue);
+        if (!isNaN(numVal)) {
+          const reverseRes = convertUnits(numVal, categoryId, toUnitId, fromUnitId);
+          if (reverseRes !== null) {
+            setFromValue(formatNumber(reverseRes, newPrec, categoryId));
+          }
         }
       }
     } else {

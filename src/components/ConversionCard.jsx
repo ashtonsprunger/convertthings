@@ -8,6 +8,8 @@ import {
   convertUnits,
   filterAndSortUnits,
   formatDisplayNumber,
+  parseFractionString,
+  getCookingCompoundMeasure,
 } from '../engine/conversions';
 
 export function ConversionCard({
@@ -37,6 +39,9 @@ export function ConversionCard({
   const [showToDropdown, setShowToDropdown] = useState(false);
   const [isSwapping, setIsSwapping] = useState(false);
   const [copiedNumber, setCopiedNumber] = useState(false);
+  const [copiedFormula, setCopiedFormula] = useState(false);
+  const [copiedInstruction, setCopiedInstruction] = useState(false);
+  const [copiedKitchen, setCopiedKitchen] = useState(false);
 
   const fromDropdownRef = useRef(null);
   const toDropdownRef = useRef(null);
@@ -47,6 +52,9 @@ export function ConversionCard({
   const prevUnitsRef = useRef({ fromUnitId, toUnitId });
   const isInitialMount = useRef(true);
   const copiedTimeoutRef = useRef(null);
+  const copiedFormulaTimeoutRef = useRef(null);
+  const copiedInstructionTimeoutRef = useRef(null);
+  const copiedKitchenTimeoutRef = useRef(null);
 
   const formulaDetails = getFormulaDetails(categoryId, fromUnit.id, toUnit.id);
   const formula = formulaDetails.equation || getFormulaString(categoryId, fromUnit.id, toUnit.id);
@@ -54,12 +62,18 @@ export function ConversionCard({
   // Reset copied state when values change
   useEffect(() => {
     setCopiedNumber(false);
+    setCopiedFormula(false);
+    setCopiedInstruction(false);
+    setCopiedKitchen(false);
   }, [fromValue, toValue, fromUnitId, toUnitId]);
 
-  // Clean up timer and running animations on unmount
+  // Clean up timers and running animations on unmount
   useEffect(() => {
     return () => {
       if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
+      if (copiedFormulaTimeoutRef.current) clearTimeout(copiedFormulaTimeoutRef.current);
+      if (copiedInstructionTimeoutRef.current) clearTimeout(copiedInstructionTimeoutRef.current);
+      if (copiedKitchenTimeoutRef.current) clearTimeout(copiedKitchenTimeoutRef.current);
       activeAnimationsRef.current.forEach((a) => {
         try {
           a.cancel();
@@ -85,6 +99,48 @@ export function ConversionCard({
     if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
     copiedTimeoutRef.current = setTimeout(() => {
       setCopiedNumber(false);
+    }, 1600);
+  };
+
+  const handleCopyInstruction = (e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    if (!formulaDetails.instruction) return;
+    onCopy(formulaDetails.instruction, 'Instruction copied to clipboard!');
+    setCopiedInstruction(true);
+    if (copiedInstructionTimeoutRef.current) clearTimeout(copiedInstructionTimeoutRef.current);
+    copiedInstructionTimeoutRef.current = setTimeout(() => {
+      setCopiedInstruction(false);
+    }, 1600);
+  };
+
+  const handleCopyFormula = (e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    const valToCopy = formulaDetails.equation || formula;
+    onCopy(valToCopy, 'Formula copied to clipboard!');
+    setCopiedFormula(true);
+    if (copiedFormulaTimeoutRef.current) clearTimeout(copiedFormulaTimeoutRef.current);
+    copiedFormulaTimeoutRef.current = setTimeout(() => {
+      setCopiedFormula(false);
+    }, 1600);
+  };
+
+  const handleCopyKitchen = (e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    if (!kitchenCompound) return;
+    onCopy(kitchenCompound, `${kitchenCompound} copied to clipboard!`);
+    setCopiedKitchen(true);
+    if (copiedKitchenTimeoutRef.current) clearTimeout(copiedKitchenTimeoutRef.current);
+    copiedKitchenTimeoutRef.current = setTimeout(() => {
+      setCopiedKitchen(false);
     }, 1600);
   };
 
@@ -292,9 +348,22 @@ export function ConversionCard({
     onSwap();
   };
 
-  // Field selection helper (selects all text on focus and click)
-  const handleInputSelect = (e) => {
+  // Smart focus helper (Option 1):
+  // Selects all text on initial focus (e.g. tabbing in or clicking from outside).
+  // When already focused, allows user to click anywhere to place the cursor without selecting all.
+  const handleInputFocus = (e) => {
     e.target.select();
+  };
+
+  const handleInputMouseDown = (e) => {
+    // If already focused, allow default browser caret placement
+    if (document.activeElement === e.target) {
+      return;
+    }
+    // If not yet focused, focusing triggers handleInputFocus which selects all.
+    // Prevent default on mousedown so mouseup doesn't clear the selection in Chrome/WebKit.
+    e.preventDefault();
+    e.target.focus();
   };
 
   const handleClear = () => {
@@ -332,16 +401,32 @@ export function ConversionCard({
     onToValueChange(next.toString());
   };
 
+  const isFractionMode =
+    precision === 'fraction' ||
+    precision === 'fraction_improper' ||
+    (precision === 'auto' && categoryId === 'cooking');
+
+  const rawTargetValue = (() => {
+    if (!fromValue) return null;
+    const num = typeof fromValue === 'string' && fromValue.includes('/')
+      ? parseFractionString(fromValue)
+      : parseFloat(fromValue);
+    if (isNaN(num)) return null;
+    return convertUnits(num, categoryId, fromUnit.id, toUnit.id);
+  })();
+
+  const kitchenCompound = getCookingCompoundMeasure(rawTargetValue, toUnit.id, categoryId);
+
   // Calculate if the current conversion result is an approximation
   const isApproximate = (() => {
-    if (!fromValue || !toValue) return false;
-    const num = parseFloat(fromValue);
-    if (isNaN(num)) return false;
-    const rawConverted = convertUnits(num, categoryId, fromUnit.id, toUnit.id);
-    if (rawConverted === null) return false;
+    if (!fromValue || !toValue || rawTargetValue === null) return false;
+    if (isFractionMode || (typeof toValue === 'string' && toValue.includes('/'))) {
+      const fracVal = parseFractionString(toValue);
+      return Math.abs(fracVal - rawTargetValue) > 1e-4;
+    }
     const formattedNum = Number(toValue);
     if (isNaN(formattedNum)) return false;
-    return Math.abs(formattedNum - rawConverted) > 1e-11;
+    return Math.abs(formattedNum - rawTargetValue) > 1e-11;
   })();
 
   const relOperator = isApproximate ? '≈' : '=';
@@ -547,13 +632,15 @@ export function ConversionCard({
               className="ct-select-subtle"
               value={precision}
               onChange={(e) => onPrecisionChange(e.target.value)}
-              title="Select decimal precision"
+              title="Select formatting and precision"
+              aria-label="Decimal Precision and Formatting"
             >
-              <option value="auto">Auto Decimals</option>
+              <option value="auto">Auto (Smart)</option>
               <option value="2">2 Decimals</option>
               <option value="4">4 Decimals</option>
-              <option value="6">6 Decimals</option>
-              <option value="8">8 Decimals</option>
+              <option value="exact">Exact (Full Precision)</option>
+              <option value="fraction">Fractions (Mixed: 1 3/8)</option>
+              <option value="fraction_improper">Fractions (Improper: 11/8)</option>
             </select>
           </div>
         </div>
@@ -598,14 +685,14 @@ export function ConversionCard({
             <div className="ct-input-inner">
               <input
                 id="fromInput"
-                type="number"
+                type={isFractionMode ? 'text' : 'number'}
                 step="any"
                 inputMode="decimal"
                 className={`ct-number-input ${getNumberFontSizeClass(fromValue)}`}
                 value={fromValue}
                 onChange={(e) => onFromValueChange(e.target.value)}
-                onFocus={handleInputSelect}
-                onClick={handleInputSelect}
+                onFocus={handleInputFocus}
+                onMouseDown={handleInputMouseDown}
                 onKeyDown={(e) => {
                   if (e.key === 'Escape') handleClear();
                 }}
@@ -746,14 +833,14 @@ export function ConversionCard({
             <div className="ct-input-inner">
               <input
                 id="toInput"
-                type="number"
+                type={isFractionMode ? 'text' : 'number'}
                 step="any"
                 inputMode="decimal"
                 className={`ct-number-input ${getNumberFontSizeClass(toValue)}`}
                 value={toValue}
                 onChange={(e) => onToValueChange(e.target.value)}
-                onFocus={handleInputSelect}
-                onClick={handleInputSelect}
+                onFocus={handleInputFocus}
+                onMouseDown={handleInputMouseDown}
                 onKeyDown={(e) => {
                   if (e.key === 'Escape') onToValueChange('');
                 }}
@@ -887,45 +974,72 @@ export function ConversionCard({
           </div>
         </div>
 
-        {/* Row 2: Invariant Educational Formula & Instruction (Replaces redundant sentence) */}
-        <div
-          className="ct-footnote-row ct-footnote-row-sub ct-copyable-row ct-formula-row"
-          onClick={() => {
-            const copyContent = formulaInstruction
-              ? `${formulaEquation} (${formulaInstruction})`
-              : formulaEquation;
-            onCopy(copyContent, 'Formula copied to clipboard!');
-          }}
-          title="Click to copy formula"
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              const copyContent = formulaInstruction
-                ? `${formulaEquation} (${formulaInstruction})`
-                : formulaEquation;
-              onCopy(copyContent, 'Formula copied to clipboard!');
-            }
-          }}
-          aria-label="Conversion formula"
-        >
-          <div className="ct-formula-inner">
-            <div className="ct-formula-main">
-              <span className="ct-formula-strip-val" title={formulaEquation}>
-                {renderFormulaContent(formulaEquation, fromUnit.symbol)}
+        {/* Kitchen Compound Measure Breakdown */}
+        {kitchenCompound && (
+          <div className="ct-kitchen-measure-row" aria-label="Kitchen measuring breakdown">
+            <button
+              type="button"
+              className={`ct-kitchen-badge ${copiedKitchen ? 'copied' : ''}`}
+              onClick={handleCopyKitchen}
+              title={copiedKitchen ? 'Copied to clipboard!' : `Copy kitchen measure: ${kitchenCompound}`}
+              aria-label={copiedKitchen ? 'Kitchen measure copied' : `Kitchen measure: ${kitchenCompound}`}
+            >
+              <Icon name="ChefHat" size={15} className="ct-kitchen-icon" />
+              <span className="ct-kitchen-label">Kitchen Measure:</span>
+              <strong className="ct-kitchen-val">{kitchenCompound}</strong>
+              <span className="ct-kitchen-copy-icon" aria-hidden="true">
+                <Icon name={copiedKitchen ? 'Check' : 'Copy'} size={12} />
               </span>
-            </div>
+            </button>
+          </div>
+        )}
+
+        {/* Row 2: Invariant Educational Formula & Instruction (Separately copy-able) */}
+        {(formulaInstruction || formulaEquation) && (
+          <div className="ct-formula-section" aria-label="Conversion formula details">
+            {/* 1. Practical Sentence Instruction on Top */}
             {formulaInstruction && (
-              <div className="ct-formula-instruction">
-                <span className="ct-formula-instruction-bullet">↳</span>
-                <span className="ct-formula-instruction-text">
+              <button
+                type="button"
+                className={`ct-formula-item ct-formula-instruction-item ${copiedInstruction ? 'copied' : ''}`}
+                onClick={handleCopyInstruction}
+                title={copiedInstruction ? 'Copied to clipboard!' : 'Copy instruction'}
+                aria-label={copiedInstruction ? 'Instruction copied to clipboard' : 'Conversion instruction'}
+              >
+                <span className="ct-formula-item-text">
                   {renderInstructionContent(formulaInstruction, fromUnit)}
                 </span>
-              </div>
+                <span className="ct-formula-copy-icon" aria-hidden="true">
+                  <Icon name={copiedInstruction ? 'Check' : 'Copy'} size={12} />
+                </span>
+                <span className="ct-formula-tooltip" role="tooltip" aria-hidden="true">
+                  {copiedInstruction ? 'Copied!' : 'Copy instruction'}
+                </span>
+              </button>
+            )}
+
+            {/* 2. Formal Mathematical Equation on Bottom */}
+            {formulaEquation && (
+              <button
+                type="button"
+                className={`ct-formula-item ct-formula-equation-item ${copiedFormula ? 'copied' : ''}`}
+                onClick={handleCopyFormula}
+                title={copiedFormula ? 'Copied to clipboard!' : 'Copy formula'}
+                aria-label={copiedFormula ? 'Formula copied to clipboard' : 'Conversion formula'}
+              >
+                <span className="ct-formula-item-text">
+                  {renderFormulaContent(formulaEquation, fromUnit.symbol)}
+                </span>
+                <span className="ct-formula-copy-icon" aria-hidden="true">
+                  <Icon name={copiedFormula ? 'Check' : 'Copy'} size={12} />
+                </span>
+                <span className="ct-formula-tooltip" role="tooltip" aria-hidden="true">
+                  {copiedFormula ? 'Copied!' : 'Copy formula'}
+                </span>
+              </button>
             )}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

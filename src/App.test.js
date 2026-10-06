@@ -296,11 +296,11 @@ describe('ConvertThings UI Integration', () => {
     });
     expect(copyNumBtn).toHaveClass('copied');
 
-    // Formula educational reference row inside card
-    const formulaStrip = screen.getByLabelText(/Conversion formula/i);
-    expect(formulaStrip).toBeInTheDocument();
-    expect(formulaStrip).toHaveTextContent(/ft = m/i);
-    expect(formulaStrip).toHaveTextContent(/Multiply the meter value by 3.2808/i);
+    // Formula educational reference section inside card
+    const formulaSection = screen.getByLabelText(/Conversion formula details/i);
+    expect(formulaSection).toBeInTheDocument();
+    expect(formulaSection).toHaveTextContent(/ft = m/i);
+    expect(formulaSection).toHaveTextContent(/Multiply the meter value by 3.2808/i);
   });
 
   test('formats large numbers with commas in equation readouts while keeping input fields numeric', () => {
@@ -344,6 +344,28 @@ describe('ConvertThings UI Integration', () => {
     expect(toInput.value).toBe('407');
     // The calculated fromInput should update with smart auto precision
     expect(Number(fromInput.value)).toBeCloseTo(33.9167, 3);
+  });
+
+  test('switches precision modes to mixed fractions, improper fractions, and exact full precision', () => {
+    render(<App />);
+    const precisionSelect = screen.getByLabelText(/Decimal Precision/i);
+    const toInput = screen.getByLabelText(/Converted value in/i);
+
+    // Switch to mixed fractions (1 m = 3.28084 ft -> 3 9/32 ft)
+    fireEvent.change(precisionSelect, { target: { value: 'fraction' } });
+    expect(toInput.value).toBe('3 9/32');
+
+    // Switch to improper fractions (1 m = 3.28084 ft -> 105/32 ft)
+    fireEvent.change(precisionSelect, { target: { value: 'fraction_improper' } });
+    expect(toInput.value).toBe('105/32');
+
+    // Switch to exact full precision
+    fireEvent.change(precisionSelect, { target: { value: 'exact' } });
+    expect(toInput.value).toContain('3.280839895');
+
+    // Switch back to auto
+    fireEvent.change(precisionSelect, { target: { value: 'auto' } });
+    expect(toInput.value).toBe('3.2808');
   });
 
   test('renders footer legal links and opens legal modal', () => {
@@ -390,6 +412,20 @@ describe('ConvertThings UI Integration', () => {
     expect(parseFloat(toInput.value)).toBeCloseTo(62.137, 2);
   });
 
+  test('automatically displays practical fractions for cooking in auto mode', () => {
+    window.history.replaceState({}, '', '/convert/13-tbsp_us-to-cup_us');
+    render(<App />);
+
+    const fromInput = screen.getByLabelText(/Enter value in/i);
+    expect(fromInput.value).toBe('13');
+
+    const toInput = screen.getByLabelText(/Converted value in/i);
+    expect(toInput.value).toBe('13/16');
+
+    const equationCard = screen.getByLabelText(/Conversion equations/i);
+    expect(equationCard).toHaveTextContent(/13 tbsp = 13\/16.*cup/i);
+  });
+
   test('respects stored decimal precision on initial mount and page reload', () => {
     window.localStorage.setItem('ct-precision', JSON.stringify('2'));
     render(<App />);
@@ -399,16 +435,26 @@ describe('ConvertThings UI Integration', () => {
     expect(toInput.value).toBe('3.28');
   });
 
-  test('clicking or focusing an input field selects its text', () => {
+  test('focusing or initial click selects input text, while clicking when active allows placing cursor', () => {
     render(<App />);
     const fromInput = screen.getByLabelText(/Enter value in/i);
     const selectSpy = jest.spyOn(fromInput, 'select');
 
-    fireEvent.focus(fromInput);
-    expect(selectSpy).toHaveBeenCalled();
+    // 1. Initial focus (e.g. keyboard Tab) selects text
+    fromInput.focus();
+    expect(selectSpy).toHaveBeenCalledTimes(1);
 
+    // 2. Clicking when already focused does NOT call select again (allows placing cursor)
+    fireEvent.mouseDown(fromInput);
     fireEvent.click(fromInput);
-    expect(selectSpy).toHaveBeenCalled();
+    expect(selectSpy).toHaveBeenCalledTimes(1);
+
+    // 3. When blurred and clicked from outside, selects text on initial entry
+    fromInput.blur();
+    selectSpy.mockClear();
+    fireEvent.mouseDown(fromInput);
+    expect(selectSpy).toHaveBeenCalledTimes(1);
+
     selectSpy.mockRestore();
   });
 
@@ -501,6 +547,11 @@ describe('ConvertThings UI Integration', () => {
     fireEvent.click(copyFormulaBtn);
 
     expect(await screen.findByText(/Formula copied to clipboard!/i)).toBeInTheDocument();
+
+    const copyInstructionBtn = screen.getByRole('button', { name: /Conversion instruction/i });
+    fireEvent.click(copyInstructionBtn);
+
+    expect(await screen.findByText(/Instruction copied to clipboard!/i)).toBeInTheDocument();
   });
 
   test('increments and decrements input values to next whole number using stepper buttons', () => {

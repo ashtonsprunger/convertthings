@@ -11,13 +11,32 @@ export function CategoryNav({ activeCategoryId, onSelectCategory }) {
     }
   };
 
+  const isFirstMountRef = useRef(true);
+
   // Keep active category tab centered in view
   useEffect(() => {
-    if (scrollRef.current) {
+    const scrollToActive = (behavior = 'smooth') => {
+      if (!scrollRef.current) return;
       const activeTab = scrollRef.current.querySelector('.ct-category-tab.active');
-      if (activeTab && typeof activeTab.scrollIntoView === 'function') {
-        activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      if (!activeTab) return;
+
+      if (typeof activeTab.scrollIntoView === 'function') {
+        activeTab.scrollIntoView({ behavior, block: 'nearest', inline: 'center' });
+      } else {
+        const container = scrollRef.current;
+        const target = activeTab.offsetLeft - container.offsetWidth / 2 + activeTab.offsetWidth / 2;
+        container.scrollLeft = Math.max(0, target);
       }
+    };
+
+    if (isFirstMountRef.current) {
+      isFirstMountRef.current = false;
+      // Instant positioning on initial load / refresh to prevent showing wrong tabs
+      scrollToActive('auto');
+      const timer = setTimeout(() => scrollToActive('auto'), 50);
+      return () => clearTimeout(timer);
+    } else {
+      scrollToActive('smooth');
     }
   }, [activeCategoryId]);
 

@@ -211,7 +211,7 @@ export async function executeTool(toolName, args = {}) {
           };
         }
 
-        const formatted = formatNumber(converted, decimals);
+        const formatted = formatNumber(converted, decimals, catId);
         const formula = getFormulaString(catId, fromMatch.unit.id, toMatch.unit.id);
         const readout = `${numVal} ${fromMatch.unit.symbol} = ${formatted} ${toMatch.unit.symbol}`;
 

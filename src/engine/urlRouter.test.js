@@ -50,6 +50,33 @@ describe('ConvertThings URL Router', () => {
     expect(route.categoryId).toBe('cooking');
     expect(route.fromUnitId).toBe('stick_butter');
     expect(route.toUnitId).toBe('tbsp_us');
+
+    const route13 = parseRoute('/convert/13-tbsp_us-to-cup_us');
+    expect(route13).not.toBeNull();
+    expect(route13.categoryId).toBe('cooking');
+    expect(route13.fromUnitId).toBe('tbsp_us');
+    expect(route13.toUnitId).toBe('cup_us');
+    expect(route13.fromValue).toBe('13');
+
+    // Culinary ounces (fl oz) when paired with cups
+    const routeOzCup = parseRoute('/convert/8-oz-to-cups');
+    expect(routeOzCup).not.toBeNull();
+    expect(routeOzCup.categoryId).toBe('cooking');
+    expect(routeOzCup.fromUnitId).toBe('floz_us');
+    expect(routeOzCup.toUnitId).toBe('cup_us');
+
+    const routeCupOz = parseRoute('/convert/1-cup-to-oz');
+    expect(routeCupOz).not.toBeNull();
+    expect(routeCupOz.categoryId).toBe('cooking');
+    expect(routeCupOz.fromUnitId).toBe('cup_us');
+    expect(routeCupOz.toUnitId).toBe('floz_us');
+
+    // Dry ounces when paired with grams (mass domain)
+    const routeOzG = parseRoute('/convert/8-oz-to-g');
+    expect(routeOzG).not.toBeNull();
+    expect(routeOzG.categoryId).toBe('mass');
+    expect(routeOzG.fromUnitId).toBe('oz');
+    expect(routeOzG.toUnitId).toBe('g');
   });
 
   test('parses direct category paths', () => {
