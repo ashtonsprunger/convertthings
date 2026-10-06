@@ -95,7 +95,8 @@
   transition: color var(--transition-fast);
 }
 
-.ct-brand:hover .ct-brand-accent {
+.ct-brand:hover .ct-brand-accent,
+.ct-footer-logo:hover .ct-brand-accent {
   color: var(--primary-hover);
 }
 

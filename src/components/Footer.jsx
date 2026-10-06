@@ -14,7 +14,9 @@ export function Footer({ onSelectCategory, onOpenLegal, onOpenDevModal }) {
       <div className="ct-footer-inner">
         <div className="ct-footer-brand-col">
           <div className="ct-footer-logo">
-            <span className="ct-brand-title">ConvertThings</span>
+            <span className="ct-brand-title" aria-label="ConvertThings">
+              <span className="ct-brand-name">Convert</span><span className="ct-brand-accent">Things</span>
+            </span>
           </div>
           <p className="ct-footer-desc">
             Fast, high-precision unit conversions for engineering, science, culinary arts, and everyday measurement tasks.
