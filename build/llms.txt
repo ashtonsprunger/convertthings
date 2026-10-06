@@ -1,0 +1,41 @@
+# ConvertThings
+
+> High-precision, real-time unit conversion web platform and Model Context Protocol (MCP) server covering 15 measurement domains and 120+ standardized NIST/SI units.
+
+ConvertThings provides instant bidirectional conversions, natural language query parsing, zero cumulative layout shift (CLS), a public REST API, and native AI agent tooling over MCP (JSON-RPC 2.0 and stdio).
+
+## Developer & AI Agent Endpoints
+
+- [Model Context Protocol (MCP) Endpoint](https://www.convertthings.com/api/mcp): Remote HTTP JSON-RPC 2.0 MCP server exposing tools (`convert_units`, `parse_and_convert`, `list_units`, `get_reference_table`) for AI agents.
+- [Public REST Conversion API](https://www.convertthings.com/api/convert): Free, CORS-enabled REST API for natural language and structured unit queries. Example: `https://www.convertthings.com/api/convert?q=100+km+to+miles`.
+- [Units Directory API](https://www.convertthings.com/api/units): Machine-readable directory of all supported categories, units, symbols, and aliases.
+- [Sitemap](https://www.convertthings.com/sitemap.xml): Full XML sitemap indexing all 1,240+ unit pair routes.
+
+## Supported Measurement Categories
+
+- [Length & Distance](https://www.convertthings.com/length): Meter, Kilometer, Mile, Foot, Inch, Yard, Centimeter, Millimeter, Nautical Mile, Light-Year.
+- [Weight & Mass](https://www.convertthings.com/mass): Kilogram, Pound, Gram, Ounce, Stone, Metric Ton, US Short Ton, Imperial Ton, Carat.
+- [Temperature](https://www.convertthings.com/temperature): Celsius, Fahrenheit, Kelvin, Rankine.
+- [Area](https://www.convertthings.com/area): Square Meter, Square Kilometer, Square Foot, Square Mile, Acre, Hectare, Square Yard.
+- [Volume & Capacity](https://www.convertthings.com/volume): Liter, Milliliter, US Gallon, US Quart, US Pint, US Cup, US Fluid Ounce, Imperial Gallon, Cubic Meter, Cubic Foot.
+- [Speed](https://www.convertthings.com/speed): Meter per Second, Kilometer per Hour, Mile per Hour, Knot, Foot per Second, Mach.
+- [Time](https://www.convertthings.com/time): Second, Millisecond, Microsecond, Nanosecond, Minute, Hour, Day, Week, Month, Year, Decade, Century.
+- [Digital Storage](https://www.convertthings.com/digital): Bit, Byte, Kilobyte, Kibibyte, Megabyte, Mebibyte, Gigabyte, Gibibyte, Terabyte, Tebibyte, Petabyte.
+- [Data Transfer Rate](https://www.convertthings.com/data_rate): bps, Kbps, Mbps, Gbps, B/s, KB/s, MB/s, GB/s.
+- [Pressure](https://www.convertthings.com/pressure): Pascal, Kilopascal, Megapascal, Bar, Millibar, PSI, Standard Atmosphere, Torr, Inch of Mercury.
+- [Energy](https://www.convertthings.com/energy): Joule, Kilojoule, Calorie, Kilocalorie, Watt-hour, Kilowatt-hour, Electronvolt, BTU, Foot-pound.
+- [Power](https://www.convertthings.com/power): Watt, Kilowatt, Megawatt, Mechanical HP, Metric HP, BTU/hour.
+- [Angle](https://www.convertthings.com/angle): Degree, Radian, Gradian, Arcminute, Arcsecond, Revolution.
+- [Fuel Economy](https://www.convertthings.com/fuel): Liters per 100km, US MPG, UK Imperial MPG, km/L.
+- [Cooking & Kitchen](https://www.convertthings.com/cooking): US Cup, US Tablespoon, US Teaspoon, Fluid Ounce, Milliliter, Liter, Pinch, Dash, Drop, Stick of Butter.
+
+## Popular Conversions
+
+- [Kilograms to Pounds](https://www.convertthings.com/convert/kg-to-lb): Convert kg to lb with exact NIST factor (1 kg = 2.2046226218 lb).
+- [Pounds to Kilograms](https://www.convertthings.com/convert/lb-to-kg): Convert lb to kg with exact NIST factor (1 lb = 0.45359237 kg).
+- [Miles to Kilometers](https://www.convertthings.com/convert/mi-to-km): Convert miles to km (1 mi = 1.609344 km).
+- [Kilometers to Miles](https://www.convertthings.com/convert/km-to-mi): Convert km to miles (1 km = 0.6213711922 mi).
+- [Celsius to Fahrenheit](https://www.convertthings.com/convert/c-to-f): Convert temperature (°F = °C × 9/5 + 32).
+- [Fahrenheit to Celsius](https://www.convertthings.com/convert/f-to-c): Convert temperature (°C = (°F - 32) × 5/9).
+- [Feet to Meters](https://www.convertthings.com/convert/ft-to-m): Convert length (1 ft = 0.3048 m).
+- [Meters to Feet](https://www.convertthings.com/convert/m-to-ft): Convert length (1 m = 3.280839895 ft).
