@@ -71,7 +71,8 @@ export function getSeoMetadata({
   }
 
   // 3. Unit Pair Conversion (e.g. lb to kg, km to mi)
-  const valStr = value !== null && value !== undefined ? String(value).trim() : '1';
+  const rawVal = value !== null && value !== undefined ? String(value).trim().replace(/,/g, '') : '1';
+  const valStr = rawVal.endsWith('.') ? rawVal.slice(0, -1) : rawVal;
   const numericVal = parseFloat(valStr);
   const isValidNumber = !isNaN(numericVal);
   const isDefaultOne = !valStr || valStr === '1';

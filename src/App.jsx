@@ -238,6 +238,12 @@ function App() {
           setToUnitId(parsed.toUnitId);
           setFromValue(parsed.fromValue);
           performCalculation(parsed.fromValue, parsed.categoryId, parsed.fromUnitId, parsed.toUnitId, precision);
+        } else if (window.location.pathname === '/' || window.location.pathname === '') {
+          setCategoryId('length');
+          setFromUnitId('m');
+          setToUnitId('ft');
+          setFromValue('1');
+          performCalculation('1', 'length', 'm', 'ft', precision);
         }
       } catch (e) {
         // ignore

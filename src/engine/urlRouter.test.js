@@ -91,6 +91,34 @@ describe('ConvertThings URL Router', () => {
     expect(routeQuery.fromValue).toBe('10000');
   });
 
+  test('parses decimal numbers and handles trailing dots cleanly', () => {
+    const route1 = parseRoute('/convert/0.5-km-to-mi');
+    expect(route1).not.toBeNull();
+    expect(route1.fromValue).toBe('0.5');
+
+    const route2 = parseRoute('/convert/.5-km-to-mi');
+    expect(route2).not.toBeNull();
+    expect(route2.fromValue).toBe('.5');
+
+    const route3 = parseRoute('/convert/1.-km-to-mi');
+    expect(route3).not.toBeNull();
+    expect(route3.fromValue).toBe('1');
+
+    const route4 = parseRoute('/convert/-40.5-c-to-f');
+    expect(route4).not.toBeNull();
+    expect(route4.fromValue).toBe('-40.5');
+
+    const route5 = parseRoute('/convert/1e5-m-to-ft');
+    expect(route5).not.toBeNull();
+    expect(route5.fromValue).toBe('1e5');
+  });
+
+  test('formats route paths with normalized decimal points', () => {
+    expect(formatRoutePath('length', 'km', 'mi', '2.')).toBe('/convert/2-km-to-mi');
+    expect(formatRoutePath('length', 'km', 'mi', '1.')).toBe('/convert/km-to-mi');
+    expect(formatRoutePath('length', 'km', 'mi', '0.5')).toBe('/convert/0.5-km-to-mi');
+  });
+
   test('generates all unit pairs across all 15 categories', () => {
     const pairs = getAllUnitPairs();
     // 15 categories with 4 to 15 units each yields well over 1,000 distinct pairs

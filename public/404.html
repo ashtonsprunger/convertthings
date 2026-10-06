@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="%PUBLIC_URL%/favicon.svg?v=5" />
+    <link rel="alternate icon" href="%PUBLIC_URL%/favicon.ico?v=5" />
+    <link rel="icon" type="image/png" sizes="192x192" href="%PUBLIC_URL%/logo192.png?v=5" />
+    <link rel="icon" type="image/png" sizes="512x512" href="%PUBLIC_URL%/logo512.png?v=5" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png?v=5" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+    <meta name="theme-color" content="#06b6d4" />
+    <meta
+      name="description"
+      content="ConvertThings is a fast, accurate online unit converter for length, weight, temperature, area, volume, speed, time, digital storage, and cooking measurements. Bidirectional, instant, and mobile-friendly."
+    />
+    <meta
+      name="keywords"
+      content="unit converter, metric to imperial, convert units, length converter, weight converter, temperature converter, celsius to fahrenheit, kg to lbs, km to miles, volume converter, conversion calculator"
+    />
+    <meta name="author" content="ConvertThings" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://www.convertthings.com/" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://www.convertthings.com/" />
+    <meta property="og:site_name" content="ConvertThings" />
+    <meta property="og:title" content="ConvertThings - Fast, Accurate Online Unit Converter" />
+    <meta
+      property="og:description"
+      content="Instantly convert units across length, mass, temperature, area, volume, speed, digital storage, and more with exact precision."
+    />
+    <meta property="og:image" content="%PUBLIC_URL%/logo512.png" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:url" content="https://convertthings.com/" />
+    <meta name="twitter:title" content="ConvertThings - Instant Unit Converter" />
+    <meta
+      name="twitter:description"
+      content="Real-time, bidirectional unit conversions with high mathematical precision. Fast, clean, and free."
+    />
+    <meta name="twitter:image" content="%PUBLIC_URL%/logo512.png" />
+
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+
+    <title>ConvertThings - Instant, Accurate Unit Converter</title>
+
+    <!-- Google Fonts (Outfit, Plus Jakarta Sans & JetBrains Mono) - Non-render-blocking -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Outfit:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Outfit:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Outfit:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      />
+    </noscript>
+
+    <!-- Google AdSense - Lazy-loaded on idle / first interaction to guarantee 100% Core Web Vitals & fast LCP -->
+    <script>
+      (function() {
+        var loaded = false;
+        function loadAdSense() {
+          if (loaded) return;
+          loaded = true;
+          var s = document.createElement('script');
+          s.async = true;
+          s.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2469761428575146";
+          s.crossOrigin = "anonymous";
+          document.head.appendChild(s);
+        }
+        var events = ['scroll', 'touchstart', 'mousemove', 'keydown', 'click'];
+        function trigger() {
+          loadAdSense();
+          events.forEach(function(e) { window.removeEventListener(e, trigger); });
+        }
+        events.forEach(function(e) { window.addEventListener(e, trigger, { passive: true, once: true }); });
+        if ('requestIdleCallback' in window) {
+          window.addEventListener('load', function() {
+            requestIdleCallback(function() { setTimeout(loadAdSense, 2000); }, { timeout: 3500 });
+          });
+        } else {
+          window.addEventListener('load', function() { setTimeout(loadAdSense, 2500); });
+        }
+      })();
+    </script>
+    <link rel="dns-prefetch" href="https://pagead2.googlesyndication.com" />
+  </head>
+  <body>
+    <noscript>
+      <div style="padding: 2rem; text-align: center; font-family: sans-serif;">
+        <h2>JavaScript Required</h2>
+        <p>ConvertThings requires JavaScript to perform real-time, interactive unit conversions.</p>
+      </div>
+    </noscript>
+    <div id="root"></div>
+  </body>
+</html>

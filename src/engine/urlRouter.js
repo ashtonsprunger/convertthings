@@ -27,11 +27,12 @@ export function parseRoute(pathname = '', search = '') {
     if (cleanPath.startsWith('/convert/')) {
       const rawSlug = cleanPath.replace(/^\/convert\/?/, '').replace(/\/$/, '');
       const slug = decodeURIComponent(rawSlug);
-      // Match optional value prefix: e.g. "100-km-to-miles", "-40-c-to-f", "0.5_cup-to-ml", or "km-to-mi"
-      const pairMatch = slug.match(/^(?:([+-]?[0-9,]*\.?[0-9]+(?:e[+-]?[0-9]+)?)[-_])?([a-z0-9_°'"/²³µ]+)-to-([a-z0-9_°'"/²³µ]+)$/i);
+      // Match optional value prefix: e.g. "100-km-to-miles", "-40-c-to-f", "0.5_cup-to-ml", "1.-km-to-mi", or "km-to-mi"
+      const pairMatch = slug.match(/^(?:([+-]?(?:[0-9,]+(?:\.[0-9]*)?|\.[0-9]+)(?:e[+-]?[0-9]+)?)[-_])?([a-z0-9_°'/²³µ]+)-to-([a-z0-9_°'/²³µ]+)$/i);
 
       if (pairMatch) {
-        const valStr = pairMatch[1] ? pairMatch[1].replace(/,/g, '') : undefined;
+        const rawValStr = pairMatch[1] ? pairMatch[1].replace(/,/g, '') : undefined;
+        const valStr = rawValStr ? rawValStr.replace(/\.$/, '') : undefined;
         const fromToken = pairMatch[2];
         const toToken = pairMatch[3];
 
@@ -136,7 +137,9 @@ export function parseRoute(pathname = '', search = '') {
 export function formatRoutePath(categoryId, fromUnitId, toUnitId, value = '1') {
   if (!fromUnitId || !toUnitId) return '/';
 
-  const valStr = value !== null && value !== undefined ? String(value).trim().replace(/,/g, '') : '1';
+  const rawVal = value !== null && value !== undefined ? String(value).trim().replace(/,/g, '') : '1';
+  // Avoid malformed URL segments while typing trailing dots (e.g. "1." -> "1")
+  const valStr = rawVal.endsWith('.') ? rawVal.slice(0, -1) : rawVal;
   const hasCustomValue = valStr !== '' && valStr !== '1' && !isNaN(valStr);
 
   if (hasCustomValue) {

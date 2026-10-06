@@ -218,5 +218,8 @@ POPULAR_ALIASES.forEach((alias) => {
   count++;
 });
 
+// 4. Output build/404.html as fallback for GitHub Pages and static web servers
+writeHtml(path.resolve(buildDir, '404.html'), templateHtml);
+
 const elapsedMs = Date.now() - startTime;
 console.log(`[prerender] Successfully generated ${count} pre-rendered HTML files in ${elapsedMs}ms!`);
