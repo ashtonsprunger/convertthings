@@ -22,6 +22,8 @@
     "start": "react-scripts start",
     "prebuild": "node scripts/generateIcons.mjs && node scripts/generateSitemap.mjs",
     "build": "react-scripts build",
+    "postbuild": "node scripts/prerender.mjs",
+    "prerender": "node scripts/prerender.mjs",
     "icons": "node scripts/generateIcons.mjs",
     "sitemap": "node scripts/generateSitemap.mjs",
     "test": "react-scripts test",

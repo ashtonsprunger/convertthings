@@ -6,6 +6,7 @@ import {
   formatNumber,
 } from './engine/conversions';
 import { parseRoute, formatRoutePath } from './engine/urlRouter';
+import { getSeoMetadata } from './engine/seo';
 import { Header } from './components/Header';
 import { Omnibox } from './components/Omnibox';
 import { CategoryNav } from './components/CategoryNav';
@@ -171,18 +172,38 @@ function App() {
       const toUnit = getUnit(categoryId, toUnitId);
 
       if (fromUnit && toUnit) {
-        // Document Title
-        const valStr = fromValue ? `${fromValue} ` : '';
-        document.title = `${valStr}${fromUnit.plural || fromUnit.name} to ${toUnit.plural || toUnit.name} Conversion | ConvertThings`;
+        const seo = getSeoMetadata({
+          categoryId,
+          fromUnitId,
+          toUnitId,
+          value: fromValue,
+        });
+
+        // High-CTR Document Title
+        document.title = seo.title;
+
+        // Meta tag sync helper
+        const setMetaTag = (selector, attrName, attrVal, content) => {
+          let el = document.querySelector(selector);
+          if (!el) {
+            el = document.createElement('meta');
+            el.setAttribute(attrName, attrVal);
+            document.head.appendChild(el);
+          }
+          el.content = content;
+        };
 
         // Meta Description update
-        let metaDesc = document.querySelector('meta[name="description"]');
-        if (!metaDesc) {
-          metaDesc = document.createElement('meta');
-          metaDesc.name = 'description';
-          document.head.appendChild(metaDesc);
-        }
-        metaDesc.content = `Easily convert ${fromUnit.plural || fromUnit.name} (${fromUnit.symbol}) to ${toUnit.plural || toUnit.name} (${toUnit.symbol}). Free, accurate, instant unit conversion calculator.`;
+        setMetaTag('meta[name="description"]', 'name', 'description', seo.description);
+
+        // Open Graph tags
+        setMetaTag('meta[property="og:title"]', 'property', 'og:title', seo.ogTitle);
+        setMetaTag('meta[property="og:description"]', 'property', 'og:description', seo.ogDescription);
+        setMetaTag('meta[property="og:url"]', 'property', 'og:url', seo.canonicalUrl);
+
+        // Twitter Card tags
+        setMetaTag('meta[name="twitter:title"]', 'name', 'twitter:title', seo.ogTitle);
+        setMetaTag('meta[name="twitter:description"]', 'name', 'twitter:description', seo.ogDescription);
 
         // Clean URL Route Path
         const routePath = formatRoutePath(categoryId, fromUnitId, toUnitId, fromValue);
@@ -194,7 +215,7 @@ function App() {
           canonical.rel = 'canonical';
           document.head.appendChild(canonical);
         }
-        canonical.href = `https://www.convertthings.com${routePath === '/' ? '' : routePath}`;
+        canonical.href = seo.canonicalUrl;
 
         // Sync browser URL path without page reloading
         if (window.location.pathname !== routePath) {

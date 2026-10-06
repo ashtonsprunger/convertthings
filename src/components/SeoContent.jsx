@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { CATEGORIES, getUnit } from '../engine/conversions';
+import { getSeoMetadata } from '../engine/seo';
 import { Icon } from './Icons';
 
 const CATEGORY_SEO_INFO = {
@@ -363,6 +364,11 @@ export function SeoContent({ categoryId, fromUnitId, toUnitId, onSelectPair }) {
   const fromUnit = getUnit(categoryId, fromUnitId);
   const toUnit = getUnit(categoryId, toUnitId);
 
+  const pairSeo = useMemo(() => {
+    if (!fromUnit || !toUnit || fromUnit.id === toUnit.id) return null;
+    return getSeoMetadata({ categoryId, fromUnitId, toUnitId, value: '1' });
+  }, [categoryId, fromUnitId, toUnitId, fromUnit, toUnit]);
+
   // Dynamic structured data for Google Rich Results
   useEffect(() => {
     const faqSchema = {
@@ -424,15 +430,28 @@ export function SeoContent({ categoryId, fromUnitId, toUnitId, onSelectPair }) {
         </h3>
         <p className="ct-guide-text">{info.baseUnitInfo}</p>
 
-        {fromUnit && toUnit && fromUnit.id !== toUnit.id && (
+        {fromUnit && toUnit && fromUnit.id !== toUnit.id && pairSeo && (
           <div className="ct-guide-spotlight">
             <h4 className="ct-spotlight-title">
-              Converting {fromUnit.plural || fromUnit.name} to {toUnit.plural || toUnit.name}
+              How to Convert {fromUnit.plural || fromUnit.name} to {toUnit.plural || toUnit.name} ({fromUnit.symbol} to {toUnit.symbol})
             </h4>
-            <p>
-              When converting from <strong>{fromUnit.name} ({fromUnit.symbol})</strong> to{' '}
-              <strong>{toUnit.name} ({toUnit.symbol})</strong>, use the live converter above for instantaneous calculation, or refer to the standardized conversion factor and step-by-step formula.
+            <p className="ct-spotlight-lead">
+              <strong>1 {fromUnit.name} ({fromUnit.symbol})</strong> is equal to{' '}
+              <strong>{pairSeo.baselineAnswer} {toUnit.plural || toUnit.name} ({toUnit.symbol})</strong>.
+              {pairSeo.formulaInstruction ? ` To convert ${fromUnit.plural?.toLowerCase() || fromUnit.name.toLowerCase()} to ${toUnit.plural?.toLowerCase() || toUnit.name.toLowerCase()}, ${pairSeo.formulaInstruction.toLowerCase()}.` : ''}
             </p>
+            <div className="ct-spotlight-quickfacts">
+              <div className="ct-spotlight-fact">
+                <span className="ct-fact-label">Quick Answer</span>
+                <span className="ct-fact-value">1 {fromUnit.symbol} = {pairSeo.baselineAnswer} {toUnit.symbol}</span>
+              </div>
+              {pairSeo.formulaEquation && (
+                <div className="ct-spotlight-fact">
+                  <span className="ct-fact-label">Formula</span>
+                  <span className="ct-fact-value">{pairSeo.formulaEquation}</span>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
