@@ -117,6 +117,7 @@ export function parseRoute(pathname = '', search = '') {
         fromUnitId: matchedCategory.defaultFrom,
         toUnitId: matchedCategory.defaultTo,
         fromValue: '1',
+        isCategoryPage: true,
       };
     }
 

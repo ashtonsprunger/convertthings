@@ -757,20 +757,38 @@ describe('ConvertThings UI Integration', () => {
     expect(document.title).toBe('ConvertThings - Instant, Accurate Online Unit Converter');
   });
 
-  test('transitions from root to conversion route and updates canonical on user interaction', () => {
+  test('preserves category pathname and canonical URL when mounting directly on /mass', () => {
+    window.history.replaceState({}, '', '/mass');
+    render(<App />);
+
+    expect(window.location.pathname).toBe('/mass');
+    const canonical = document.querySelector('link[rel="canonical"]');
+    expect(canonical.href).toBe('https://www.convertthings.com/mass');
+    expect(document.title).toContain('Weight & Mass Converter');
+  });
+
+  test('navigates to category route and preserves category canonical when selecting category', () => {
     window.history.replaceState({}, '', '/');
     render(<App />);
 
     const cookingTab = screen.getByRole('tab', { name: /Cooking/i });
     fireEvent.click(cookingTab);
 
-    expect(window.location.pathname).toBe('/convert/cup_us-to-tbsp_us');
+    expect(window.location.pathname).toBe('/cooking');
     const canonical = document.querySelector('link[rel="canonical"]');
-    expect(canonical.href).toBe('https://www.convertthings.com/convert/cup_us-to-tbsp_us');
+    expect(canonical.href).toBe('https://www.convertthings.com/cooking');
+    expect(document.title).toContain('Cooking & Kitchen');
+
+    // Subsequent user calculation transitions to conversion slug
+    const swapButton = screen.getByLabelText(/Swap from and to units/i);
+    fireEvent.click(swapButton);
+
+    expect(window.location.pathname).toContain('/convert/');
+    expect(canonical.href).toContain('/convert/');
   });
 
   test('clicking header logo navigates back to root homepage and restores homepage canonical', () => {
-    window.history.replaceState({}, '', '/convert/cup_us-to-tbsp_us');
+    window.history.replaceState({}, '', '/cooking');
     render(<App />);
 
     const homeLink = screen.getByLabelText(/^ConvertThings Home$/i);

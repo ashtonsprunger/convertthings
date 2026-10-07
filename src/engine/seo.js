@@ -31,6 +31,7 @@ export function getSeoMetadata({
   value = '1',
   domain = 'https://www.convertthings.com',
   isRoot = false,
+  isCategoryPage = false,
 }) {
   const cleanDomain = (domain || 'https://www.convertthings.com').replace(/\/$/, '');
 
@@ -54,7 +55,7 @@ export function getSeoMetadata({
   const toUnit = getUnit(categoryId, toUnitId);
 
   // 2. Category Landing Page (e.g. /length, /mass)
-  if (!fromUnit || !toUnit || fromUnit.id === toUnit.id) {
+  if (isCategoryPage || !fromUnit || !toUnit || fromUnit.id === toUnit.id) {
     const sampleUnits = (UNIT_DEFINITIONS[categoryId]?.units || [])
       .slice(0, 5)
       .map((u) => u.plural || u.name)

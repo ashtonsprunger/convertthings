@@ -37,7 +37,11 @@ function App() {
       if (typeof window !== 'undefined') {
         const parsed = parseRoute(window.location.pathname, window.location.search);
         if (parsed) {
-          return { ...parsed, isRoot: false };
+          return {
+            ...parsed,
+            isRoot: false,
+            isCategoryPage: !!parsed.isCategoryPage,
+          };
         }
       }
     } catch (e) {
@@ -49,6 +53,7 @@ function App() {
       toUnitId: 'ft',
       fromValue: '1',
       isRoot: true,
+      isCategoryPage: false,
     };
   };
 
@@ -67,6 +72,7 @@ function App() {
   const initial = getInitialState();
   const initialPrecision = getInitialPrecision();
   const [isRoot, setIsRoot] = useState(initial.isRoot ?? false);
+  const [isCategoryPage, setIsCategoryPage] = useState(initial.isCategoryPage ?? false);
   const [categoryId, setCategoryId] = useState(initial.categoryId);
   const [fromUnitId, setFromUnitId] = useState(initial.fromUnitId);
   const [toUnitId, setToUnitId] = useState(initial.toUnitId);
@@ -226,6 +232,45 @@ function App() {
         return;
       }
 
+      // 2. Category Landing Page (e.g. /mass, /area, /cooking)
+      if (isCategoryPage) {
+        const seo = getSeoMetadata({
+          categoryId,
+          isCategoryPage: true,
+        });
+
+        // High-CTR Document Title for category landing page
+        document.title = seo.title;
+
+        // Meta Description update
+        setMetaTag('meta[name="description"]', 'name', 'description', seo.description);
+
+        // Open Graph tags
+        setMetaTag('meta[property="og:title"]', 'property', 'og:title', seo.ogTitle);
+        setMetaTag('meta[property="og:description"]', 'property', 'og:description', seo.ogDescription);
+        setMetaTag('meta[property="og:url"]', 'property', 'og:url', seo.canonicalUrl);
+
+        // Twitter Card tags
+        setMetaTag('meta[name="twitter:title"]', 'name', 'twitter:title', seo.ogTitle);
+        setMetaTag('meta[name="twitter:description"]', 'name', 'twitter:description', seo.ogDescription);
+
+        // Update Canonical Link tag for search bots
+        let canonical = document.querySelector('link[rel="canonical"]');
+        if (!canonical) {
+          canonical = document.createElement('link');
+          canonical.rel = 'canonical';
+          document.head.appendChild(canonical);
+        }
+        canonical.href = seo.canonicalUrl;
+
+        // Maintain clean category path (e.g. '/mass') in address bar
+        const categoryPath = `/${categoryId}`;
+        if (window.location.pathname !== categoryPath) {
+          window.history.replaceState({}, '', categoryPath);
+        }
+        return;
+      }
+
       const fromUnit = getUnit(categoryId, fromUnitId);
       const toUnit = getUnit(categoryId, toUnitId);
 
@@ -272,7 +317,7 @@ function App() {
     } catch (e) {
       // ignore
     }
-  }, [isRoot, categoryId, fromUnitId, toUnitId, fromValue]);
+  }, [isRoot, isCategoryPage, categoryId, fromUnitId, toUnitId, fromValue]);
 
   // Listen for browser Back / Forward history navigation
   useEffect(() => {
@@ -281,6 +326,7 @@ function App() {
         const pathname = window.location.pathname;
         if (pathname === '/' || pathname === '') {
           setIsRoot(true);
+          setIsCategoryPage(false);
           setCategoryId('length');
           setFromUnitId('m');
           setToUnitId('ft');
@@ -291,6 +337,7 @@ function App() {
         const parsed = parseRoute(pathname, window.location.search);
         if (parsed) {
           setIsRoot(false);
+          setIsCategoryPage(!!parsed.isCategoryPage);
           setCategoryId(parsed.categoryId);
           setFromUnitId(parsed.fromUnitId);
           setToUnitId(parsed.toUnitId);
@@ -309,6 +356,7 @@ function App() {
   const handleGoHome = (e) => {
     if (e) e.preventDefault();
     setIsRoot(true);
+    setIsCategoryPage(false);
     setCategoryId('length');
     setFromUnitId('m');
     setToUnitId('ft');
@@ -323,6 +371,7 @@ function App() {
   // Handle From Value changes
   const handleFromValueChange = (newVal) => {
     setIsRoot(false);
+    setIsCategoryPage(false);
     setLastEdited('from');
     setFromValue(newVal);
     performCalculation(newVal, categoryId, fromUnitId, toUnitId, precision);
@@ -345,6 +394,7 @@ function App() {
   // Handle To Value changes (Reverse calculation)
   const handleToValueChange = (newVal) => {
     setIsRoot(false);
+    setIsCategoryPage(false);
     setLastEdited('to');
     setToValue(newVal);
     if (newVal === '' || newVal === null) {
@@ -373,21 +423,27 @@ function App() {
 
   // Switch category
   const handleSelectCategory = (newCatId) => {
-    if (newCatId === categoryId && !isRoot) return;
+    if (newCatId === categoryId && isCategoryPage) return;
     const catDef = CATEGORIES.find((c) => c.id === newCatId);
     if (!catDef) return;
 
     setIsRoot(false);
+    setIsCategoryPage(true);
     setLastEdited('from');
     setCategoryId(newCatId);
     setFromUnitId(catDef.defaultFrom);
     setToUnitId(catDef.defaultTo);
-    performCalculation(fromValue, newCatId, catDef.defaultFrom, catDef.defaultTo, precision);
+    setFromValue('1');
+    performCalculation('1', newCatId, catDef.defaultFrom, catDef.defaultTo, precision);
+    if (typeof window !== 'undefined' && window.location.pathname !== `/${newCatId}`) {
+      window.history.pushState({}, '', `/${newCatId}`);
+    }
   };
 
   // Switch From unit
   const handleFromUnitChange = (newFromId) => {
     setIsRoot(false);
+    setIsCategoryPage(false);
     setFromUnitId(newFromId);
     if (lastEdited === 'to' && toValue !== '' && toValue !== null && !isNaN(toValue)) {
       const reverseRes = convertUnits(Number(toValue), categoryId, toUnitId, newFromId);
@@ -402,6 +458,7 @@ function App() {
   // Switch To unit
   const handleToUnitChange = (newToId) => {
     setIsRoot(false);
+    setIsCategoryPage(false);
     setToUnitId(newToId);
     performCalculation(fromValue, categoryId, fromUnitId, newToId, precision);
     setLastEdited('from');
@@ -410,6 +467,7 @@ function App() {
   // Swap units (⇄) and invert equation values
   const handleSwap = () => {
     setIsRoot(false);
+    setIsCategoryPage(false);
     setLastEdited('from');
     const nextFrom = toUnitId;
     const nextTo = fromUnitId;
@@ -444,6 +502,7 @@ function App() {
   // Handle Natural Language / Omnibox selection
   const handleSelectConversion = ({ categoryId: cId, fromUnitId: fId, toUnitId: tId, value: val }) => {
     setIsRoot(false);
+    setIsCategoryPage(false);
     setLastEdited('from');
     setCategoryId(cId);
     setFromUnitId(fId);
@@ -488,6 +547,7 @@ function App() {
 
   const handleSelectFavorite = (fav) => {
     setIsRoot(false);
+    setIsCategoryPage(false);
     setCategoryId(fav.categoryId);
 
     // If already on this exact direction, swap direction and invert value!
@@ -635,6 +695,7 @@ function App() {
           fromValue={fromValue}
           onSelectTargetUnit={(targetUnitId) => {
             setIsRoot(false);
+            setIsCategoryPage(false);
             setToUnitId(targetUnitId);
             performCalculation(fromValue || '1', categoryId, fromUnitId, targetUnitId, precision);
             focusAndSelectFromInput();
@@ -646,6 +707,7 @@ function App() {
           history={history}
           onSelectHistory={(item) => {
             setIsRoot(false);
+            setIsCategoryPage(false);
             setCategoryId(item.categoryId);
             setFromUnitId(item.fromUnitId);
             setToUnitId(item.toUnitId);
@@ -667,6 +729,7 @@ function App() {
           toUnitId={toUnitId}
           onSelectPair={(catId, fUnitId, tUnitId) => {
             setIsRoot(false);
+            setIsCategoryPage(false);
             if (catId !== categoryId) {
               setCategoryId(catId);
             }

@@ -77,4 +77,11 @@ describe('SEO Metadata Engine', () => {
     expect(meta.title).toBe('ConvertThings - Instant, Accurate Online Unit Converter');
     expect(meta.canonicalUrl).toBe('https://www.convertthings.com/');
   });
+
+  test('returns category landing page metadata when isCategoryPage is explicitly true', () => {
+    const meta = getSeoMetadata({ categoryId: 'mass', fromUnitId: 'kg', toUnitId: 'lb', isCategoryPage: true });
+    expect(meta.title).toBe('Weight & Mass Converter - Fast, Accurate Unit Conversion | ConvertThings');
+    expect(meta.canonicalUrl).toBe('https://www.convertthings.com/mass');
+    expect(meta.description).toContain('Free online weight & mass converter');
+  });
 });
