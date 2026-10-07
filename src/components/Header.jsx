@@ -1,11 +1,11 @@
 import React from 'react';
 import { Icon } from './Icons';
 
-export function Header({ theme, onToggleTheme, onShare }) {
+export function Header({ theme, onToggleTheme, onShare, onGoHome }) {
   return (
     <header className="ct-header">
       <div className="ct-header-inner">
-        <div className="ct-brand">
+        <a href="/" className="ct-brand" onClick={onGoHome} aria-label="ConvertThings Home">
           <div className="ct-logo-wrap" aria-hidden="true">
             <Icon name="BrandLogo" size={36} />
           </div>
@@ -15,7 +15,7 @@ export function Header({ theme, onToggleTheme, onShare }) {
             </h1>
             <span className="ct-brand-tagline">Fast, Accurate Unit Converter</span>
           </div>
-        </div>
+        </a>
 
         <div className="ct-header-actions">
           <button

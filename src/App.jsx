@@ -37,7 +37,7 @@ function App() {
       if (typeof window !== 'undefined') {
         const parsed = parseRoute(window.location.pathname, window.location.search);
         if (parsed) {
-          return parsed;
+          return { ...parsed, isRoot: false };
         }
       }
     } catch (e) {
@@ -48,6 +48,7 @@ function App() {
       fromUnitId: 'm',
       toUnitId: 'ft',
       fromValue: '1',
+      isRoot: true,
     };
   };
 
@@ -65,6 +66,7 @@ function App() {
 
   const initial = getInitialState();
   const initialPrecision = getInitialPrecision();
+  const [isRoot, setIsRoot] = useState(initial.isRoot ?? false);
   const [categoryId, setCategoryId] = useState(initial.categoryId);
   const [fromUnitId, setFromUnitId] = useState(initial.fromUnitId);
   const [toUnitId, setToUnitId] = useState(initial.toUnitId);
@@ -180,6 +182,50 @@ function App() {
   // Sync to URL parameters & Document Title for SEO
   useEffect(() => {
     try {
+      const setMetaTag = (selector, attrName, attrVal, content) => {
+        let el = document.querySelector(selector);
+        if (!el) {
+          el = document.createElement('meta');
+          el.setAttribute(attrName, attrVal);
+          document.head.appendChild(el);
+        }
+        el.content = content;
+      };
+
+      if (isRoot) {
+        const seo = getSeoMetadata({ isRoot: true });
+
+        // High-CTR Document Title for root homepage
+        document.title = seo.title;
+
+        // Meta Description update
+        setMetaTag('meta[name="description"]', 'name', 'description', seo.description);
+
+        // Open Graph tags
+        setMetaTag('meta[property="og:title"]', 'property', 'og:title', seo.ogTitle);
+        setMetaTag('meta[property="og:description"]', 'property', 'og:description', seo.ogDescription);
+        setMetaTag('meta[property="og:url"]', 'property', 'og:url', seo.canonicalUrl);
+
+        // Twitter Card tags
+        setMetaTag('meta[name="twitter:title"]', 'name', 'twitter:title', seo.ogTitle);
+        setMetaTag('meta[name="twitter:description"]', 'name', 'twitter:description', seo.ogDescription);
+
+        // Update Canonical Link tag for search bots
+        let canonical = document.querySelector('link[rel="canonical"]');
+        if (!canonical) {
+          canonical = document.createElement('link');
+          canonical.rel = 'canonical';
+          document.head.appendChild(canonical);
+        }
+        canonical.href = seo.canonicalUrl;
+
+        // Maintain clean '/' root pathname in address bar
+        if (window.location.pathname !== '/') {
+          window.history.replaceState({}, '', '/');
+        }
+        return;
+      }
+
       const fromUnit = getUnit(categoryId, fromUnitId);
       const toUnit = getUnit(categoryId, toUnitId);
 
@@ -193,17 +239,6 @@ function App() {
 
         // High-CTR Document Title
         document.title = seo.title;
-
-        // Meta tag sync helper
-        const setMetaTag = (selector, attrName, attrVal, content) => {
-          let el = document.querySelector(selector);
-          if (!el) {
-            el = document.createElement('meta');
-            el.setAttribute(attrName, attrVal);
-            document.head.appendChild(el);
-          }
-          el.content = content;
-        };
 
         // Meta Description update
         setMetaTag('meta[name="description"]', 'name', 'description', seo.description);
@@ -237,25 +272,30 @@ function App() {
     } catch (e) {
       // ignore
     }
-  }, [categoryId, fromUnitId, toUnitId, fromValue]);
+  }, [isRoot, categoryId, fromUnitId, toUnitId, fromValue]);
 
   // Listen for browser Back / Forward history navigation
   useEffect(() => {
     const handlePopState = () => {
       try {
-        const parsed = parseRoute(window.location.pathname, window.location.search);
-        if (parsed) {
-          setCategoryId(parsed.categoryId);
-          setFromUnitId(parsed.fromUnitId);
-          setToUnitId(parsed.toUnitId);
-          setFromValue(parsed.fromValue);
-          performCalculation(parsed.fromValue, parsed.categoryId, parsed.fromUnitId, parsed.toUnitId, precision);
-        } else if (window.location.pathname === '/' || window.location.pathname === '') {
+        const pathname = window.location.pathname;
+        if (pathname === '/' || pathname === '') {
+          setIsRoot(true);
           setCategoryId('length');
           setFromUnitId('m');
           setToUnitId('ft');
           setFromValue('1');
           performCalculation('1', 'length', 'm', 'ft', precision);
+          return;
+        }
+        const parsed = parseRoute(pathname, window.location.search);
+        if (parsed) {
+          setIsRoot(false);
+          setCategoryId(parsed.categoryId);
+          setFromUnitId(parsed.fromUnitId);
+          setToUnitId(parsed.toUnitId);
+          setFromValue(parsed.fromValue);
+          performCalculation(parsed.fromValue, parsed.categoryId, parsed.fromUnitId, parsed.toUnitId, precision);
         }
       } catch (e) {
         // ignore
@@ -265,8 +305,24 @@ function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [performCalculation, precision]);
 
+  // Handle return to root homepage
+  const handleGoHome = (e) => {
+    if (e) e.preventDefault();
+    setIsRoot(true);
+    setCategoryId('length');
+    setFromUnitId('m');
+    setToUnitId('ft');
+    setFromValue('1');
+    performCalculation('1', 'length', 'm', 'ft', precision);
+    if (window.location.pathname !== '/') {
+      window.history.pushState({}, '', '/');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   // Handle From Value changes
   const handleFromValueChange = (newVal) => {
+    setIsRoot(false);
     setLastEdited('from');
     setFromValue(newVal);
     performCalculation(newVal, categoryId, fromUnitId, toUnitId, precision);
@@ -288,6 +344,7 @@ function App() {
 
   // Handle To Value changes (Reverse calculation)
   const handleToValueChange = (newVal) => {
+    setIsRoot(false);
     setLastEdited('to');
     setToValue(newVal);
     if (newVal === '' || newVal === null) {
@@ -316,10 +373,11 @@ function App() {
 
   // Switch category
   const handleSelectCategory = (newCatId) => {
-    if (newCatId === categoryId) return;
+    if (newCatId === categoryId && !isRoot) return;
     const catDef = CATEGORIES.find((c) => c.id === newCatId);
     if (!catDef) return;
 
+    setIsRoot(false);
     setLastEdited('from');
     setCategoryId(newCatId);
     setFromUnitId(catDef.defaultFrom);
@@ -329,6 +387,7 @@ function App() {
 
   // Switch From unit
   const handleFromUnitChange = (newFromId) => {
+    setIsRoot(false);
     setFromUnitId(newFromId);
     if (lastEdited === 'to' && toValue !== '' && toValue !== null && !isNaN(toValue)) {
       const reverseRes = convertUnits(Number(toValue), categoryId, toUnitId, newFromId);
@@ -342,6 +401,7 @@ function App() {
 
   // Switch To unit
   const handleToUnitChange = (newToId) => {
+    setIsRoot(false);
     setToUnitId(newToId);
     performCalculation(fromValue, categoryId, fromUnitId, newToId, precision);
     setLastEdited('from');
@@ -349,6 +409,7 @@ function App() {
 
   // Swap units (⇄) and invert equation values
   const handleSwap = () => {
+    setIsRoot(false);
     setLastEdited('from');
     const nextFrom = toUnitId;
     const nextTo = fromUnitId;
@@ -382,6 +443,7 @@ function App() {
 
   // Handle Natural Language / Omnibox selection
   const handleSelectConversion = ({ categoryId: cId, fromUnitId: fId, toUnitId: tId, value: val }) => {
+    setIsRoot(false);
     setLastEdited('from');
     setCategoryId(cId);
     setFromUnitId(fId);
@@ -425,6 +487,7 @@ function App() {
   };
 
   const handleSelectFavorite = (fav) => {
+    setIsRoot(false);
     setCategoryId(fav.categoryId);
 
     // If already on this exact direction, swap direction and invert value!
@@ -508,6 +571,7 @@ function App() {
         theme={theme}
         onToggleTheme={toggleTheme}
         onShare={handleShare}
+        onGoHome={handleGoHome}
       />
 
       <main className="ct-main">
@@ -570,6 +634,7 @@ function App() {
           toUnitId={toUnitId}
           fromValue={fromValue}
           onSelectTargetUnit={(targetUnitId) => {
+            setIsRoot(false);
             setToUnitId(targetUnitId);
             performCalculation(fromValue || '1', categoryId, fromUnitId, targetUnitId, precision);
             focusAndSelectFromInput();
@@ -580,6 +645,7 @@ function App() {
         <ConversionHistory
           history={history}
           onSelectHistory={(item) => {
+            setIsRoot(false);
             setCategoryId(item.categoryId);
             setFromUnitId(item.fromUnitId);
             setToUnitId(item.toUnitId);
@@ -600,6 +666,7 @@ function App() {
           fromUnitId={fromUnitId}
           toUnitId={toUnitId}
           onSelectPair={(catId, fUnitId, tUnitId) => {
+            setIsRoot(false);
             if (catId !== categoryId) {
               setCategoryId(catId);
             }
@@ -615,6 +682,7 @@ function App() {
         onSelectCategory={handleSelectCategory}
         onOpenLegal={(tab) => setLegalModal({ isOpen: true, tab })}
         onOpenDevModal={() => setDevModalOpen(true)}
+        onGoHome={handleGoHome}
       />
 
       <DeveloperModal

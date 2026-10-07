@@ -746,5 +746,40 @@ describe('ConvertThings UI Integration', () => {
     render(<App />);
     expect(screen.getByRole('tab', { name: /Weight & Mass/i })).toHaveClass('active');
   });
+
+  test('preserves root pathname and homepage canonical URL on initial mount', () => {
+    window.history.replaceState({}, '', '/');
+    render(<App />);
+
+    expect(window.location.pathname).toBe('/');
+    const canonical = document.querySelector('link[rel="canonical"]');
+    expect(canonical.href).toBe('https://www.convertthings.com/');
+    expect(document.title).toBe('ConvertThings - Instant, Accurate Online Unit Converter');
+  });
+
+  test('transitions from root to conversion route and updates canonical on user interaction', () => {
+    window.history.replaceState({}, '', '/');
+    render(<App />);
+
+    const cookingTab = screen.getByRole('tab', { name: /Cooking/i });
+    fireEvent.click(cookingTab);
+
+    expect(window.location.pathname).toBe('/convert/cup_us-to-tbsp_us');
+    const canonical = document.querySelector('link[rel="canonical"]');
+    expect(canonical.href).toBe('https://www.convertthings.com/convert/cup_us-to-tbsp_us');
+  });
+
+  test('clicking header logo navigates back to root homepage and restores homepage canonical', () => {
+    window.history.replaceState({}, '', '/convert/cup_us-to-tbsp_us');
+    render(<App />);
+
+    const homeLink = screen.getByLabelText(/^ConvertThings Home$/i);
+    fireEvent.click(homeLink);
+
+    expect(window.location.pathname).toBe('/');
+    const canonical = document.querySelector('link[rel="canonical"]');
+    expect(canonical.href).toBe('https://www.convertthings.com/');
+    expect(document.title).toBe('ConvertThings - Instant, Accurate Online Unit Converter');
+  });
 });
 

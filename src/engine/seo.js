@@ -30,11 +30,12 @@ export function getSeoMetadata({
   toUnitId,
   value = '1',
   domain = 'https://www.convertthings.com',
+  isRoot = false,
 }) {
   const cleanDomain = (domain || 'https://www.convertthings.com').replace(/\/$/, '');
 
-  // 1. Fallback to homepage metadata if no category or unit specified
-  if (!categoryId || !UNIT_DEFINITIONS[categoryId]) {
+  // 1. Fallback to homepage metadata if root or no category/unit specified
+  if (isRoot || !categoryId || !UNIT_DEFINITIONS[categoryId]) {
     return {
       title: 'ConvertThings - Instant, Accurate Online Unit Converter',
       description:

@@ -1,7 +1,7 @@
 import React from 'react';
 import { CATEGORIES } from '../engine/conversions';
 
-export function Footer({ onSelectCategory, onOpenLegal, onOpenDevModal }) {
+export function Footer({ onSelectCategory, onOpenLegal, onOpenDevModal, onGoHome }) {
   const handleLegalClick = (e, tab) => {
     if (onOpenLegal) {
       e.preventDefault();
@@ -9,15 +9,22 @@ export function Footer({ onSelectCategory, onOpenLegal, onOpenDevModal }) {
     }
   };
 
+  const handleHomeClick = (e) => {
+    if (onGoHome) {
+      e.preventDefault();
+      onGoHome(e);
+    }
+  };
+
   return (
     <footer className="ct-footer">
       <div className="ct-footer-inner">
         <div className="ct-footer-brand-col">
-          <div className="ct-footer-logo">
+          <a href="/" className="ct-footer-logo" onClick={handleHomeClick} aria-label="ConvertThings Home (Footer)">
             <span className="ct-brand-title" aria-label="ConvertThings">
               <span className="ct-brand-name">Convert</span><span className="ct-brand-accent">Things</span>
             </span>
-          </div>
+          </a>
           <p className="ct-footer-desc">
             Fast, high-precision unit conversions for engineering, science, culinary arts, and everyday measurement tasks.
           </p>
