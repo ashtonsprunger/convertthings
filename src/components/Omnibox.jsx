@@ -170,11 +170,12 @@ export function Omnibox({ onSelectConversion, onSelectCategory, history = [], fa
               const isCategory = item.type === 'category';
               const isCompound = item.type === 'compound';
               const isUnsupported = item.type === 'unsupported';
+              const isInstantMatch = item.badge === 'Instant Match';
 
               return (
                 <div
                   key={item.id || idx}
-                  className={`ct-omnibox-item ${isSelected ? 'active' : ''} ${item.categoryId ? `ct-cat-${item.categoryId}` : ''} ${isCategory ? 'ct-item-category' : ''} ${isCompound ? 'ct-item-compound' : ''} ${isUnsupported ? 'ct-item-unsupported' : ''}`}
+                  className={`ct-omnibox-item ${isSelected ? 'active' : ''} ${isInstantMatch ? 'ct-item-instant-card' : ''} ${item.categoryId ? `ct-cat-${item.categoryId}` : ''} ${isCategory ? 'ct-item-category' : ''} ${isCompound ? 'ct-item-compound' : ''} ${isUnsupported ? 'ct-item-unsupported' : ''}`}
                   onMouseEnter={() => setSelectedIndex(idx)}
                   onClick={() => handleExecuteSuggestion(item)}
                   role="button"
