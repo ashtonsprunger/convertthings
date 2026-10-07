@@ -7,7 +7,7 @@ export function Header({ theme, onToggleTheme, onShare, onGoHome }) {
       <div className="ct-header-inner">
         <a href="/" className="ct-brand" onClick={onGoHome} aria-label="ConvertThings Home">
           <div className="ct-logo-wrap" aria-hidden="true">
-            <Icon name="BrandLogo" size={36} />
+            <Icon name="BrandLogo" size={40} />
           </div>
           <div className="ct-brand-text">
             <h1 className="ct-brand-title" aria-label="ConvertThings">
@@ -25,7 +25,7 @@ export function Header({ theme, onToggleTheme, onShare, onGoHome }) {
             title="Share this conversion"
             aria-label="Share conversion link"
           >
-            <Icon name="Share" size={18} />
+            <Icon name="Share" size={20} />
           </button>
 
           <button
@@ -35,7 +35,7 @@ export function Header({ theme, onToggleTheme, onShare, onGoHome }) {
             title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             aria-label="Toggle dark/light mode"
           >
-            <Icon name={theme === 'dark' ? 'Sun' : 'Moon'} size={18} />
+            <Icon name={theme === 'dark' ? 'Sun' : 'Moon'} size={20} />
           </button>
         </div>
       </div>

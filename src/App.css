@@ -17,6 +17,7 @@
   z-index: 50;
   width: 100%;
   padding: 0;
+  padding-top: env(safe-area-inset-top, 0px);
   pointer-events: auto;
   background-color: var(--bg-header);
   border-bottom: 1px solid var(--border-color);
@@ -29,7 +30,7 @@
 .ct-header-inner {
   max-width: 920px;
   margin: 0 auto;
-  padding: 0.65rem 1.25rem;
+  padding: 0.75rem 1.25rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -195,13 +196,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border-radius: var(--radius-full);
   color: var(--text-secondary);
   background-color: var(--bg-card-subtle);
   border: 1px solid var(--border-color);
   transition: all var(--transition-fast);
+}
+
+.ct-btn-icon svg {
+  width: 20px;
+  height: 20px;
 }
 
 .ct-btn-icon:hover {
@@ -1226,19 +1232,39 @@
 @media (max-width: 600px) {
   .ct-header {
     padding: 0;
+    padding-top: env(safe-area-inset-top, 0px);
   }
   .ct-header-inner {
-    padding: 0.5rem 0.85rem;
+    padding: 0.9rem 1rem;
+  }
+  .ct-brand {
+    gap: 0.85rem;
+  }
+  .ct-logo-wrap svg,
+  .ct-logo-svg {
+    width: 44px;
+    height: 44px;
   }
   .ct-brand-title {
-    font-size: 1.25rem;
+    font-size: 1.45rem;
   }
   .ct-brand-tagline {
-    display: none;
+    display: block;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    line-height: 1.2;
+    margin-top: 2px;
+  }
+  .ct-header-actions {
+    gap: 0.65rem;
   }
   .ct-btn-icon {
-    width: 32px;
-    height: 32px;
+    width: 42px;
+    height: 42px;
+  }
+  .ct-btn-icon svg {
+    width: 20px;
+    height: 20px;
   }
   .ct-nav-arrow {
     display: none;
@@ -1268,6 +1294,43 @@
   .ct-category-expand-btn {
     padding: 0.35rem 0.55rem;
     font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .ct-header-inner {
+    padding: 0.8rem 0.75rem;
+  }
+  .ct-brand {
+    gap: 0.6rem;
+  }
+  .ct-logo-wrap svg,
+  .ct-logo-svg {
+    width: 40px;
+    height: 40px;
+  }
+  .ct-brand-title {
+    font-size: 1.32rem;
+  }
+  .ct-brand-tagline {
+    font-size: 0.66rem;
+    max-width: 135px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ct-header-actions {
+    gap: 0.45rem;
+  }
+  .ct-btn-icon {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+@media (max-width: 330px) {
+  .ct-brand-tagline {
+    display: none;
   }
 }
 
