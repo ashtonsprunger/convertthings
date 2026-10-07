@@ -1019,5 +1019,73 @@ describe('Dual-Tier Memory System (In-Session & Cross-Session Persistence)', () 
     const catCanonical = document.querySelector('link[rel="canonical"]');
     expect(catCanonical.href).toBe('https://www.convertthings.com/cooking');
   });
+
+  test('share button always generates full permalink even when sitting on clean root / or category hub', async () => {
+    const originalClipboard = navigator.clipboard;
+    const writeTextMock = jest.fn().mockResolvedValue();
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: writeTextMock },
+      writable: true,
+      configurable: true,
+    });
+
+    // 1. Root / with remembered mi -> km
+    window.localStorage.setItem(
+      'ct-pref-units',
+      JSON.stringify({ length: { fromUnitId: 'mi', toUnitId: 'km' } })
+    );
+    window.history.replaceState({}, '', '/');
+    const { unmount } = render(<App />);
+
+    expect(window.location.pathname).toBe('/');
+    const shareBtn = screen.getByRole('button', { name: /Share conversion link/i });
+    await act(async () => {
+      fireEvent.click(shareBtn);
+    });
+
+    expect(writeTextMock).toHaveBeenCalledTimes(1);
+    expect(writeTextMock.mock.calls[0][0]).toBe('http://localhost/convert/mi-to-km');
+    unmount();
+
+    // 2. Category hub /cooking
+    window.history.replaceState({}, '', '/cooking');
+    render(<App />);
+
+    expect(window.location.pathname).toBe('/cooking');
+    const shareBtn2 = screen.getByRole('button', { name: /Share conversion link/i });
+    await act(async () => {
+      fireEvent.click(shareBtn2);
+    });
+
+    expect(writeTextMock).toHaveBeenCalledTimes(2);
+    expect(writeTextMock.mock.calls[1][0]).toBe('http://localhost/convert/cup_us-to-tbsp_us');
+
+    Object.defineProperty(navigator, 'clipboard', {
+      value: originalClipboard,
+      writable: true,
+      configurable: true,
+    });
+  });
+
+  test('promotes address bar from root / or category hub to /convert/... upon user interaction', () => {
+    // 1. Mount on root /
+    window.history.replaceState({}, '', '/');
+    render(<App />);
+
+    expect(window.location.pathname).toBe('/');
+
+    // Type 25 into fromInput -> promotes to /convert/25-m-to-ft
+    const fromInput = screen.getByLabelText(/Enter value in/i);
+    fireEvent.change(fromInput, { target: { value: '25' } });
+
+    expect(window.location.pathname).toBe('/convert/25-m-to-ft');
+
+    // Click swap button -> promotes to /convert/ft-to-m (with converted value)
+    const swapButton = screen.getByLabelText(/Swap from and to units/i);
+    fireEvent.click(swapButton);
+
+    expect(window.location.pathname).toContain('/convert/');
+    expect(window.location.pathname).toContain('-ft-to-m');
+  });
 });
 

@@ -690,6 +690,8 @@ function App() {
 
   // Change precision
   const handlePrecisionChange = (newPrec) => {
+    setIsRoot(false);
+    setIsCategoryPage(false);
     setPrecision(newPrec);
     try {
       if (typeof window !== 'undefined') {
@@ -851,7 +853,12 @@ function App() {
   };
 
   const handleShare = () => {
-    copyToClipboard(window.location.href, 'Conversion link copied to clipboard!');
+    const routePath = formatRoutePath(categoryId, fromUnitId, toUnitId, fromValue, precision);
+    const origin = typeof window !== 'undefined' && window.location.origin
+      ? window.location.origin
+      : 'https://www.convertthings.com';
+    const fullShareUrl = `${origin}${routePath}`;
+    copyToClipboard(fullShareUrl, 'Conversion link copied to clipboard!');
   };
 
   // Keyboard shortcut listener (Alt+S for Swap, Esc to blur)
