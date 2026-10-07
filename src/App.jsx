@@ -879,10 +879,13 @@ function App() {
         />
 
         {/* Visual Mode Bridge Divider */}
-        <div className="ct-or-divider" aria-hidden="true">
-          <span className="ct-or-line" />
-          <span className="ct-or-badge">or select units manually</span>
-          <span className="ct-or-line" />
+        <div className="ct-mode-bridge" role="separator" aria-label="Conversion Modes">
+          <span className="ct-mode-bridge-line" />
+          <span className="ct-mode-bridge-badge">
+            <span className="ct-mode-badge-dot" />
+            OR BROWSE 15 CATEGORIES &amp; DIAL IN MANUALLY
+          </span>
+          <span className="ct-mode-bridge-line" />
         </div>
 
         {/* Category Navigation Pills */}

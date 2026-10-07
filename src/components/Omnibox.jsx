@@ -2,12 +2,40 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Icon } from './Icons';
 import { getSearchSuggestions } from '../engine/parser';
 
+const PLACEHOLDER_TIPS = [
+  "Search units or try: '100 km to miles'...",
+  "Search units or try: '72°F in °C'...",
+  "Search units or try: '1 cup to ml'...",
+  "Search units or try: '500 sq ft to m²'...",
+  "Search units or try: '150 lbs into kg'...",
+  "Search units or try: '5'11 to cm'...",
+  "Search units or try: '1 gigabyte in megabytes'...",
+];
+
+const DISCOVERY_CHIPS = [
+  { label: '100 km → mi', query: '100 km to miles' },
+  { label: '72°F → °C', query: '72 f in c' },
+  { label: '1 cup → ml', query: '1 cup to ml' },
+  { label: '500 sq ft → m²', query: '500 sq ft to m²' },
+  { label: '150 lbs → kg', query: '150 lbs into kg' },
+];
+
 export function Omnibox({ onSelectConversion, onSelectCategory, history = [], favorites = [] }) {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const containerRef = useRef(null);
   const inputRef = useRef(null);
+
+  // Rotate placeholder tips every 3.2s when search is empty & closed
+  useEffect(() => {
+    if (query || isOpen) return;
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % PLACEHOLDER_TIPS.length);
+    }, 3200);
+    return () => clearInterval(interval);
+  }, [query, isOpen]);
 
   // Keyboard shortcut '/' to focus search anywhere on page
   useEffect(() => {
@@ -114,6 +142,18 @@ export function Omnibox({ onSelectConversion, onSelectCategory, history = [], fa
     }
   };
 
+  const handleChipClick = (chipQuery) => {
+    setQuery(chipQuery);
+    const results = getSearchSuggestions(chipQuery, { history, favorites });
+    const instant = results.find((r) => r.badge === 'Instant Match') || results[0];
+    if (instant && instant.payload?.action === 'convert') {
+      handleExecuteSuggestion(instant);
+    } else {
+      setIsOpen(true);
+      inputRef.current?.focus();
+    }
+  };
+
   const handleClear = () => {
     setQuery('');
     setSelectedIndex(0);
@@ -132,7 +172,7 @@ export function Omnibox({ onSelectConversion, onSelectCategory, history = [], fa
           ref={inputRef}
           type="text"
           className="ct-omnibox-input"
-          placeholder="Search units or categories (e.g. 'cooking', '100 km to miles', '5\'11 to cm', '72°F in °C')..."
+          placeholder={PLACEHOLDER_TIPS[placeholderIndex]}
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -163,8 +203,35 @@ export function Omnibox({ onSelectConversion, onSelectCategory, history = [], fa
         </div>
 
         {/* Floating Dropdown Autocomplete Palette (Zero CLS) */}
-        {isOpen && suggestions.length > 0 && (
+        {isOpen && (
           <div id="ct-omnibox-listbox" className="ct-omnibox-dropdown" role="listbox">
+            {!query.trim() && (
+              <div className="ct-omnibox-tips-card">
+                <div className="ct-tips-card-header">
+                  <Icon name="Sparkles" size={14} />
+                  <span>Smart Convert — Natural Language Power</span>
+                </div>
+                <div className="ct-tips-card-grid">
+                  <div className="ct-tip-item" onClick={() => handleChipClick('100 km to miles')} role="button" tabIndex={0}>
+                    <span className="ct-tip-dot" />
+                    <span className="ct-tip-text"><strong>"100 km to miles"</strong> — Distance</span>
+                  </div>
+                  <div className="ct-tip-item" onClick={() => handleChipClick('72 f in c')} role="button" tabIndex={0}>
+                    <span className="ct-tip-dot" />
+                    <span className="ct-tip-text"><strong>"72 f in c"</strong> — Temperature</span>
+                  </div>
+                  <div className="ct-tip-item" onClick={() => handleChipClick('1 cup to ml')} role="button" tabIndex={0}>
+                    <span className="ct-tip-dot" />
+                    <span className="ct-tip-text"><strong>"1 cup to ml"</strong> — Cooking</span>
+                  </div>
+                  <div className="ct-tip-item" onClick={() => handleChipClick("5'11 to cm")} role="button" tabIndex={0}>
+                    <span className="ct-tip-dot" />
+                    <span className="ct-tip-text"><strong>"5'11 to cm"</strong> — Height</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {suggestions.map((item, idx) => {
               const isSelected = idx === selectedIndex;
               const isCategory = item.type === 'category';
@@ -235,6 +302,24 @@ export function Omnibox({ onSelectConversion, onSelectCategory, history = [], fa
             })}
           </div>
         )}
+      </div>
+
+      {/* Discovery Shelf: Instant Example Chips */}
+      <div className="ct-omnibox-shelf" role="region" aria-label="Suggested quick conversions">
+        <span className="ct-shelf-label">Try:</span>
+        <div className="ct-shelf-chips">
+          {DISCOVERY_CHIPS.map((chip) => (
+            <button
+              key={chip.label}
+              type="button"
+              className="ct-shelf-chip"
+              onClick={() => handleChipClick(chip.query)}
+              title={`Convert ${chip.query}`}
+            >
+              {chip.label}
+            </button>
+          ))}
+        </div>
       </div>
     </section>
   );
