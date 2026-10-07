@@ -801,3 +801,116 @@ describe('ConvertThings UI Integration', () => {
   });
 });
 
+describe('Dual-Tier Memory System (In-Session & Cross-Session Persistence)', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  test('retains active input number and units per category within the same session', () => {
+    window.history.replaceState({}, '', '/');
+    render(<App />);
+
+    // Start on Length, set fromInput to 42
+    const fromInput = screen.getByLabelText(/Enter value in/i);
+    fireEvent.change(fromInput, { target: { value: '42' } });
+    expect(fromInput.value).toBe('42');
+
+    // Switch to Cooking tab
+    const cookingTab = screen.getByRole('tab', { name: /Cooking/i });
+    fireEvent.click(cookingTab);
+
+    // Cooking starts with fresh 1
+    const cookingInput = screen.getByLabelText(/Enter value in/i);
+    expect(cookingInput.value).toBe('1');
+
+    // Change Cooking to 3.5
+    fireEvent.change(cookingInput, { target: { value: '3.5' } });
+    expect(cookingInput.value).toBe('3.5');
+
+    // Switch back to Length tab
+    const lengthTab = screen.getByRole('tab', { name: /Length & Distance/i });
+    fireEvent.click(lengthTab);
+
+    // Length restores remembered value 42
+    const restoredLengthInput = screen.getByLabelText(/Enter value in/i);
+    expect(restoredLengthInput.value).toBe('42');
+
+    // Switch back to Cooking tab
+    fireEvent.click(cookingTab);
+    const restoredCookingInput = screen.getByLabelText(/Enter value in/i);
+    expect(restoredCookingInput.value).toBe('3.5');
+  });
+
+  test('loads cross-session preferred units for category hubs while starting with clean 1', () => {
+    // Pre-populate preferred units in localStorage for mass (e.g. lb to g)
+    window.localStorage.setItem(
+      'ct-pref-units',
+      JSON.stringify({
+        mass: { fromUnitId: 'lb', toUnitId: 'g' },
+      })
+    );
+
+    // Mount on /mass
+    window.history.replaceState({}, '', '/mass');
+    render(<App />);
+
+    const fromInput = screen.getByLabelText(/Enter value in/i);
+    expect(fromInput.value).toBe('1');
+
+    // Unit symbols should reflect the preferred units
+    expect(screen.getByTitle('Change unit from Pound')).toBeInTheDocument();
+    expect(screen.getByTitle('Change unit to Gram')).toBeInTheDocument();
+  });
+
+  test('updates ct-pref-units in localStorage when user swaps or changes units', () => {
+    window.history.replaceState({}, '', '/length');
+    render(<App />);
+
+    const swapButton = screen.getByLabelText(/Swap from and to units/i);
+    fireEvent.click(swapButton);
+
+    const stored = JSON.parse(window.localStorage.getItem('ct-pref-units') || '{}');
+    expect(stored.length).toBeDefined();
+    expect(stored.length.fromUnitId).toBe('ft');
+    expect(stored.length.toUnitId).toBe('m');
+  });
+
+  test('direct URL overrides stored category unit preferences', () => {
+    // Pre-populate preferred units for length to be ft -> in
+    window.localStorage.setItem(
+      'ct-pref-units',
+      JSON.stringify({
+        length: { fromUnitId: 'ft', toUnitId: 'in' },
+      })
+    );
+
+    // Direct link to 100 km to miles
+    window.history.replaceState({}, '', '/convert/100-km-to-miles');
+    render(<App />);
+
+    const fromInput = screen.getByLabelText(/Enter value in/i);
+    expect(fromInput.value).toBe('100');
+    expect(screen.getByTitle('Change unit from Kilometer')).toBeInTheDocument();
+    expect(screen.getByTitle('Change unit to Mile')).toBeInTheDocument();
+  });
+
+  test('root homepage / is pristine and always opens Length 1 m to ft', () => {
+    // Pre-populate preferred units for length to be mi -> km
+    window.localStorage.setItem(
+      'ct-pref-units',
+      JSON.stringify({
+        length: { fromUnitId: 'mi', toUnitId: 'km' },
+      })
+    );
+
+    // Mount on root /
+    window.history.replaceState({}, '', '/');
+    render(<App />);
+
+    const fromInput = screen.getByLabelText(/Enter value in/i);
+    expect(fromInput.value).toBe('1');
+    expect(screen.getByTitle('Change unit from Meter')).toBeInTheDocument();
+    expect(screen.getByTitle('Change unit to Foot')).toBeInTheDocument();
+  });
+});
+

@@ -27,6 +27,38 @@ import { useTheme } from './hooks/useTheme';
 import './App.css';
 
 const DEFAULT_FAVORITES = [];
+const CATEGORY_UNITS_STORAGE_KEY = 'ct-pref-units';
+
+function getSavedCategoryUnits(catId) {
+  try {
+    if (typeof window === 'undefined') return null;
+    const raw = window.localStorage.getItem(CATEGORY_UNITS_STORAGE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    const pref = data?.[catId];
+    if (pref && typeof pref === 'object' && pref.fromUnitId && pref.toUnitId) {
+      if (getUnit(catId, pref.fromUnitId) && getUnit(catId, pref.toUnitId)) {
+        return { fromUnitId: pref.fromUnitId, toUnitId: pref.toUnitId };
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+  return null;
+}
+
+function saveCategoryUnits(catId, fromId, toId) {
+  try {
+    if (typeof window === 'undefined') return;
+    if (!getUnit(catId, fromId) || !getUnit(catId, toId)) return;
+    const raw = window.localStorage.getItem(CATEGORY_UNITS_STORAGE_KEY);
+    const data = raw ? JSON.parse(raw) : {};
+    data[catId] = { fromUnitId: fromId, toUnitId: toId };
+    window.localStorage.setItem(CATEGORY_UNITS_STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    // ignore
+  }
+}
 
 function App() {
   const [theme, toggleTheme] = useTheme();
@@ -37,6 +69,18 @@ function App() {
       if (typeof window !== 'undefined') {
         const parsed = parseRoute(window.location.pathname, window.location.search);
         if (parsed) {
+          if (parsed.isCategoryPage) {
+            const savedUnits = getSavedCategoryUnits(parsed.categoryId);
+            if (savedUnits) {
+              return {
+                ...parsed,
+                fromUnitId: savedUnits.fromUnitId,
+                toUnitId: savedUnits.toUnitId,
+                isRoot: false,
+                isCategoryPage: true,
+              };
+            }
+          }
           return {
             ...parsed,
             isRoot: false,
@@ -82,6 +126,19 @@ function App() {
     return res !== null ? formatNumber(res, initialPrecision, initial.categoryId) : '';
   });
   const [lastEdited, setLastEdited] = useState('from');
+
+  // In-memory per-category session state (retains active numbers & units across category switches)
+  const sessionStateRef = useRef(
+    initial.isRoot
+      ? {}
+      : {
+          [initial.categoryId]: {
+            fromValue: initial.fromValue,
+            fromUnitId: initial.fromUnitId,
+            toUnitId: initial.toUnitId,
+          },
+        }
+  );
 
   const [precision, setPrecision] = useLocalStorage('ct-precision', initialPrecision);
   const [favorites, setFavorites] = useLocalStorage('ct-favorites', DEFAULT_FAVORITES);
@@ -338,11 +395,32 @@ function App() {
         if (parsed) {
           setIsRoot(false);
           setIsCategoryPage(!!parsed.isCategoryPage);
-          setCategoryId(parsed.categoryId);
-          setFromUnitId(parsed.fromUnitId);
-          setToUnitId(parsed.toUnitId);
-          setFromValue(parsed.fromValue);
-          performCalculation(parsed.fromValue, parsed.categoryId, parsed.fromUnitId, parsed.toUnitId, precision);
+
+          let nextCat = parsed.categoryId;
+          let nextFrom = parsed.fromUnitId;
+          let nextTo = parsed.toUnitId;
+          let nextVal = parsed.fromValue;
+
+          if (parsed.isCategoryPage) {
+            const inSession = sessionStateRef.current ? sessionStateRef.current[nextCat] : null;
+            if (inSession) {
+              nextFrom = inSession.fromUnitId || nextFrom;
+              nextTo = inSession.toUnitId || nextTo;
+              nextVal = inSession.fromValue !== undefined ? inSession.fromValue : nextVal;
+            } else {
+              const savedUnits = getSavedCategoryUnits(nextCat);
+              if (savedUnits) {
+                nextFrom = savedUnits.fromUnitId;
+                nextTo = savedUnits.toUnitId;
+              }
+            }
+          }
+
+          setCategoryId(nextCat);
+          setFromUnitId(nextFrom);
+          setToUnitId(nextTo);
+          setFromValue(nextVal);
+          performCalculation(nextVal, nextCat, nextFrom, nextTo, precision);
         }
       } catch (e) {
         // ignore
@@ -362,6 +440,13 @@ function App() {
     setToUnitId('ft');
     setFromValue('1');
     performCalculation('1', 'length', 'm', 'ft', precision);
+    if (sessionStateRef.current) {
+      sessionStateRef.current['length'] = {
+        fromValue: '1',
+        fromUnitId: 'm',
+        toUnitId: 'ft',
+      };
+    }
     if (window.location.pathname !== '/') {
       window.history.pushState({}, '', '/');
     }
@@ -375,6 +460,14 @@ function App() {
     setLastEdited('from');
     setFromValue(newVal);
     performCalculation(newVal, categoryId, fromUnitId, toUnitId, precision);
+
+    if (sessionStateRef.current) {
+      sessionStateRef.current[categoryId] = {
+        fromValue: newVal,
+        fromUnitId,
+        toUnitId,
+      };
+    }
 
     // Queue history recording
     if (historyTimeoutRef.current) clearTimeout(historyTimeoutRef.current);
@@ -399,6 +492,13 @@ function App() {
     setToValue(newVal);
     if (newVal === '' || newVal === null) {
       setFromValue('');
+      if (sessionStateRef.current) {
+        sessionStateRef.current[categoryId] = {
+          fromValue: '',
+          fromUnitId,
+          toUnitId,
+        };
+      }
       return;
     }
     const numVal = typeof newVal === 'string' && isFractionLike(newVal)
@@ -407,12 +507,27 @@ function App() {
 
     if (isNaN(numVal)) {
       setFromValue('');
+      if (sessionStateRef.current) {
+        sessionStateRef.current[categoryId] = {
+          fromValue: '',
+          fromUnitId,
+          toUnitId,
+        };
+      }
       return;
     }
     const reverseRes = convertUnits(numVal, categoryId, toUnitId, fromUnitId);
     if (reverseRes !== null) {
       const formatted = formatNumber(reverseRes, precision, categoryId);
       setFromValue(formatted);
+
+      if (sessionStateRef.current) {
+        sessionStateRef.current[categoryId] = {
+          fromValue: formatted,
+          fromUnitId,
+          toUnitId,
+        };
+      }
 
       if (historyTimeoutRef.current) clearTimeout(historyTimeoutRef.current);
       historyTimeoutRef.current = setTimeout(() => {
@@ -431,13 +546,49 @@ function App() {
     setIsCategoryPage(true);
     setLastEdited('from');
     setCategoryId(newCatId);
-    setFromUnitId(catDef.defaultFrom);
-    setToUnitId(catDef.defaultTo);
-    setFromValue('1');
-    performCalculation('1', newCatId, catDef.defaultFrom, catDef.defaultTo, precision);
+
+    // 1. Check in-memory session cache for this category
+    const inSession = sessionStateRef.current ? sessionStateRef.current[newCatId] : null;
+
+    let nextFromId = catDef.defaultFrom;
+    let nextToId = catDef.defaultTo;
+    let nextVal = '1';
+
+    if (inSession) {
+      nextFromId = inSession.fromUnitId || catDef.defaultFrom;
+      nextToId = inSession.toUnitId || catDef.defaultTo;
+      nextVal = inSession.fromValue !== undefined ? inSession.fromValue : '1';
+    } else {
+      // 2. Check cross-session saved units in localStorage
+      const savedUnits = getSavedCategoryUnits(newCatId);
+      if (savedUnits) {
+        nextFromId = savedUnits.fromUnitId;
+        nextToId = savedUnits.toUnitId;
+      }
+      nextVal = '1';
+    }
+
+    if (!getUnit(newCatId, nextFromId)) nextFromId = catDef.defaultFrom;
+    if (!getUnit(newCatId, nextToId)) nextToId = catDef.defaultTo;
+
+    setFromUnitId(nextFromId);
+    setToUnitId(nextToId);
+    setFromValue(nextVal);
+    performCalculation(nextVal, newCatId, nextFromId, nextToId, precision);
+
+    if (sessionStateRef.current) {
+      sessionStateRef.current[newCatId] = {
+        fromValue: nextVal,
+        fromUnitId: nextFromId,
+        toUnitId: nextToId,
+      };
+    }
+
     if (typeof window !== 'undefined' && window.location.pathname !== `/${newCatId}`) {
       window.history.pushState({}, '', `/${newCatId}`);
     }
+
+    focusAndSelectFromInput();
   };
 
   // Switch From unit
@@ -445,13 +596,25 @@ function App() {
     setIsRoot(false);
     setIsCategoryPage(false);
     setFromUnitId(newFromId);
+    saveCategoryUnits(categoryId, newFromId, toUnitId);
+
+    let nextVal = fromValue;
     if (lastEdited === 'to' && toValue !== '' && toValue !== null && !isNaN(toValue)) {
       const reverseRes = convertUnits(Number(toValue), categoryId, toUnitId, newFromId);
       if (reverseRes !== null) {
-        setFromValue(formatNumber(reverseRes, precision, categoryId));
+        nextVal = formatNumber(reverseRes, precision, categoryId);
+        setFromValue(nextVal);
       }
     } else {
       performCalculation(fromValue, categoryId, newFromId, toUnitId, precision);
+    }
+
+    if (sessionStateRef.current) {
+      sessionStateRef.current[categoryId] = {
+        fromValue: nextVal,
+        fromUnitId: newFromId,
+        toUnitId,
+      };
     }
   };
 
@@ -460,8 +623,17 @@ function App() {
     setIsRoot(false);
     setIsCategoryPage(false);
     setToUnitId(newToId);
+    saveCategoryUnits(categoryId, fromUnitId, newToId);
     performCalculation(fromValue, categoryId, fromUnitId, newToId, precision);
     setLastEdited('from');
+
+    if (sessionStateRef.current) {
+      sessionStateRef.current[categoryId] = {
+        fromValue,
+        fromUnitId,
+        toUnitId: newToId,
+      };
+    }
   };
 
   // Swap units (⇄) and invert equation values
@@ -475,7 +647,17 @@ function App() {
     setFromUnitId(nextFrom);
     setToUnitId(nextTo);
     setFromValue(nextVal);
+    saveCategoryUnits(categoryId, nextFrom, nextTo);
     performCalculation(nextVal, categoryId, nextFrom, nextTo, precision);
+
+    if (sessionStateRef.current) {
+      sessionStateRef.current[categoryId] = {
+        fromValue: nextVal,
+        fromUnitId: nextFrom,
+        toUnitId: nextTo,
+      };
+    }
+
     focusAndSelectFromInput();
   };
 
@@ -490,7 +672,16 @@ function App() {
         if (!isNaN(numVal)) {
           const reverseRes = convertUnits(numVal, categoryId, toUnitId, fromUnitId);
           if (reverseRes !== null) {
-            setFromValue(formatNumber(reverseRes, newPrec, categoryId));
+            const formatted = formatNumber(reverseRes, newPrec, categoryId);
+            setFromValue(formatted);
+            if (sessionStateRef.current) {
+              sessionStateRef.current[categoryId] = {
+                ...(sessionStateRef.current[categoryId] || {}),
+                fromValue: formatted,
+                fromUnitId,
+                toUnitId,
+              };
+            }
           }
         }
       }
@@ -509,6 +700,14 @@ function App() {
     setToUnitId(tId);
     const strVal = val !== undefined ? val.toString() : '1';
     setFromValue(strVal);
+    saveCategoryUnits(cId, fId, tId);
+    if (sessionStateRef.current) {
+      sessionStateRef.current[cId] = {
+        fromValue: strVal,
+        fromUnitId: fId,
+        toUnitId: tId,
+      };
+    }
     performCalculation(strVal, cId, fId, tId, precision);
     showToast(`Converted ${strVal} ${fId} to ${tId}`);
     focusAndSelectFromInput();
@@ -563,6 +762,14 @@ function App() {
     setFromUnitId(nextFrom);
     setToUnitId(nextTo);
     setFromValue(nextVal);
+    saveCategoryUnits(fav.categoryId, nextFrom, nextTo);
+    if (sessionStateRef.current) {
+      sessionStateRef.current[fav.categoryId] = {
+        fromValue: nextVal,
+        fromUnitId: nextFrom,
+        toUnitId: nextTo,
+      };
+    }
     performCalculation(nextVal, fav.categoryId, nextFrom, nextTo, precision);
     focusAndSelectFromInput();
   };
@@ -697,6 +904,14 @@ function App() {
             setIsRoot(false);
             setIsCategoryPage(false);
             setToUnitId(targetUnitId);
+            saveCategoryUnits(categoryId, fromUnitId, targetUnitId);
+            if (sessionStateRef.current) {
+              sessionStateRef.current[categoryId] = {
+                fromValue: fromValue || '1',
+                fromUnitId,
+                toUnitId: targetUnitId,
+              };
+            }
             performCalculation(fromValue || '1', categoryId, fromUnitId, targetUnitId, precision);
             focusAndSelectFromInput();
           }}
@@ -713,6 +928,14 @@ function App() {
             setToUnitId(item.toUnitId);
             setFromValue(item.fromValue);
             setToValue(item.toValue);
+            saveCategoryUnits(item.categoryId, item.fromUnitId, item.toUnitId);
+            if (sessionStateRef.current) {
+              sessionStateRef.current[item.categoryId] = {
+                fromValue: item.fromValue,
+                fromUnitId: item.fromUnitId,
+                toUnitId: item.toUnitId,
+              };
+            }
             showToast('Loaded from history');
             focusAndSelectFromInput();
           }}
@@ -735,7 +958,16 @@ function App() {
             }
             setFromUnitId(fUnitId);
             setToUnitId(tUnitId);
-            performCalculation(fromValue || '1', catId, fUnitId, tUnitId, precision);
+            saveCategoryUnits(catId, fUnitId, tUnitId);
+            const curVal = fromValue || '1';
+            if (sessionStateRef.current) {
+              sessionStateRef.current[catId] = {
+                fromValue: curVal,
+                fromUnitId: fUnitId,
+                toUnitId: tUnitId,
+              };
+            }
+            performCalculation(curVal, catId, fUnitId, tUnitId, precision);
             focusAndSelectFromInput();
           }}
         />

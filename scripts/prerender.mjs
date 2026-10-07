@@ -153,7 +153,7 @@ function writeHtml(targetPath, html) {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
-  let retries = 4;
+  let retries = 5;
   while (retries > 0) {
     try {
       fs.writeFileSync(targetPath, html, 'utf8');
@@ -161,7 +161,8 @@ function writeHtml(targetPath, html) {
     } catch (err) {
       retries--;
       if (retries === 0) throw err;
-      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 60);
+      const end = Date.now() + 100;
+      while (Date.now() < end) {}
     }
   }
 }
