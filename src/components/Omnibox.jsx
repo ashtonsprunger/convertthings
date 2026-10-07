@@ -174,7 +174,7 @@ export function Omnibox({ onSelectConversion, onSelectCategory, history = [], fa
               return (
                 <div
                   key={item.id || idx}
-                  className={`ct-omnibox-item ${isSelected ? 'active' : ''} ${isCategory ? 'ct-item-category' : ''} ${isCompound ? 'ct-item-compound' : ''} ${isUnsupported ? 'ct-item-unsupported' : ''}`}
+                  className={`ct-omnibox-item ${isSelected ? 'active' : ''} ${item.categoryId ? `ct-cat-${item.categoryId}` : ''} ${isCategory ? 'ct-item-category' : ''} ${isCompound ? 'ct-item-compound' : ''} ${isUnsupported ? 'ct-item-unsupported' : ''}`}
                   onMouseEnter={() => setSelectedIndex(idx)}
                   onClick={() => handleExecuteSuggestion(item)}
                   role="button"
@@ -187,18 +187,39 @@ export function Omnibox({ onSelectConversion, onSelectCategory, history = [], fa
 
                   <div className="ct-omnibox-item-content">
                     <div className="ct-omnibox-item-title">
-                      <span>{item.title}</span>
+                      {item.equation ? (
+                        <span className="ct-omnibox-equation">
+                          <span className="ct-eq-from">
+                            {item.equation.fromVal}{item.equation.fromUnit ? ` ${item.equation.fromUnit}` : ''}
+                          </span>
+                          <span className="ct-eq-equals">=</span>
+                          <strong className="ct-eq-result">
+                            {item.equation.toVal} {item.equation.toUnit}
+                          </strong>
+                        </span>
+                      ) : (
+                        <span>{item.title}</span>
+                      )}
                     </div>
                     {item.subtitle && (
                       <div className="ct-omnibox-item-sub">
-                        <span>{item.subtitle}</span>
+                        <span className="ct-sub-text">{item.subtitle}</span>
+                        {item.badge && (
+                          <span
+                            className={`ct-omnibox-badge ct-badge-inline ct-badge-${item.badge.toLowerCase().replace(/\s+/g, '-')}`}
+                          >
+                            {item.badge}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
 
                   <div className="ct-omnibox-item-actions">
                     {item.badge && (
-                      <span className={`ct-omnibox-badge ct-badge-${item.badge.toLowerCase().replace(/\s+/g, '-')}`}>
+                      <span
+                        className={`ct-omnibox-badge ct-badge-desktop ct-badge-${item.badge.toLowerCase().replace(/\s+/g, '-')}`}
+                      >
                         {item.badge}
                       </span>
                     )}

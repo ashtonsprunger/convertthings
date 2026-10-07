@@ -838,13 +838,24 @@ export function getSearchSuggestions(rawQuery, options = {}) {
   if (!query) {
     if (options.history && Array.isArray(options.history) && options.history.length > 0) {
       options.history.slice(0, 3).forEach((h) => {
+        const cat = CATEGORIES.find((c) => c.id === h.categoryId);
+        const fromValFormatted = formatNumber(Number(h.fromValue) || 1, 'auto', h.categoryId);
         suggestions.push({
           id: `hist-${h.categoryId}-${h.fromUnitId}-${h.toUnitId}-${h.fromValue}`,
           type: 'history',
-          title: `${formatNumber(Number(h.fromValue) || 1, 'auto', h.categoryId)} ${h.fromSymbol} = ${h.toValue} ${h.toSymbol}`,
+          categoryId: h.categoryId,
+          title: `${fromValFormatted} ${h.fromSymbol} = ${h.toValue} ${h.toSymbol}`,
           subtitle: `Recent Conversion · ${h.categoryName || h.categoryId}`,
           badge: 'Recent',
-          icon: 'Clock',
+          icon: cat ? cat.icon : 'Clock',
+          equation: {
+            fromVal: fromValFormatted,
+            fromUnit: h.fromSymbol,
+            fromSymbol: h.fromSymbol,
+            toVal: h.toValue,
+            toUnit: h.toSymbol,
+            toSymbol: h.toSymbol,
+          },
           payload: {
             action: 'convert',
             categoryId: h.categoryId,
@@ -863,6 +874,7 @@ export function getSearchSuggestions(rawQuery, options = {}) {
         suggestions.push({
           id: `cat-${cat.id}`,
           type: 'category',
+          categoryId: cat.id,
           title: `Explore ${cat.name}`,
           subtitle: `Category · ${UNIT_DEFINITIONS[cat.id]?.units?.length || 10} units`,
           badge: 'Category',
@@ -889,6 +901,7 @@ export function getSearchSuggestions(rawQuery, options = {}) {
     suggestions.push({
       id: `cat-jump-${catMatch.id}`,
       type: 'category',
+      categoryId: catMatch.id,
       title: `Go to ${catMatch.name} Category`,
       subtitle: `Explore ${UNIT_DEFINITIONS[catMatch.id]?.units?.length || 10} units (${sampleUnits}...)`,
       badge: 'Category',
@@ -908,13 +921,24 @@ export function getSearchSuggestions(rawQuery, options = {}) {
         const res = convertUnits(pop.val, catMatch.id, pop.from, pop.to);
         if (res !== null) {
           const formatted = formatNumber(res, 'auto', catMatch.id);
+          const fromPlural = uFrom.plural || uFrom.name;
+          const toPlural = uTo.plural || uTo.name;
           suggestions.push({
             id: `cat-pop-${catMatch.id}-${pop.from}-${pop.to}-${pop.val}`,
             type: 'conversion',
-            title: `${pop.val} ${uFrom.name} = ${formatted} ${uTo.plural || uTo.name}`,
+            categoryId: catMatch.id,
+            title: `${pop.val} ${fromPlural} = ${formatted} ${toPlural}`,
             subtitle: `${catMatch.name} · ${uFrom.symbol} → ${uTo.symbol}`,
             badge: 'Popular',
-            icon: 'Sparkles',
+            icon: catMatch.icon,
+            equation: {
+              fromVal: pop.val,
+              fromUnit: fromPlural,
+              fromSymbol: uFrom.symbol,
+              toVal: formatted,
+              toUnit: toPlural,
+              toSymbol: uTo.symbol,
+            },
             payload: {
               action: 'convert',
               categoryId: catMatch.id,
@@ -937,18 +961,32 @@ export function getSearchSuggestions(rawQuery, options = {}) {
     const isCompound = parsed.isCompound;
     const cat = CATEGORIES.find((c) => c.id === parsed.categoryId);
     const catName = cat ? cat.name : parsed.categoryId;
+    const catIcon = cat ? cat.icon : (isCompound ? 'Ruler' : 'Sparkles');
+
+    const fromPlural = parsed.fromUnit.plural || parsed.fromUnit.name;
+    const toPlural = parsed.toUnit.plural || parsed.toUnit.name;
+    const fromValFormatted = formatNumber(parsed.value, 'auto', parsed.categoryId);
 
     const mainTitle = isCompound
-      ? `${parsed.compoundDisplay} = ${parsed.formattedResult} ${parsed.toUnit.plural || parsed.toUnit.name}`
-      : `${formatNumber(parsed.value, 'auto', parsed.categoryId)} ${parsed.fromUnit.plural || parsed.fromUnit.name} = ${parsed.formattedResult} ${parsed.toUnit.plural || parsed.toUnit.name}`;
+      ? `${parsed.compoundDisplay} = ${parsed.formattedResult} ${toPlural}`
+      : `${fromValFormatted} ${fromPlural} = ${parsed.formattedResult} ${toPlural}`;
 
     suggestions.push({
       id: `conv-main-${parsed.categoryId}-${parsed.fromUnit.id}-${parsed.toUnit.id}`,
       type: isCompound ? 'compound' : 'conversion',
+      categoryId: parsed.categoryId,
       title: mainTitle,
       subtitle: `${catName} · ${parsed.fromUnit.symbol} → ${parsed.toUnit.symbol}`,
       badge: isCompound ? 'Height Match' : 'Instant Match',
-      icon: isCompound ? 'Ruler' : 'Sparkles',
+      icon: catIcon,
+      equation: {
+        fromVal: isCompound ? parsed.compoundDisplay : fromValFormatted,
+        fromUnit: isCompound ? '' : fromPlural,
+        fromSymbol: parsed.fromUnit.symbol,
+        toVal: parsed.formattedResult,
+        toUnit: toPlural,
+        toSymbol: parsed.toUnit.symbol,
+      },
       payload: {
         action: 'convert',
         categoryId: parsed.categoryId,
@@ -959,37 +997,6 @@ export function getSearchSuggestions(rawQuery, options = {}) {
         hasExplicitValue: isCompound || !!parsed.hasExplicitValue,
       },
     });
-
-    // Provide 1-2 complementary/alternative unit targets in same category
-    if (!isCompound && UNIT_DEFINITIONS[parsed.categoryId]) {
-      const otherUnits = UNIT_DEFINITIONS[parsed.categoryId].units
-        .filter((u) => u.id !== parsed.fromUnit.id && u.id !== parsed.toUnit.id)
-        .slice(0, 2);
-
-      otherUnits.forEach((alt) => {
-        const altRes = convertUnits(parsed.value, parsed.categoryId, parsed.fromUnit.id, alt.id);
-        if (altRes !== null) {
-          const altFormatted = formatNumber(altRes, 'auto', parsed.categoryId);
-          suggestions.push({
-            id: `conv-alt-${parsed.categoryId}-${parsed.fromUnit.id}-${alt.id}`,
-            type: 'conversion',
-            title: `${formatNumber(parsed.value, 'auto', parsed.categoryId)} ${parsed.fromUnit.plural || parsed.fromUnit.name} = ${altFormatted} ${alt.plural || alt.name}`,
-            subtitle: `Also in ${catName} · ${parsed.fromUnit.symbol} → ${alt.symbol}`,
-            badge: 'Related',
-            icon: 'ArrowRight',
-            payload: {
-              action: 'convert',
-              categoryId: parsed.categoryId,
-              fromUnitId: parsed.fromUnit.id,
-              toUnitId: alt.id,
-              value: parsed.value,
-              formattedResult: altFormatted,
-              hasExplicitValue: !!parsed.hasExplicitValue,
-            },
-          });
-        }
-      });
-    }
 
     return suggestions;
   }
@@ -1007,19 +1014,33 @@ export function getSearchSuggestions(rawQuery, options = {}) {
       const catId = candidate.categoryId;
       const cat = CATEGORIES.find((c) => c.id === catId);
       const catName = cat ? cat.name : catId;
+      const catIcon = cat ? cat.icon : 'Sparkles';
       const targetUnits = UNIT_DEFINITIONS[catId].units.filter((u) => u.id !== candidate.unit.id).slice(0, 4);
 
       targetUnits.forEach((tUnit) => {
         const res = convertUnits(val, catId, candidate.unit.id, tUnit.id);
         if (res !== null) {
           const formatted = formatNumber(res, 'auto', catId);
+          const valFormatted = formatNumber(val, 'auto', catId);
+          const candPlural = candidate.unit.plural || candidate.unit.name;
+          const tPlural = tUnit.plural || tUnit.name;
+
           suggestions.push({
             id: `inc-${catId}-${candidate.unit.id}-${tUnit.id}`,
             type: 'conversion',
-            title: `${formatNumber(val, 'auto', catId)} ${candidate.unit.plural || candidate.unit.name} = ${formatted} ${tUnit.plural || tUnit.name}`,
+            categoryId: catId,
+            title: `${valFormatted} ${candPlural} = ${formatted} ${tPlural}`,
             subtitle: `${catName} · ${candidate.unit.symbol} → ${tUnit.symbol}`,
             badge: 'Suggested',
-            icon: 'Sparkles',
+            icon: catIcon,
+            equation: {
+              fromVal: valFormatted,
+              fromUnit: candPlural,
+              fromSymbol: candidate.unit.symbol,
+              toVal: formatted,
+              toUnit: tPlural,
+              toSymbol: tUnit.symbol,
+            },
             payload: {
               action: 'convert',
               categoryId: catId,

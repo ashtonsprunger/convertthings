@@ -660,6 +660,178 @@
   user-select: none;
 }
 
+/* Omnibox Equation Layout */
+.ct-omnibox-equation {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.ct-eq-from {
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+.ct-eq-equals {
+  color: var(--text-muted);
+  font-weight: 600;
+  margin: 0 0.1rem;
+}
+
+.ct-eq-result {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+/* Category-specific icon tinting in Omnibox */
+.ct-cat-length .ct-omnibox-item-icon {
+  background-color: rgba(6, 182, 212, 0.15);
+  color: #06b6d4;
+}
+
+.ct-cat-mass .ct-omnibox-item-icon {
+  background-color: rgba(139, 92, 246, 0.15);
+  color: #8b5cf6;
+}
+
+.ct-cat-temperature .ct-omnibox-item-icon {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.ct-cat-area .ct-omnibox-item-icon {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.ct-cat-volume .ct-omnibox-item-icon {
+  background-color: rgba(14, 165, 233, 0.15);
+  color: #0ea5e9;
+}
+
+.ct-cat-speed .ct-omnibox-item-icon {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.ct-cat-time .ct-omnibox-item-icon {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+}
+
+.ct-cat-digital .ct-omnibox-item-icon {
+  background-color: rgba(168, 85, 247, 0.15);
+  color: #a855f7;
+}
+
+.ct-cat-data_rate .ct-omnibox-item-icon {
+  background-color: rgba(234, 179, 8, 0.15);
+  color: #eab308;
+}
+
+.ct-cat-pressure .ct-omnibox-item-icon {
+  background-color: rgba(99, 102, 241, 0.15);
+  color: #6366f1;
+}
+
+.ct-cat-energy .ct-omnibox-item-icon {
+  background-color: rgba(236, 72, 153, 0.15);
+  color: #ec4899;
+}
+
+.ct-cat-power .ct-omnibox-item-icon {
+  background-color: rgba(249, 115, 22, 0.15);
+  color: #f97316;
+}
+
+.ct-cat-angle .ct-omnibox-item-icon {
+  background-color: rgba(20, 184, 166, 0.15);
+  color: #14b8a6;
+}
+
+.ct-cat-fuel .ct-omnibox-item-icon {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.ct-cat-cooking .ct-omnibox-item-icon {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+/* Badges: Desktop action column vs Mobile inline */
+.ct-badge-inline {
+  display: none;
+}
+
+.ct-badge-desktop {
+  display: inline-block;
+}
+
+/* Touch & Mobile Responsive Omnibox Refinements */
+@media (max-width: 680px), (pointer: coarse) {
+  /* Hide desktop-only shortcut badge in search input */
+  .ct-omnibox-shortcut {
+    display: none !important;
+  }
+
+  /* Hide enter key hint icon */
+  .ct-omnibox-enter-hint {
+    display: none !important;
+  }
+}
+
+@media (max-width: 680px) {
+  /* Switch badge from right column to subtitle row on mobile */
+  .ct-badge-desktop {
+    display: none !important;
+  }
+
+  .ct-badge-inline {
+    display: inline-flex !important;
+    font-size: 0.62rem;
+    padding: 0.1rem 0.42rem;
+    line-height: 1.2;
+    border-radius: var(--radius-full);
+  }
+
+  .ct-omnibox-item-actions {
+    display: none !important;
+  }
+
+  /* Title wraps cleanly, never truncating with ellipsis */
+  .ct-omnibox-item-title {
+    white-space: normal !important;
+    word-break: break-word;
+    font-size: 0.95rem;
+    line-height: 1.35;
+  }
+
+  .ct-omnibox-item-sub {
+    white-space: normal !important;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    font-size: 0.76rem;
+    margin-top: 0.15rem;
+  }
+
+  /* Compact dropdown container height above virtual keyboard */
+  .ct-omnibox-dropdown {
+    max-height: min(320px, 48vh) !important;
+    padding: 0.35rem !important;
+    gap: 0.2rem !important;
+  }
+
+  .ct-omnibox-item {
+    padding: 0.6rem 0.75rem !important;
+    gap: 0.65rem !important;
+  }
+}
+
 /* ==========================================
    Visual Mode Bridge Divider ("or select units manually")
    ========================================== */

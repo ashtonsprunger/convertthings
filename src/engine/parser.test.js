@@ -259,18 +259,44 @@ describe('Smart Convert Search Parser Engine', () => {
       expect(suggestions[1].type).toBe('conversion');
     });
 
-    test('generates instant match for full conversion queries', () => {
+    test('generates instant match for full conversion queries with domain category icon and equation', () => {
       const suggestions = getSearchSuggestions('100 km to miles');
-      expect(suggestions.length).toBeGreaterThan(0);
+      expect(suggestions.length).toBe(1); // Exact match isolated to 1 card
       expect(suggestions[0].type).toBe('conversion');
       expect(suggestions[0].badge).toBe('Instant Match');
+      expect(suggestions[0].icon).toBe('Ruler'); // Category icon for length
+      expect(suggestions[0].categoryId).toBe('length');
+      expect(suggestions[0].equation).toBeDefined();
+      expect(suggestions[0].equation.fromVal).toBe('100');
+      expect(suggestions[0].equation.toUnit).toBe('Miles');
       expect(suggestions[0].payload.value).toBe(100);
+
+      // Verify domain icons for other categories
+      const tempMatch = getSearchSuggestions('72 f in c');
+      expect(tempMatch[0].icon).toBe('Thermometer');
+      expect(tempMatch[0].categoryId).toBe('temperature');
+
+      const massMatch = getSearchSuggestions('150 lbs to kg');
+      expect(massMatch[0].icon).toBe('Scale');
+      expect(massMatch[0].categoryId).toBe('mass');
+
+      const cookingMatch = getSearchSuggestions('1 cup to ml');
+      expect(cookingMatch[0].icon).toBe('ChefHat');
+      expect(cookingMatch[0].categoryId).toBe('cooking');
+
+      // Verify compound height query
+      const heightMatch = getSearchSuggestions("5'11 to cm");
+      expect(heightMatch[0].icon).toBe('Ruler');
+      expect(heightMatch[0].equation.fromVal).toBe('5 ft 11 in');
+      expect(heightMatch[0].equation.toUnit).toBe('Centimeters');
     });
 
-    test('generates suggestions for incomplete queries', () => {
+    test('generates suggestions for incomplete queries with domain icon and equation', () => {
       const suggestions = getSearchSuggestions('100 km to');
       expect(suggestions.length).toBeGreaterThan(0);
       expect(suggestions[0].badge).toBe('Suggested');
+      expect(suggestions[0].icon).toBe('Ruler');
+      expect(suggestions[0].equation).toBeDefined();
     });
 
     test('generates notice for unsupported currency queries', () => {
