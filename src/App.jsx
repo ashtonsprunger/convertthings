@@ -91,10 +91,11 @@ function App() {
     } catch (e) {
       // ignore
     }
+    const savedLengthUnits = getSavedCategoryUnits('length');
     return {
       categoryId: 'length',
-      fromUnitId: 'm',
-      toUnitId: 'ft',
+      fromUnitId: savedLengthUnits?.fromUnitId || 'm',
+      toUnitId: savedLengthUnits?.toUnitId || 'ft',
       fromValue: '1',
       isRoot: true,
       isCategoryPage: false,
@@ -128,17 +129,13 @@ function App() {
   const [lastEdited, setLastEdited] = useState('from');
 
   // In-memory per-category session state (retains active numbers & units across category switches)
-  const sessionStateRef = useRef(
-    initial.isRoot
-      ? {}
-      : {
-          [initial.categoryId]: {
-            fromValue: initial.fromValue,
-            fromUnitId: initial.fromUnitId,
-            toUnitId: initial.toUnitId,
-          },
-        }
-  );
+  const sessionStateRef = useRef({
+    [initial.categoryId]: {
+      fromValue: initial.fromValue,
+      fromUnitId: initial.fromUnitId,
+      toUnitId: initial.toUnitId,
+    },
+  });
 
   const [precision, setPrecision] = useLocalStorage('ct-precision', initialPrecision);
   const [favorites, setFavorites] = useLocalStorage('ct-favorites', DEFAULT_FAVORITES);
@@ -382,13 +379,16 @@ function App() {
       try {
         const pathname = window.location.pathname;
         if (pathname === '/' || pathname === '') {
+          const savedLengthUnits = getSavedCategoryUnits('length');
+          const rootFrom = savedLengthUnits?.fromUnitId || 'm';
+          const rootTo = savedLengthUnits?.toUnitId || 'ft';
           setIsRoot(true);
           setIsCategoryPage(false);
           setCategoryId('length');
-          setFromUnitId('m');
-          setToUnitId('ft');
+          setFromUnitId(rootFrom);
+          setToUnitId(rootTo);
           setFromValue('1');
-          performCalculation('1', 'length', 'm', 'ft', precision);
+          performCalculation('1', 'length', rootFrom, rootTo, precision);
           return;
         }
         const parsed = parseRoute(pathname, window.location.search);
@@ -433,18 +433,21 @@ function App() {
   // Handle return to root homepage
   const handleGoHome = (e) => {
     if (e) e.preventDefault();
+    const savedLengthUnits = getSavedCategoryUnits('length');
+    const rootFrom = savedLengthUnits?.fromUnitId || 'm';
+    const rootTo = savedLengthUnits?.toUnitId || 'ft';
     setIsRoot(true);
     setIsCategoryPage(false);
     setCategoryId('length');
-    setFromUnitId('m');
-    setToUnitId('ft');
+    setFromUnitId(rootFrom);
+    setToUnitId(rootTo);
     setFromValue('1');
-    performCalculation('1', 'length', 'm', 'ft', precision);
+    performCalculation('1', 'length', rootFrom, rootTo, precision);
     if (sessionStateRef.current) {
       sessionStateRef.current['length'] = {
         fromValue: '1',
-        fromUnitId: 'm',
-        toUnitId: 'ft',
+        fromUnitId: rootFrom,
+        toUnitId: rootTo,
       };
     }
     if (window.location.pathname !== '/') {

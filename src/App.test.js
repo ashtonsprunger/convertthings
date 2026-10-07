@@ -894,7 +894,7 @@ describe('Dual-Tier Memory System (In-Session & Cross-Session Persistence)', () 
     expect(screen.getByTitle('Change unit to Mile')).toBeInTheDocument();
   });
 
-  test('root homepage / is pristine and always opens Length 1 m to ft', () => {
+  test('root homepage / restores saved length unit preferences while starting with clean 1', () => {
     // Pre-populate preferred units for length to be mi -> km
     window.localStorage.setItem(
       'ct-pref-units',
@@ -907,6 +907,23 @@ describe('Dual-Tier Memory System (In-Session & Cross-Session Persistence)', () 
     window.history.replaceState({}, '', '/');
     render(<App />);
 
+    expect(window.location.pathname).toBe('/');
+    const fromInput = screen.getByLabelText(/Enter value in/i);
+    expect(fromInput.value).toBe('1');
+    expect(screen.getByTitle('Change unit from Mile')).toBeInTheDocument();
+    expect(screen.getByTitle('Change unit to Kilometer')).toBeInTheDocument();
+
+    const canonical = document.querySelector('link[rel="canonical"]');
+    expect(canonical.href).toBe('https://www.convertthings.com/');
+    expect(document.title).toBe('ConvertThings - Instant, Accurate Online Unit Converter');
+  });
+
+  test('root homepage / defaults to 1 Meter to Foot when no length preferences are stored', () => {
+    // Mount on root / with empty localStorage
+    window.history.replaceState({}, '', '/');
+    render(<App />);
+
+    expect(window.location.pathname).toBe('/');
     const fromInput = screen.getByLabelText(/Enter value in/i);
     expect(fromInput.value).toBe('1');
     expect(screen.getByTitle('Change unit from Meter')).toBeInTheDocument();
