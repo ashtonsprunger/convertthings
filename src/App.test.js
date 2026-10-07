@@ -929,5 +929,95 @@ describe('Dual-Tier Memory System (In-Session & Cross-Session Persistence)', () 
     expect(screen.getByTitle('Change unit from Meter')).toBeInTheDocument();
     expect(screen.getByTitle('Change unit to Foot')).toBeInTheDocument();
   });
+
+  test('mounts with precision from URL query parameter (?p=4) and overrides local state for that view', () => {
+    window.history.replaceState({}, '', '/convert/100-km-to-miles?p=4');
+    render(<App />);
+
+    const precisionSelect = screen.getByLabelText(/Decimal Precision/i);
+    expect(precisionSelect.value).toBe('4');
+
+    const toInput = screen.getByLabelText(/Converted value in/i);
+    // 100 km to miles = 62.1371192... -> with 4 decimals is 62.1371
+    expect(toInput.value).toBe('62.1371');
+
+    // Canonical link tag must remain completely clean for SEO bots
+    const canonical = document.querySelector('link[rel="canonical"]');
+    expect(canonical.href).toBe('https://www.convertthings.com/convert/100-km-to-mi');
+    expect(canonical.href).not.toContain('?p=');
+  });
+
+  test('dynamically synchronizes ?p= in browser address bar when changing precision', () => {
+    window.history.replaceState({}, '', '/convert/100-km-to-miles');
+    render(<App />);
+
+    expect(window.location.search).toBe('');
+
+    const precisionSelect = screen.getByLabelText(/Decimal Precision/i);
+
+    // Switch to 2 decimals -> URL gains ?p=2
+    fireEvent.change(precisionSelect, { target: { value: '2' } });
+    expect(window.location.search).toBe('?p=2');
+
+    // Switch to exact -> URL gains ?p=exact
+    fireEvent.change(precisionSelect, { target: { value: 'exact' } });
+    expect(window.location.search).toBe('?p=exact');
+
+    // Switch back to auto -> URL search is cleanly cleared
+    fireEvent.change(precisionSelect, { target: { value: 'auto' } });
+    expect(window.location.search).toBe('');
+  });
+
+  test('share button copies current URL including ?p= parameter when precision is non-default', async () => {
+    const originalClipboard = navigator.clipboard;
+    const writeTextMock = jest.fn().mockResolvedValue();
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: writeTextMock },
+      writable: true,
+      configurable: true,
+    });
+
+    window.history.replaceState({}, '', '/convert/100-km-to-miles?p=exact');
+    render(<App />);
+
+    const shareButton = screen.getByRole('button', { name: /Share conversion link/i });
+    await act(async () => {
+      fireEvent.click(shareButton);
+    });
+
+    expect(writeTextMock).toHaveBeenCalledTimes(1);
+    const copiedUrl = writeTextMock.mock.calls[0][0];
+    expect(copiedUrl).toContain('/convert/100-km-to-mi?p=exact');
+
+    expect(await screen.findByText(/Conversion link copied to clipboard!/i)).toBeInTheDocument();
+
+    Object.defineProperty(navigator, 'clipboard', {
+      value: originalClipboard,
+      writable: true,
+      configurable: true,
+    });
+  });
+
+  test('synchronizes ?p= on category hubs and root homepage without affecting canonical tags', () => {
+    // 1. Root homepage with ?p=2
+    window.history.replaceState({}, '', '/?p=2');
+    const { unmount } = render(<App />);
+
+    expect(window.location.pathname).toBe('/');
+    expect(window.location.search).toBe('?p=2');
+    const rootCanonical = document.querySelector('link[rel="canonical"]');
+    expect(rootCanonical.href).toBe('https://www.convertthings.com/');
+
+    unmount();
+
+    // 2. Category page with ?p=fraction
+    window.history.replaceState({}, '', '/cooking?p=fraction');
+    render(<App />);
+
+    expect(window.location.pathname).toBe('/cooking');
+    expect(window.location.search).toBe('?p=fraction');
+    const catCanonical = document.querySelector('link[rel="canonical"]');
+    expect(catCanonical.href).toBe('https://www.convertthings.com/cooking');
+  });
 });
 

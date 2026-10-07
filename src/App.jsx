@@ -7,7 +7,7 @@ import {
   parseFractionString,
   isFractionLike,
 } from './engine/conversions';
-import { parseRoute, formatRoutePath } from './engine/urlRouter';
+import { parseRoute, formatRoutePath, VALID_PRECISIONS } from './engine/urlRouter';
 import { getSeoMetadata } from './engine/seo';
 import { Header } from './components/Header';
 import { Omnibox } from './components/Omnibox';
@@ -105,8 +105,16 @@ function App() {
   const getInitialPrecision = () => {
     try {
       if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const queryP = params.get('p') || params.get('prec');
+        if (queryP && VALID_PRECISIONS.includes(queryP.toLowerCase())) {
+          return queryP.toLowerCase();
+        }
         const item = window.localStorage.getItem('ct-precision');
-        if (item) return JSON.parse(item);
+        if (item) {
+          const parsed = JSON.parse(item);
+          if (VALID_PRECISIONS.includes(parsed)) return parsed;
+        }
       }
     } catch (e) {
       // ignore
@@ -137,7 +145,7 @@ function App() {
     },
   });
 
-  const [precision, setPrecision] = useLocalStorage('ct-precision', initialPrecision);
+  const [precision, setPrecision] = useState(initialPrecision);
   const [favorites, setFavorites] = useLocalStorage('ct-favorites', DEFAULT_FAVORITES);
   const [history, setHistory] = useLocalStorage('ct-history', []);
   const [toast, setToast] = useState({ message: '', visible: false });
@@ -252,6 +260,8 @@ function App() {
         el.content = content;
       };
 
+      const targetSearch = precision && precision !== 'auto' ? `?p=${encodeURIComponent(precision)}` : '';
+
       if (isRoot) {
         const seo = getSeoMetadata({ isRoot: true });
 
@@ -279,9 +289,10 @@ function App() {
         }
         canonical.href = seo.canonicalUrl;
 
-        // Maintain clean '/' root pathname in address bar
-        if (window.location.pathname !== '/') {
-          window.history.replaceState({}, '', '/');
+        // Maintain clean '/' root pathname in address bar (with ?p= if non-default)
+        const targetUrl = `/${targetSearch}`;
+        if (window.location.pathname + (window.location.search || '') !== targetUrl) {
+          window.history.replaceState({}, '', targetUrl);
         }
         return;
       }
@@ -317,10 +328,11 @@ function App() {
         }
         canonical.href = seo.canonicalUrl;
 
-        // Maintain clean category path (e.g. '/mass') in address bar
+        // Maintain clean category path (e.g. '/mass') in address bar (with ?p= if non-default)
         const categoryPath = `/${categoryId}`;
-        if (window.location.pathname !== categoryPath) {
-          window.history.replaceState({}, '', categoryPath);
+        const targetUrl = `${categoryPath}${targetSearch}`;
+        if (window.location.pathname + (window.location.search || '') !== targetUrl) {
+          window.history.replaceState({}, '', targetUrl);
         }
         return;
       }
@@ -351,10 +363,10 @@ function App() {
         setMetaTag('meta[name="twitter:title"]', 'name', 'twitter:title', seo.ogTitle);
         setMetaTag('meta[name="twitter:description"]', 'name', 'twitter:description', seo.ogDescription);
 
-        // Clean URL Route Path
-        const routePath = formatRoutePath(categoryId, fromUnitId, toUnitId, fromValue);
+        // Clean URL Route Path with ?p= if non-default
+        const routePath = formatRoutePath(categoryId, fromUnitId, toUnitId, fromValue, precision);
 
-        // Update Canonical Link tag for search bots
+        // Update Canonical Link tag for search bots (always clean!)
         let canonical = document.querySelector('link[rel="canonical"]');
         if (!canonical) {
           canonical = document.createElement('link');
@@ -364,19 +376,31 @@ function App() {
         canonical.href = seo.canonicalUrl;
 
         // Sync browser URL path without page reloading
-        if (window.location.pathname !== routePath) {
+        if (window.location.pathname + (window.location.search || '') !== routePath) {
           window.history.replaceState({}, '', routePath);
         }
       }
     } catch (e) {
       // ignore
     }
-  }, [isRoot, isCategoryPage, categoryId, fromUnitId, toUnitId, fromValue]);
+  }, [isRoot, isCategoryPage, categoryId, fromUnitId, toUnitId, fromValue, precision]);
 
   // Listen for browser Back / Forward history navigation
   useEffect(() => {
     const handlePopState = () => {
       try {
+        const search = window.location.search;
+        let popPrecision = undefined;
+        if (search) {
+          const pParams = new URLSearchParams(search);
+          const rawP = pParams.get('p') || pParams.get('prec');
+          if (rawP && VALID_PRECISIONS.includes(rawP.toLowerCase())) {
+            popPrecision = rawP.toLowerCase();
+          }
+        }
+        const effectivePrec = popPrecision || getInitialPrecision();
+        setPrecision(effectivePrec);
+
         const pathname = window.location.pathname;
         if (pathname === '/' || pathname === '') {
           const savedLengthUnits = getSavedCategoryUnits('length');
@@ -388,7 +412,7 @@ function App() {
           setFromUnitId(rootFrom);
           setToUnitId(rootTo);
           setFromValue('1');
-          performCalculation('1', 'length', rootFrom, rootTo, precision);
+          performCalculation('1', 'length', rootFrom, rootTo, effectivePrec);
           return;
         }
         const parsed = parseRoute(pathname, window.location.search);
@@ -420,7 +444,7 @@ function App() {
           setFromUnitId(nextFrom);
           setToUnitId(nextTo);
           setFromValue(nextVal);
-          performCalculation(nextVal, nextCat, nextFrom, nextTo, precision);
+          performCalculation(nextVal, nextCat, nextFrom, nextTo, effectivePrec);
         }
       } catch (e) {
         // ignore
@@ -428,7 +452,7 @@ function App() {
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [performCalculation, precision]);
+  }, [performCalculation]);
 
   // Handle return to root homepage
   const handleGoHome = (e) => {
@@ -667,6 +691,13 @@ function App() {
   // Change precision
   const handlePrecisionChange = (newPrec) => {
     setPrecision(newPrec);
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('ct-precision', JSON.stringify(newPrec));
+      }
+    } catch (e) {
+      // ignore
+    }
     if (lastEdited === 'to') {
       if (toValue !== '' && toValue !== null) {
         const numVal = typeof toValue === 'string' && toValue.includes('/')

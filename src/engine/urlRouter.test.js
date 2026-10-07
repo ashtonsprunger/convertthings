@@ -146,6 +146,45 @@ describe('ConvertThings URL Router', () => {
     expect(formatRoutePath('length', 'km', 'mi', '0.5')).toBe('/convert/0.5-km-to-mi');
   });
 
+  test('formats route paths with precision query parameter only when non-default', () => {
+    // Default auto leaves URL clean
+    expect(formatRoutePath('length', 'km', 'mi', '1', 'auto')).toBe('/convert/km-to-mi');
+    expect(formatRoutePath('length', 'km', 'mi', '100', 'auto')).toBe('/convert/100-km-to-mi');
+
+    // Non-default precisions append ?p=
+    expect(formatRoutePath('length', 'km', 'mi', '100', '4')).toBe('/convert/100-km-to-mi?p=4');
+    expect(formatRoutePath('length', 'km', 'mi', '1', 'exact')).toBe('/convert/km-to-mi?p=exact');
+    expect(formatRoutePath('cooking', 'cup_us', 'tbsp_us', '1', 'fraction')).toBe('/convert/cup_us-to-tbsp_us?p=fraction');
+    expect(formatRoutePath('cooking', 'cup_us', 'tbsp_us', '1', 'fraction_improper')).toBe('/convert/cup_us-to-tbsp_us?p=fraction_improper');
+
+    // Invalid precision is ignored
+    expect(formatRoutePath('length', 'km', 'mi', '1', 'invalid_prec')).toBe('/convert/km-to-mi');
+  });
+
+  test('parses precision query parameters via ?p= and ?prec=', () => {
+    const route1 = parseRoute('/convert/km-to-mi', '?p=4');
+    expect(route1).not.toBeNull();
+    expect(route1.precision).toBe('4');
+
+    const route2 = parseRoute('/convert/100-km-to-miles', '?prec=exact');
+    expect(route2).not.toBeNull();
+    expect(route2.precision).toBe('exact');
+
+    const route3 = parseRoute('/cooking', '?p=fraction');
+    expect(route3).not.toBeNull();
+    expect(route3.precision).toBe('fraction');
+
+    const route4 = parseRoute('/', '?cat=mass&from=kg&to=lb&v=250&p=2');
+    expect(route4).not.toBeNull();
+    expect(route4.precision).toBe('2');
+
+    // Invalid precision is ignored
+    const routeInvalid = parseRoute('/convert/km-to-mi', '?p=unknown');
+    expect(routeInvalid).not.toBeNull();
+    expect(routeInvalid.precision).toBeUndefined();
+  });
+
+
   test('generates all unit pairs across all 15 categories', () => {
     const pairs = getAllUnitPairs();
     // 15 categories with 4 to 15 units each yields well over 1,000 distinct pairs

@@ -7,20 +7,31 @@
 import { CATEGORIES, UNIT_DEFINITIONS, getUnit } from './conversions.js';
 import { findUnit, findAllUnits } from './parser.js';
 
+export const VALID_PRECISIONS = ['auto', '2', '4', 'exact', 'fraction', 'fraction_improper'];
+
 /**
  * Parses current location (pathname and search) into structured conversion state.
  * Supports:
  * 1. Clean unit pair paths: /convert/km-to-mi, /convert/celsius-to-fahrenheit
  * 2. Specific calculation paths: /convert/100-km-to-miles, /convert/72-f-to-c
  * 3. Category paths: /length, /temperature, /cooking
- * 4. Query parameters: ?cat=length&from=km&to=mi&v=100
+ * 4. Query parameters: ?cat=length&from=km&to=mi&v=100&p=4
  *
  * @param {string} pathname Window location pathname (e.g. '/convert/km-to-mi')
- * @param {string} search Window location search query (e.g. '?v=100')
+ * @param {string} search Window location search query (e.g. '?v=100&p=4')
  * @returns {object|null} Initial state or null if no route matched
  */
 export function parseRoute(pathname = '', search = '') {
   try {
+    let precision = undefined;
+    if (search) {
+      const pParams = new URLSearchParams(search);
+      const rawP = pParams.get('p') || pParams.get('prec');
+      if (rawP && VALID_PRECISIONS.includes(rawP.toLowerCase())) {
+        precision = rawP.toLowerCase();
+      }
+    }
+
     // 1. Check clean /convert/ routes
     const cleanPath = (pathname || '').trim().toLowerCase();
 
@@ -102,6 +113,7 @@ export function parseRoute(pathname = '', search = '') {
               fromUnitId,
               toUnitId,
               fromValue: value,
+              ...(precision ? { precision } : {}),
             };
           }
         }
@@ -118,6 +130,7 @@ export function parseRoute(pathname = '', search = '') {
         toUnitId: matchedCategory.defaultTo,
         fromValue: '1',
         isCategoryPage: true,
+        ...(precision ? { precision } : {}),
       };
     }
 
@@ -139,6 +152,7 @@ export function parseRoute(pathname = '', search = '') {
           fromUnitId: validFrom,
           toUnitId: validTo,
           fromValue: cleanVal !== null && !isNaN(cleanVal) ? cleanVal : '1',
+          ...(precision ? { precision } : {}),
         };
       }
     }
@@ -156,9 +170,10 @@ export function parseRoute(pathname = '', search = '') {
  * @param {string} fromUnitId Source unit ID
  * @param {string} toUnitId Target unit ID
  * @param {string|number} value Current calculation value
- * @returns {string} Clean URL path (e.g. '/convert/km-to-mi' or '/convert/100-km-to-mi')
+ * @param {string} [precision='auto'] Selected precision formatting
+ * @returns {string} Clean URL path (e.g. '/convert/km-to-mi', '/convert/100-km-to-mi', or '/convert/100-km-to-mi?p=4')
  */
-export function formatRoutePath(categoryId, fromUnitId, toUnitId, value = '1') {
+export function formatRoutePath(categoryId, fromUnitId, toUnitId, value = '1', precision = 'auto') {
   if (!fromUnitId || !toUnitId) return '/';
 
   const rawVal = value !== null && value !== undefined ? String(value).trim().replace(/,/g, '') : '1';
@@ -166,11 +181,16 @@ export function formatRoutePath(categoryId, fromUnitId, toUnitId, value = '1') {
   const valStr = rawVal.endsWith('.') ? rawVal.slice(0, -1) : rawVal;
   const hasCustomValue = valStr !== '' && valStr !== '1' && !isNaN(valStr);
 
+  let path = `/convert/${fromUnitId}-to-${toUnitId}`;
   if (hasCustomValue) {
-    return `/convert/${encodeURIComponent(valStr)}-${fromUnitId}-to-${toUnitId}`;
+    path = `/convert/${encodeURIComponent(valStr)}-${fromUnitId}-to-${toUnitId}`;
   }
 
-  return `/convert/${fromUnitId}-to-${toUnitId}`;
+  if (precision && precision !== 'auto' && VALID_PRECISIONS.includes(precision)) {
+    return `${path}?p=${encodeURIComponent(precision)}`;
+  }
+
+  return path;
 }
 
 /**
