@@ -633,23 +633,21 @@ describe('ConvertThings UI Integration', () => {
     expect(await screen.findByText(/Instruction copied to clipboard!/i)).toBeInTheDocument();
   });
 
-  test('increments and decrements input values to next whole number using stepper buttons', () => {
+  test('increments and decrements input values to next whole number using arrow keys', () => {
     render(<App />);
     const fromInput = screen.getByLabelText(/Enter value in/i);
     expect(fromInput.value).toBe('1');
 
     // Increment fromInput: 1 -> 2
-    const incFromBtn = screen.getByRole('button', { name: /Increment Meter/i });
-    fireEvent.click(incFromBtn);
+    fireEvent.keyDown(fromInput, { key: 'ArrowUp' });
     expect(fromInput.value).toBe('2');
 
     // Decrement fromInput: 2 -> 1
-    const decFromBtn = screen.getByRole('button', { name: /Decrement Meter/i });
-    fireEvent.click(decFromBtn);
+    fireEvent.keyDown(fromInput, { key: 'ArrowDown' });
     expect(fromInput.value).toBe('1');
 
     // Decrement again: 1 -> 0
-    fireEvent.click(decFromBtn);
+    fireEvent.keyDown(fromInput, { key: 'ArrowDown' });
     expect(fromInput.value).toBe('0');
   });
 

@@ -882,8 +882,7 @@ function App() {
         <div className="ct-mode-bridge" role="separator" aria-label="Conversion Modes">
           <span className="ct-mode-bridge-line" />
           <span className="ct-mode-bridge-badge">
-            <span className="ct-mode-badge-dot" />
-            OR BROWSE 15 CATEGORIES &amp; DIAL IN MANUALLY
+            or select units manually
           </span>
           <span className="ct-mode-bridge-line" />
         </div>

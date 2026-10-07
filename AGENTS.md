@@ -47,10 +47,24 @@
    - Automated sitemap generator indexing 1,244 pair URLs in `public/sitemap.xml`.
    - Injects structured JSON-LD schema (`WebApplication` and `FAQPage`) dynamically into `<head>` for Google search rich snippets.
 
-6. **Clean, Modern UI/UX (`src/App.css`, `src/index.css`)**:
-   - Full dark and light mode with automatic system preference detection and localStorage persistence.
-   - **Immediate Color-Highlighted Equation Readout**: Prominent live conversion statement (e.g. `1 ft = 12 in`) with high-contrast color badges and full-name captions.
-   - Developer Modal (`src/components/DeveloperModal.jsx`) with live interactive API tester and 1-click Claude Desktop configs.
+6. **Google Material 3 Rounded Design System (`src/App.css`, `src/index.css`)**:
+   - **Full Pill & Floating Capsule Geometry**:
+     - Main inputs (`.ct-integrated-input-box`) and Omnibox search bar use `border-radius: var(--radius-full)` (9999px) capsules.
+     - Docked unit selectors (`.ct-integrated-unit-btn`) nest inside the input capsule as Material pill chips.
+     - Primary cards (`.ct-card`, `.ct-table-card`, `.ct-history-section`, modals, SEO guides) use `--radius-card: 28px`.
+     - Secondary surfaces and footers use `--radius-surface: 20px`.
+     - Filter tags and dropdown results use `--radius-chip: 14px`.
+   - **Multi-Tier Ambient Elevation & Lighting**:
+     - Ambient shadows (`--shadow-google-sm`, `--shadow-google-md`, `--shadow-google-lg`) paired with specular inset highlight strokes (`--shadow-specular`) that adapt smoothly between light and dark modes.
+     - Tactile spring easings (`--ease-spring: cubic-bezier(0.34, 1.45, 0.64, 1)` and `--ease-smooth: cubic-bezier(0.16, 1, 0.3, 1)`).
+   - **Dual-Mode Architectural Hierarchy (Auto vs. Manual)**:
+     - **Docked Header**: Sits flush at `top: 0` with edge-to-edge frosted glass (`backdrop-filter: blur(20px)`), allowing the Omnibox below to stand out as the **sole hero floating pill** on the page.
+     - **Animated Omnibox**: Displays rotating double-quoted examples (`"100 km to miles"`, `"72°F in °C"`, `"1 cup to ml"`) with smooth vertical slide-and-fade transitions every 3.2s when unfocused.
+     - **Mode Bridge Divider**: A clean, balanced hairline divider (`────────── or select units manually ──────────`) clearly distinguishing the fast Auto search above from the Manual interactive workbench below.
+     - **Unified Mobile Steppers**: On mobile screens (`<= 680px`), increment and decrement buttons merge into a contiguous vertical capsule rocker beside the input, featuring top/bottom rounded caps and a hairline divider.
+   - **Zero Auto-Focus Stealing**: Focus is strictly user-initiated (tapping an input, pressing `/`, or clicking Clear). Programmatic focus is never called on category switches, unit changes, or swaps, ensuring mobile virtual keyboards never pop up unprompted.
+   - **Color-Highlighted Equation Readout**: Prominent live conversion statement (e.g. `1 ft = 12 in`) with high-contrast color badges and full-name captions.
+   - **Developer Modal (`src/components/DeveloperModal.jsx`)**: Live interactive API tester and 1-click Claude Desktop configs.
    - Starred favorites bar, recent history drawer, and searchable unit dropdowns.
 
 7. **Monetization & AdSense Readiness (`src/components/AdSlot.jsx`, `public/ads.txt`)**:
@@ -161,7 +175,7 @@ convertThings/
   ```powershell
   $env:CI="true"; npm test
   ```
-  Runs all 41 unit and integration tests across 3 suites without hanging.
+  Runs all 166 unit and integration tests across 6 suites without hanging.
 - **Execute API & MCP Test Suite:**
   ```powershell
   npm run test:api
@@ -188,5 +202,12 @@ convertThings/
 3. **SEO & Routing Integrity:**
    - Any modifications to URL parsing in `src/engine/urlRouter.js` must be covered by unit tests in `src/engine/urlRouter.test.js`.
    - Never break static files (`ads.txt`, `sitemap.xml`, `robots.txt`).
-4. **Test Everything:**
-   - Always run `$env:CI="true"; npm test` and `npm run test:api` before committing or concluding turns.
+4. **Adhere to Google Material 3 Design Tokens:**
+   - Always preserve the unified corner radius scale (`--radius-card: 28px`, `--radius-surface: 20px`, `--radius-chip: 14px`, `--radius-pill: 9999px`).
+   - Use multi-tier ambient shadows (`--shadow-google-sm`, `--shadow-google-md`, `--shadow-google-lg`) and kinetic spring easing (`--ease-spring`).
+   - Maintain the dual-mode hierarchy: docked flush header, hero floating Omnibox with animated placeholder, clean mode divider, and conjoined vertical mobile steppers.
+5. **Respect Intentional Focus (No Auto-Focus Stealing):**
+   - Never call `.focus()` or `autoFocus` programmatically on category switches, unit changes, favorite loading, or swap operations.
+   - Preserving passive focus prevents mobile virtual keyboards from jumping into view and obscuring results, and prevents desktop scroll hijacking.
+6. **Test Everything:**
+   - Always run `$env:CI="true"; npm test` and `npm run test:api` before concluding turns.
