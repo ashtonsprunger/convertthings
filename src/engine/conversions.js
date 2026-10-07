@@ -112,7 +112,7 @@ export const UNIT_DEFINITIONS = {
   area: {
     baseUnit: 'sqm',
     units: [
-      { id: 'sqm', name: 'Square Meter', plural: 'Square Meters', symbol: 'm²', factor: 1, aliases: ['square meter', 'square meters', 'sq meter', 'sqm', 'm2', 'm²'] },
+      { id: 'sqm', name: 'Square Meter', plural: 'Square Meters', symbol: 'm²', factor: 1, aliases: ['square meter', 'square meters', 'sq meter', 'sq meters', 'sq m', 'sqm', 'm2', 'm²', 'sq metre', 'sq metres'] },
       { id: 'sqkm', name: 'Square Kilometer', plural: 'Square Kilometers', symbol: 'km²', factor: 1e6, aliases: ['square kilometer', 'square kilometers', 'sq km', 'sqkm', 'km2', 'km²'] },
       { id: 'sqcm', name: 'Square Centimeter', plural: 'Square Centimeters', symbol: 'cm²', factor: 0.0001, aliases: ['square centimeter', 'square centimeters', 'sq cm', 'sqcm', 'cm2', 'cm²'] },
       { id: 'sqmm', name: 'Square Millimeter', plural: 'Square Millimeters', symbol: 'mm²', factor: 1e-6, aliases: ['square millimeter', 'sq mm', 'sqmm', 'mm2', 'mm²'] },

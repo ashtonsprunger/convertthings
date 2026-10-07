@@ -16,5 +16,11 @@ if (!navigator.clipboard) {
   navigator.clipboard.writeText = jest.fn().mockImplementation(() => Promise.resolve());
 }
 
-// Mock window.scrollTo
+// Mock window.scrollTo and Element scroll methods
 window.scrollTo = jest.fn();
+if (typeof Element.prototype.scrollTo !== 'function') {
+  Element.prototype.scrollTo = jest.fn();
+}
+if (typeof Element.prototype.scrollBy !== 'function') {
+  Element.prototype.scrollBy = jest.fn();
+}

@@ -29,7 +29,8 @@ export function Footer({ onSelectCategory, onOpenLegal, onOpenDevModal, onGoHome
             Fast, high-precision unit conversions for engineering, science, culinary arts, and everyday measurement tasks.
           </p>
           <div className="ct-footer-standards">
-            <span>Calibrated with official NIST & ISO 80000 standards.</span>
+            <span className="ct-standards-dot" aria-hidden="true" />
+            <span>Calibrated with official NIST &amp; ISO 80000 standards.</span>
           </div>
         </div>
 

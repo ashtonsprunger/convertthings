@@ -1,6 +1,5 @@
 import React from 'react';
-import logoBlack from '../assets/logo-black.svg';
-import logoWhite from '../assets/logo-white.svg';
+import { BrandLogo } from './BrandLogo';
 
 export function Icon({ name, size = 18, className = '', ...props }) {
   const defaultProps = {
@@ -230,6 +229,16 @@ export function Icon({ name, size = 18, className = '', ...props }) {
           <path d="m18 15-6-6-6 6" />
         </svg>
       );
+    case 'Grid':
+    case 'LayoutGrid':
+      return (
+        <svg {...defaultProps}>
+          <rect width="7" height="7" x="3" y="3" rx="1.5" />
+          <rect width="7" height="7" x="14" y="3" rx="1.5" />
+          <rect width="7" height="7" x="14" y="14" rx="1.5" />
+          <rect width="7" height="7" x="3" y="14" rx="1.5" />
+        </svg>
+      );
     case 'ExternalLink':
       return (
         <svg {...defaultProps}>
@@ -239,31 +248,27 @@ export function Icon({ name, size = 18, className = '', ...props }) {
         </svg>
       );
     case 'BrandLogo':
-      return (
-        <span
-          className={`ct-icon ct-icon-BrandLogo ${className}`}
-          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: size, height: size }}
-          {...props}
-        >
-          <img
-            src={logoBlack}
-            alt="ConvertThings logo"
-            className="ct-logo-img ct-logo-light"
-            style={{ width: size, height: size, objectFit: 'contain' }}
-          />
-          <img
-            src={logoWhite}
-            alt="ConvertThings logo"
-            className="ct-logo-img ct-logo-dark"
-            style={{ width: size, height: size, objectFit: 'contain' }}
-          />
-        </span>
-      );
+      return <BrandLogo size={size} className={className} {...props} />;
     case 'BookOpen':
       return (
         <svg {...defaultProps}>
           <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
           <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+        </svg>
+      );
+    case 'ArrowRight':
+      return (
+        <svg {...defaultProps}>
+          <line x1="5" y1="12" x2="19" y2="12" />
+          <polyline points="12 5 19 12 12 19" />
+        </svg>
+      );
+    case 'AlertCircle':
+      return (
+        <svg {...defaultProps}>
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
         </svg>
       );
     default:

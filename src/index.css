@@ -6,13 +6,18 @@
 :root {
   /* Light Theme Palette */
   --bg-app: #f8fafc;
-  --bg-header: #ffffff;
+  --bg-header: rgba(255, 255, 255, 0.78);
+  --border-header: rgba(226, 232, 240, 0.85);
   --bg-card: #ffffff;
   --bg-card-subtle: #f1f5f9;
   --bg-input: #ffffff;
   --bg-hover: #f1f5f9;
   --bg-active: #e2e8f0;
   --bg-dropdown: #ffffff;
+  --bg-footer: #ffffff;
+  --bg-footer-gradient: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  --footer-aura: rgba(6, 182, 212, 0.09);
+  --footer-aura-secondary: rgba(139, 92, 246, 0.05);
 
   --text-main: #0f172a;
   --text-secondary: #475569;
@@ -74,13 +79,18 @@
 [data-theme="dark"] {
   /* Dark Theme Palette */
   --bg-app: #090d16;
-  --bg-header: #0f172a;
+  --bg-header: rgba(15, 23, 42, 0.78);
+  --border-header: rgba(51, 65, 85, 0.7);
   --bg-card: #0f172a;
   --bg-card-subtle: #1e293b;
   --bg-input: #131d31;
   --bg-hover: #1e293b;
   --bg-active: #334155;
   --bg-dropdown: #0f172a;
+  --bg-footer: #0a0f1d;
+  --bg-footer-gradient: linear-gradient(180deg, #0e1628 0%, #060a12 100%);
+  --footer-aura: rgba(6, 182, 212, 0.16);
+  --footer-aura-secondary: rgba(167, 139, 250, 0.08);
 
   --text-main: #f8fafc;
   --text-secondary: #cbd5e1;
@@ -137,6 +147,7 @@
 html {
   font-size: 16px;
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
@@ -148,6 +159,20 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color var(--transition-normal), color var(--transition-normal);
+  background-image:
+    radial-gradient(at 0% 0%, rgba(139, 92, 246, 0.05) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.05) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.04) 0px, transparent 50%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  overflow-x: hidden;
+}
+
+[data-theme="dark"] body {
+  background-image:
+    radial-gradient(at 0% 0%, rgba(167, 139, 250, 0.09) 0px, transparent 48%),
+    radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.10) 0px, transparent 48%),
+    radial-gradient(at 50% 100%, rgba(52, 211, 153, 0.06) 0px, transparent 50%);
 }
 
 input, button, select, textarea {

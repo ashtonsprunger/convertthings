@@ -727,7 +727,7 @@ function App() {
   };
 
   // Handle Natural Language / Omnibox selection
-  const handleSelectConversion = ({ categoryId: cId, fromUnitId: fId, toUnitId: tId, value: val }) => {
+  const handleSelectConversion = ({ categoryId: cId, fromUnitId: fId, toUnitId: tId, value: val, hasExplicitValue }) => {
     setIsRoot(false);
     setIsCategoryPage(false);
     setLastEdited('from');
@@ -746,7 +746,9 @@ function App() {
     }
     performCalculation(strVal, cId, fId, tId, precision);
     showToast(`Converted ${strVal} ${fId} to ${tId}`);
-    focusAndSelectFromInput();
+    if (!hasExplicitValue) {
+      focusAndSelectFromInput();
+    }
   };
 
   // Check if current pair is favorite (order-agnostic pair)
@@ -887,7 +889,19 @@ function App() {
         <AdSlot position="top-banner" />
 
         {/* Universal Omnibox Search */}
-        <Omnibox onSelectConversion={handleSelectConversion} />
+        <Omnibox
+          onSelectConversion={handleSelectConversion}
+          onSelectCategory={handleSelectCategory}
+          history={history}
+          favorites={favorites}
+        />
+
+        {/* Visual Mode Bridge Divider */}
+        <div className="ct-or-divider" aria-hidden="true">
+          <span className="ct-or-line" />
+          <span className="ct-or-badge">or select units manually</span>
+          <span className="ct-or-line" />
+        </div>
 
         {/* Category Navigation Pills */}
         <CategoryNav
