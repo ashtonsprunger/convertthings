@@ -152,16 +152,6 @@ function App() {
   const [legalModal, setLegalModal] = useState({ isOpen: false, tab: 'privacy' });
   const [devModalOpen, setDevModalOpen] = useState(false);
 
-  // Helper to focus and select the first input field
-  const focusAndSelectFromInput = () => {
-    setTimeout(() => {
-      const el = document.getElementById('fromInput');
-      if (el) {
-        el.focus({ preventScroll: true });
-        el.select();
-      }
-    }, 10);
-  };
 
   // Open modal if URL has hash (#privacy, #terms, #about, #api, #mcp, #developer)
   useEffect(() => {
@@ -614,8 +604,6 @@ function App() {
     if (typeof window !== 'undefined' && window.location.pathname !== `/${newCatId}`) {
       window.history.pushState({}, '', `/${newCatId}`);
     }
-
-    focusAndSelectFromInput();
   };
 
   // Switch From unit
@@ -684,8 +672,6 @@ function App() {
         toUnitId: nextTo,
       };
     }
-
-    focusAndSelectFromInput();
   };
 
   // Change precision
@@ -746,9 +732,6 @@ function App() {
     }
     performCalculation(strVal, cId, fId, tId, precision);
     showToast(`Converted ${strVal} ${fId} to ${tId}`);
-    if (!hasExplicitValue) {
-      focusAndSelectFromInput();
-    }
   };
 
   // Check if current pair is favorite (order-agnostic pair)
@@ -809,7 +792,6 @@ function App() {
       };
     }
     performCalculation(nextVal, fav.categoryId, nextFrom, nextTo, precision);
-    focusAndSelectFromInput();
   };
 
   const handleRemoveFavorite = (fav) => {
@@ -968,7 +950,6 @@ function App() {
               };
             }
             performCalculation(fromValue || '1', categoryId, fromUnitId, targetUnitId, precision);
-            focusAndSelectFromInput();
           }}
         />
 
@@ -992,7 +973,6 @@ function App() {
               };
             }
             showToast('Loaded from history');
-            focusAndSelectFromInput();
           }}
           onClearHistory={() => {
             setHistory([]);
@@ -1023,7 +1003,6 @@ function App() {
               };
             }
             performCalculation(curVal, catId, fUnitId, tUnitId, precision);
-            focusAndSelectFromInput();
           }}
         />
       </main>

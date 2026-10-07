@@ -1977,9 +1977,9 @@
 
   .ct-unit-block {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 38px;
+    grid-template-columns: minmax(0, 1fr) 40px;
     grid-template-rows: 1fr 1fr;
-    gap: 4px 6px;
+    gap: 0 8px;
     align-items: stretch;
     width: 100%;
     min-width: 0;
@@ -1993,6 +1993,7 @@
     margin: 0;
   }
 
+  /* Combined Vertical Stepper Pill on Mobile */
   .ct-stepper-outer {
     display: flex;
     align-items: stretch;
@@ -2011,22 +2012,62 @@
     grid-row: 2;
   }
 
-  .ct-stepper-outer-up .ct-stepper-btn,
+  .ct-stepper-outer-up .ct-stepper-btn {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    padding: 0;
+    border-radius: var(--radius-full) var(--radius-full) 0 0;
+    border: 1px solid var(--border-color);
+    border-bottom: none;
+    background-color: var(--bg-card-subtle);
+    box-shadow: none;
+    transform: none !important;
+  }
+
   .ct-stepper-outer-down .ct-stepper-btn {
     width: 100%;
     height: 100%;
     min-height: 0;
     padding: 0;
+    border-radius: 0 0 var(--radius-full) var(--radius-full);
+    border: 1px solid var(--border-color);
+    border-top: 1px solid var(--border-color);
+    background-color: var(--bg-card-subtle);
+    box-shadow: none;
+    transform: none !important;
   }
 
   .ct-stepper-outer-up .ct-stepper-btn:hover,
   .ct-stepper-outer-down .ct-stepper-btn:hover {
-    transform: none;
+    transform: none !important;
+    background-color: var(--bg-hover);
+    border-color: var(--border-color);
   }
 
   .ct-stepper-outer-up .ct-stepper-btn:active,
   .ct-stepper-outer-down .ct-stepper-btn:active {
-    transform: scale(0.96);
+    transform: none !important;
+    background-color: var(--primary-light);
+  }
+
+  .ct-stepper-outer-up .ct-stepper-btn.ct-stepper-from:active,
+  .ct-stepper-outer-down .ct-stepper-btn.ct-stepper-from:active {
+    background-color: var(--readout-from-bg);
+    color: var(--readout-from-text);
+  }
+
+  .ct-stepper-outer-up .ct-stepper-btn.ct-stepper-to:active,
+  .ct-stepper-outer-down .ct-stepper-btn.ct-stepper-to:active {
+    background-color: var(--readout-to-bg);
+    color: var(--readout-to-text);
+  }
+
+  .ct-stepper-outer-up .ct-stepper-btn:focus-visible,
+  .ct-stepper-outer-down .ct-stepper-btn:focus-visible {
+    z-index: 2;
+    outline: 2px solid var(--primary);
+    outline-offset: 1px;
   }
 }
 

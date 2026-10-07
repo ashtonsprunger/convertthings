@@ -542,7 +542,7 @@ describe('ConvertThings UI Integration', () => {
     expect(screen.queryByLabelText(/Favorite Conversions/i)).not.toBeInTheDocument();
   });
 
-  test('clicking a favorite focuses and selects the from input field and sets active class', async () => {
+  test('clicking a favorite updates active class and units without stealing input focus', async () => {
     window.localStorage.setItem('ct-favorites', JSON.stringify([{ categoryId: 'length', fromUnitId: 'km', toUnitId: 'mi' }]));
     render(<App />);
     const fromInput = screen.getByLabelText(/Enter value in/i);
@@ -556,7 +556,7 @@ describe('ConvertThings UI Integration', () => {
     fireEvent.click(favBtn);
 
     await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(selectSpy).toHaveBeenCalled();
+    expect(selectSpy).not.toHaveBeenCalled();
     expect(pill).toHaveClass('active');
     selectSpy.mockRestore();
   });

@@ -903,7 +903,6 @@ export function ConversionCard({
                       value={fromSearch}
                       onChange={(e) => setFromSearch(e.target.value)}
                       onKeyDown={handleFromSearchKeyDown}
-                      autoFocus
                     />
                     {fromSearch && (
                       <button
@@ -1087,7 +1086,6 @@ export function ConversionCard({
                       value={toSearch}
                       onChange={(e) => setToSearch(e.target.value)}
                       onKeyDown={handleToSearchKeyDown}
-                      autoFocus
                     />
                     {toSearch && (
                       <button
