@@ -6,7 +6,7 @@
 :root {
   /* Light Theme Palette */
   --bg-app: #f8fafc;
-  --bg-header: rgba(255, 255, 255, 0.78);
+  --bg-header: rgba(255, 255, 255, 0.72);
   --border-header: rgba(226, 232, 240, 0.85);
   --bg-card: #ffffff;
   --bg-card-subtle: #f1f5f9;
@@ -14,10 +14,6 @@
   --bg-hover: #f1f5f9;
   --bg-active: #e2e8f0;
   --bg-dropdown: #ffffff;
-  --bg-footer: #ffffff;
-  --bg-footer-gradient: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-  --footer-aura: rgba(15, 23, 42, 0.03);
-  --footer-aura-secondary: rgba(15, 23, 42, 0.015);
 
   --text-main: #0f172a;
   --text-secondary: #475569;
@@ -130,8 +126,8 @@
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 18px;
-  --radius-card: 28px;
-  --radius-surface: 20px;
+  --radius-card: 38px;
+  --radius-surface: 18px;
   --radius-chip: 14px;
   --radius-pill: 9999px;
   --radius-full: 9999px;
@@ -159,7 +155,7 @@
 [data-theme="dark"] {
   /* Dark Theme Palette */
   --bg-app: #090d16;
-  --bg-header: rgba(15, 23, 42, 0.78);
+  --bg-header: rgba(15, 23, 42, 0.72);
   --border-header: rgba(51, 65, 85, 0.7);
   --bg-card: #0f172a;
   --bg-card-subtle: #1e293b;
@@ -167,10 +163,6 @@
   --bg-hover: #1e293b;
   --bg-active: #334155;
   --bg-dropdown: #0f172a;
-  --bg-footer: #0a0f1d;
-  --bg-footer-gradient: linear-gradient(180deg, #0e1628 0%, #060a12 100%);
-  --footer-aura: rgba(248, 250, 252, 0.04);
-  --footer-aura-secondary: rgba(248, 250, 252, 0.02);
 
   --text-main: #f8fafc;
   --text-secondary: #cbd5e1;

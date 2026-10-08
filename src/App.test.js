@@ -1172,5 +1172,69 @@ describe('Dual-Tier Memory System (In-Session & Cross-Session Persistence)', () 
     expect(window.location.search).toBe('?kitchen=1');
     expect(screen.getByText('Drawer Tools to Pull')).toBeInTheDocument();
   });
+
+  test('Smart Headroom hides on scroll down and reveals on any upward scroll', () => {
+    window.history.replaceState({}, '', '/');
+    render(<App />);
+
+    const header = document.querySelector('.ct-header');
+    expect(header).toBeInTheDocument();
+    expect(header).not.toHaveClass('ct-header-hidden');
+
+    // Simulate scrolling down past 40px threshold
+    act(() => {
+      Object.defineProperty(window, 'pageYOffset', { value: 150, writable: true, configurable: true });
+      fireEvent.scroll(window);
+    });
+    expect(header).toHaveClass('ct-header-hidden');
+
+    // Simulate scrolling UP even slightly (from 150 to 140) - should immediately reveal
+    act(() => {
+      Object.defineProperty(window, 'pageYOffset', { value: 140, writable: true, configurable: true });
+      fireEvent.scroll(window);
+    });
+    expect(header).not.toHaveClass('ct-header-hidden');
+
+    // Scroll down again - hides
+    act(() => {
+      Object.defineProperty(window, 'pageYOffset', { value: 300, writable: true, configurable: true });
+      fireEvent.scroll(window);
+    });
+    expect(header).toHaveClass('ct-header-hidden');
+
+    // Press '/' key while hidden - should reveal immediately
+    act(() => {
+      fireEvent.keyDown(window, { key: '/' });
+    });
+    expect(header).not.toHaveClass('ct-header-hidden');
+  });
+
+  test('clicking brand logo 3 times triggers celestial orbit easter egg animation', () => {
+    jest.useFakeTimers();
+    render(<App />);
+
+    const brandLink = document.querySelector('.ct-header .ct-brand');
+    expect(brandLink).toBeInTheDocument();
+    const logoWrap = brandLink.querySelector('.ct-logo-wrap');
+    expect(logoWrap).not.toHaveClass('ct-turbine-active');
+
+    // Click 3 times quickly
+    act(() => {
+      fireEvent.click(brandLink);
+      fireEvent.click(brandLink);
+      fireEvent.click(brandLink);
+    });
+
+    expect(logoWrap).toHaveClass('ct-turbine-active');
+
+    // After animation duration (1100ms), class should automatically remove
+    act(() => {
+      jest.advanceTimersByTime(1150);
+    });
+
+    expect(logoWrap).not.toHaveClass('ct-turbine-active');
+    jest.useRealTimers();
+  });
 });
+
 

@@ -852,9 +852,9 @@ export function getSearchSuggestions(rawQuery, options = {}) {
           type: 'history',
           categoryId: h.categoryId,
           title: `${fromValFormatted} ${h.fromSymbol} = ${h.toValue} ${h.toSymbol}`,
-          subtitle: `Recent Conversion · ${h.categoryName || h.categoryId}`,
+          subtitle: 'Recent Conversion',
           badge: 'Recent',
-          icon: cat ? cat.icon : 'Clock',
+          icon: h.categoryIcon || (cat ? cat.icon : 'Clock'),
           equation: {
             fromVal: fromValFormatted,
             fromUnit: h.fromSymbol,

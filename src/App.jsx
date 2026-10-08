@@ -231,6 +231,7 @@ function App() {
         const item = {
           categoryId: catId,
           categoryName: cat.name,
+          categoryIcon: cat.icon,
           fromUnitId: fUnitId,
           toUnitId: tUnitId,
           fromValue: fVal,

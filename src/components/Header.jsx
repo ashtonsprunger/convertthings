@@ -16,6 +16,7 @@ export function Header({
   const headerRef = useRef(null);
   const clickCountRef = useRef(0);
   const clickTimerRef = useRef(null);
+  const turbineTimerRef = useRef(null);
 
   // Smart Headroom: hide on scroll down, reveal on scroll up
   useEffect(() => {
@@ -60,6 +61,8 @@ export function Header({
     return () => {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('keydown', handleKeyDown);
+      if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+      if (turbineTimerRef.current) clearTimeout(turbineTimerRef.current);
     };
   }, []);
 
@@ -70,7 +73,10 @@ export function Header({
     if (clickCountRef.current >= 3) {
       clickCountRef.current = 0;
       setIsTurbineSpinning(true);
-      setTimeout(() => setIsTurbineSpinning(false), 950);
+      if (turbineTimerRef.current) clearTimeout(turbineTimerRef.current);
+      turbineTimerRef.current = setTimeout(() => {
+        setIsTurbineSpinning(false);
+      }, 1100);
     } else {
       clickTimerRef.current = setTimeout(() => {
         clickCountRef.current = 0;

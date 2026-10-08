@@ -44,15 +44,16 @@
 5. **SEO & Clean Route Architecture (`src/engine/urlRouter.js`, `scripts/generateSitemap.mjs`)**:
    - Programmatic unit-pair URLs (`/convert/:from-to-:to`, `/convert/:val-:from-to-:to`).
    - Dynamic document title and meta description updates.
-   - Automated sitemap generator indexing 1,244 pair URLs in `public/sitemap.xml`.
+   - Automated sitemap generator indexing 1,310 URLs in `public/sitemap.xml` with 1,325 pre-rendered static HTML routes.
    - Injects structured JSON-LD schema (`WebApplication` and `FAQPage`) dynamically into `<head>` for Google search rich snippets.
 
 6. **Google Material 3 Rounded Design System (`src/App.css`, `src/index.css`)**:
    - **Full Pill & Floating Capsule Geometry**:
      - Main inputs (`.ct-integrated-input-box`) and Omnibox search bar use `border-radius: var(--radius-full)` (9999px) capsules.
      - Interactive full-name unit selector chips (`.ct-unit-selector-chip`: `[ Millimeter  mm  ▾ ]`) sit inside the pod header as floating Material pill chips with subtle resting depth.
-     - Primary cards (`.ct-card`, `.ct-table-card`, `.ct-history-section`, modals, SEO guides) use `--radius-card: 28px`.
-     - Secondary surfaces and footers use `--radius-surface: 20px`.
+     - Primary cards (`.ct-card`, `.ct-table-card`, `.ct-history-section`, modals, SEO guides) use `--radius-card: 38px`.
+     - Secondary nested surfaces and cards use `--radius-surface: 18px`.
+     - Strict **Concentric Geometry** formula: $R_{\text{outer}} (38\text{px}) = R_{\text{inner}} (18\text{px}) + \text{Padding} (20\text{px} / 1.25\text{rem})$.
      - Filter tags and dropdown results use `--radius-chip: 14px`.
    - **Unified Unit Pod Architecture (`.ct-unit-block`)**:
      - Organizes the "From" and "To" sides into two distinct, soft surface trays (`background-color: var(--bg-card-subtle)`, `border-radius: var(--radius-card)`, `border: 1px solid transparent;`) without harsh border lines.
@@ -104,10 +105,12 @@ convertThings/
 │   ├── index.html             # SEO-optimized HTML5 shell with OpenGraph, Twitter, AdSense
 │   ├── privacy.html           # Standalone legal privacy policy
 │   ├── robots.txt             # Crawl directives with sitemap index
-│   ├── sitemap.xml            # 1,244 auto-generated unit pair URLs
+│   ├── sitemap.xml            # 1,310 auto-generated unit pair URLs (1,325 pre-rendered routes)
 │   └── terms.html             # Standalone terms of service
 ├── scripts/
-│   ├── generateSitemap.mjs    # Automated sitemap generation script
+│   ├── generateIcons.mjs      # Brand asset & favicon generator from source logo
+│   ├── generateSitemap.mjs    # Automated sitemap generation script (1,310 URLs)
+│   ├── prerender.mjs          # Static HTML pre-rendering generator (1,325 routes)
 │   └── test-api.mjs           # Serverless API and MCP integration test suite
 ├── src/
 │   ├── components/
@@ -187,7 +190,7 @@ convertThings/
   ```powershell
   $env:CI="true"; npm test
   ```
-  Runs all 187 unit and integration tests across 7 suites without hanging.
+  Runs all 194 unit and integration tests across 8 suites without hanging.
 - **Execute API & MCP Test Suite:**
   ```powershell
   npm run test:api
@@ -214,8 +217,13 @@ convertThings/
 3. **SEO & Routing Integrity:**
    - Any modifications to URL parsing in `src/engine/urlRouter.js` must be covered by unit tests in `src/engine/urlRouter.test.js`.
    - Never break static files (`ads.txt`, `sitemap.xml`, `robots.txt`).
-4. **Adhere to Google Material 3 Design Tokens:**
-   - Always preserve the unified corner radius scale (`--radius-card: 28px`, `--radius-surface: 20px`, `--radius-chip: 14px`, `--radius-pill: 9999px`).
+4. **Adhere to Google Material 3 Design Tokens & Concentric Geometry:**
+   - Always preserve the unified concentric corner radius scale (`--radius-card: 38px`, `--radius-surface: 18px`, `--radius-chip: 14px`, `--radius-pill: 9999px`).
+   - Maintain the concentric alignment equation: Outer card radius ($38\text{px}$) = Inner nested surface radius ($18\text{px}$) + Card uniform padding ($20\text{px} / 1.25\text{rem}$). Action buttons with $36\text{px}$ height ($R = 18\text{px}$) also satisfy $18\text{px} + 20\text{px} = 38\text{px}$.
+   - Omnibox dropdown maintains local menu concentricity: container radius $20\text{px}$, padding $8\text{px}$, item radius $12\text{px}$ ($12 + 8 = 20$).
+   - Never use single-sided `border-left` on rounded surface cards (which bends around corner arcs into a "bent noodle"); use an absolute `::before` pseudo-element straight accent bar with inset top/bottom stops (`top: 14px; bottom: 14px;`).
+   - Active table row highlights (`.ct-row-current`) must have rounded capsule ends (`10px` border-radius on outer cells) rather than sharp 90° rectangular blocks.
+   - Lock interactive card text & icon vertical baselines (`min-height: 48px; line-height: 1`).
    - Use multi-tier ambient shadows (`--shadow-google-sm`, `--shadow-google-md`, `--shadow-google-lg`) and kinetic spring easing (`--ease-spring`).
    - Maintain the smart navigation hierarchy: ambient floating capsule on desktop, edge-to-edge docked on mobile, and smart headroom scroll dynamics.
 5. **Zero-Border & Surface-Driven Architecture (App-Wide)**:

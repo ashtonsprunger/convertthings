@@ -67,6 +67,21 @@ export function Omnibox({ onSelectConversion, onSelectCategory, history = [], fa
     setSelectedIndex(0);
   }, [query]);
 
+  // Ensure active suggestion is scrolled into view when navigating with ArrowDown / ArrowUp
+  useEffect(() => {
+    if (!isOpen) return;
+    const listbox = containerRef.current?.querySelector('#ct-omnibox-listbox');
+    if (!listbox) return;
+    if (selectedIndex === 0) {
+      listbox.scrollTop = 0;
+      return;
+    }
+    const activeEl = listbox.querySelector('.ct-omnibox-item.active');
+    if (activeEl && typeof activeEl.scrollIntoView === 'function') {
+      activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [selectedIndex, isOpen]);
+
   // Click outside to dismiss dropdown
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -82,24 +97,17 @@ export function Omnibox({ onSelectConversion, onSelectCategory, history = [], fa
     };
   }, []);
 
-  // Trigger visual flight spring animation from omnibox dropdown into conversion workbench
-  const triggerSuggestionFlight = (item, sourceEl) => {
+  // Instantaneous tactile arrival feedback on conversion workbench upon Omnibox selection
+  const triggerWorkbenchArrival = () => {
     if (typeof window === 'undefined' || typeof document === 'undefined') return;
     const prefersReducedMotion =
       window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) return;
 
-    let startRect = null;
-    if (sourceEl && typeof sourceEl.getBoundingClientRect === 'function') {
-      startRect = sourceEl.getBoundingClientRect();
-    } else if (containerRef.current) {
-      startRect = containerRef.current.getBoundingClientRect();
-    }
-    if (!startRect) return;
-
-    const targetEl = document.querySelector('.ct-conversion-grid') || document.getElementById('conversion-panel');
+    const targetEl =
+      document.getElementById('conversion-panel') ||
+      document.querySelector('.ct-conversion-grid');
     if (!targetEl) return;
-    const targetRect = targetEl.getBoundingClientRect();
 
     const isMobile = window.innerWidth <= 680;
     if (isMobile) {
@@ -110,68 +118,36 @@ export function Omnibox({ onSelectConversion, onSelectCategory, history = [], fa
       }
     }
 
-    const pill = document.createElement('div');
-    pill.className = 'ct-flying-suggestion-pill';
+    // Trigger Odometer Roll & Bloom animation
+    targetEl.classList.remove('ct-workbench-received');
+    const gridEl = targetEl.querySelector('.ct-conversion-grid') || targetEl;
+    gridEl.classList.remove('ct-workbench-received');
 
-    let displayTxt = item.title || 'Converting...';
-    if (item.equation) {
-      displayTxt = `${item.equation.fromVal}${item.equation.fromUnit ? ' ' + item.equation.fromUnit : ''} = ${item.equation.toVal} ${item.equation.toUnit}`;
-    }
-    pill.textContent = displayTxt;
-    document.body.appendChild(pill);
+    // Force reflow so re-triggering works reliably
+    void targetEl.offsetWidth;
 
-    const pillRect = pill.getBoundingClientRect();
-    const startX = Math.max(12, Math.min(startRect.left + (startRect.width / 2) - (pillRect.width / 2), window.innerWidth - pillRect.width - 12));
-    const startY = Math.max(12, startRect.top + (startRect.height / 2) - (pillRect.height / 2));
-    const endX = Math.max(12, Math.min(targetRect.left + (targetRect.width / 2) - (pillRect.width / 2), window.innerWidth - pillRect.width - 12));
-    const endY = isMobile
-      ? Math.min(Math.max(targetRect.top + 24, 70), window.innerHeight - 70)
-      : targetRect.top + 24;
+    targetEl.classList.add('ct-workbench-received');
+    gridEl.classList.add('ct-workbench-received');
 
-    if (typeof pill.animate === 'function') {
-      const anim = pill.animate(
-        [
-          {
-            transform: `translate3d(${startX}px, ${startY}px, 0) scale(1)`,
-            opacity: 1,
-          },
-          {
-            transform: `translate3d(${(startX + endX) / 2}px, ${(startY + endY) / 2 - (isMobile ? 10 : 20)}px, 0) scale(1.06)`,
-            opacity: 1,
-            offset: 0.45,
-          },
-          {
-            transform: `translate3d(${endX}px, ${endY}px, 0) scale(0.92)`,
-            opacity: 0,
-          },
-        ],
-        {
-          duration: isMobile ? 380 : 440,
-          easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)',
-          fill: 'forwards',
-        }
-      );
-
-      anim.onfinish = () => {
-        pill.remove();
-        targetEl.classList.add('ct-workbench-received');
-        setTimeout(() => {
-          targetEl.classList.remove('ct-workbench-received');
-        }, 500);
-      };
-    } else {
-      pill.remove();
-    }
+    setTimeout(() => {
+      targetEl.classList.remove('ct-workbench-received');
+      gridEl.classList.remove('ct-workbench-received');
+    }, 550);
   };
 
   // Execute selected suggestion
   const handleExecuteSuggestion = (item, sourceEl = null) => {
     if (!item || !item.payload) return;
 
+    if (sourceEl && sourceEl.classList) {
+      sourceEl.classList.add('ct-item-pressed');
+    }
+
     if (item.payload.action === 'navigate_category') {
       if (onSelectCategory && item.payload.categoryId) {
         onSelectCategory(item.payload.categoryId);
       }
+      triggerWorkbenchArrival();
       setQuery('');
       setIsOpen(false);
       inputRef.current?.blur();
@@ -179,7 +155,7 @@ export function Omnibox({ onSelectConversion, onSelectCategory, history = [], fa
     }
 
     if (item.payload.action === 'convert') {
-      triggerSuggestionFlight(item, sourceEl);
+      triggerWorkbenchArrival();
       if (onSelectConversion) {
         onSelectConversion({
           categoryId: item.payload.categoryId,
@@ -349,7 +325,7 @@ export function Omnibox({ onSelectConversion, onSelectCategory, history = [], fa
                     {item.subtitle && (
                       <div className="ct-omnibox-item-sub">
                         <span className="ct-sub-text">{item.subtitle}</span>
-                        {item.badge && (
+                        {item.badge && !isInstantMatch && (
                           <span
                             className={`ct-omnibox-badge ct-badge-inline ct-badge-${item.badge.toLowerCase().replace(/\s+/g, '-')}`}
                           >
@@ -361,7 +337,7 @@ export function Omnibox({ onSelectConversion, onSelectCategory, history = [], fa
                   </div>
 
                   <div className="ct-omnibox-item-actions">
-                    {item.badge && (
+                    {item.badge && !isInstantMatch && (
                       <span
                         className={`ct-omnibox-badge ct-badge-desktop ct-badge-${item.badge.toLowerCase().replace(/\s+/g, '-')}`}
                       >

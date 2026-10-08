@@ -1,5 +1,6 @@
 import React from 'react';
 import { CATEGORIES } from '../engine/conversions';
+import { Icon } from './Icons';
 
 export function Footer({ onSelectCategory, onOpenLegal, onOpenDevModal, onGoHome }) {
   const handleLegalClick = (e, tab) => {
@@ -19,44 +20,47 @@ export function Footer({ onSelectCategory, onOpenLegal, onOpenDevModal, onGoHome
   return (
     <footer className="ct-footer">
       <div className="ct-footer-inner">
-        <div className="ct-footer-brand-col">
-          <a href="/" className="ct-footer-logo" onClick={handleHomeClick} aria-label="ConvertThings Home (Footer)">
-            <span className="ct-brand-title" aria-label="ConvertThings">
-              <span className="ct-brand-name">Convert</span><span className="ct-brand-accent">Things</span>
-            </span>
-          </a>
-          <p className="ct-footer-desc">
-            Fast, high-precision unit conversions for engineering, science, culinary arts, and everyday measurement tasks.
-          </p>
-          <div className="ct-footer-standards">
-            <span className="ct-standards-dot" aria-hidden="true" />
-            <span>Calibrated with official NIST &amp; ISO 80000 standards.</span>
+        <div className="ct-footer-main">
+          <div className="ct-footer-brand-col">
+            <a href="/" className="ct-footer-logo" onClick={handleHomeClick} aria-label="ConvertThings Home (Footer)">
+              <div className="ct-logo-wrap" aria-hidden="true">
+                <Icon name="BrandLogo" size={28} />
+              </div>
+              <span className="ct-brand-title" aria-label="ConvertThings">
+                <span className="ct-brand-name">Convert</span><span className="ct-brand-accent">Things</span>
+              </span>
+            </a>
+            <p className="ct-footer-desc">
+              Fast, high-precision unit conversions for engineering, science, culinary arts, and everyday measurement tasks.
+            </p>
+            <div className="ct-footer-standards">
+              <span>NIST &amp; ISO 80000 Precision Verified</span>
+            </div>
+          </div>
+
+          <div className="ct-footer-links-col">
+            <h4 className="ct-footer-heading">Conversion Categories</h4>
+            <div className="ct-footer-category-grid">
+              {CATEGORIES.map((cat) => (
+                <a
+                  key={cat.id}
+                  href={`/${cat.id}`}
+                  className="ct-footer-cat-link"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onSelectCategory(cat.id);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                >
+                  <Icon name={cat.icon} size={14} className="ct-footer-cat-icon" aria-hidden="true" />
+                  <span>{cat.name}</span>
+                </a>
+              ))}
+            </div>
           </div>
         </div>
 
-        <div className="ct-footer-links-col">
-          <h4 className="ct-footer-heading">Conversion Categories</h4>
-          <div className="ct-footer-category-grid">
-            {CATEGORIES.map((cat) => (
-              <a
-                key={cat.id}
-                href={`/${cat.id}`}
-                className="ct-footer-cat-link"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onSelectCategory(cat.id);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-              >
-                {cat.name}
-              </a>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="ct-footer-bottom">
-        <div className="ct-footer-bottom-inner">
+        <div className="ct-footer-bottom">
           <p className="ct-footer-copy">
             &copy; {new Date().getFullYear()} ConvertThings. All rights reserved.
           </p>
@@ -72,9 +76,9 @@ export function Footer({ onSelectCategory, onOpenLegal, onOpenDevModal, onGoHome
                 }
               }}
             >
-              ⚡ AI &amp; Developer API
+              <Icon name="Zap" size={13} aria-hidden="true" className="ct-footer-api-icon" />
+              <span>AI &amp; Developer API</span>
             </a>
-            <span className="ct-dot">&bull;</span>
             <a
               href="/privacy.html"
               className="ct-footer-legal-link"
@@ -82,7 +86,6 @@ export function Footer({ onSelectCategory, onOpenLegal, onOpenDevModal, onGoHome
             >
               Privacy Policy
             </a>
-            <span className="ct-dot">&bull;</span>
             <a
               href="/terms.html"
               className="ct-footer-legal-link"
@@ -90,7 +93,6 @@ export function Footer({ onSelectCategory, onOpenLegal, onOpenDevModal, onGoHome
             >
               Terms of Service
             </a>
-            <span className="ct-dot">&bull;</span>
             <a
               href="#about"
               className="ct-footer-legal-link"
@@ -98,7 +100,6 @@ export function Footer({ onSelectCategory, onOpenLegal, onOpenDevModal, onGoHome
             >
               About &amp; Contact
             </a>
-            <span className="ct-dot">&bull;</span>
             <a
               href="https://github.com/ashtonsprunger/convertthings"
               target="_blank"

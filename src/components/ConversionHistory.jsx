@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Icon } from './Icons';
-import { formatDisplayNumber } from '../engine/conversions';
+import { formatDisplayNumber, CATEGORIES } from '../engine/conversions';
 
 export function ConversionHistory({ history, onSelectHistory, onClearHistory }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -36,27 +36,40 @@ export function ConversionHistory({ history, onSelectHistory, onClearHistory }) 
 
       {isOpen && (
         <div className="ct-history-list">
-          {history.map((item, index) => (
-            <button
-              key={`${item.timestamp || index}-${item.categoryId}`}
-              type="button"
-              className={`ct-history-item ct-cat-${item.categoryId}`}
-              onClick={() => onSelectHistory(item)}
-            >
-              <div className="ct-history-expression">
-                <span className="ct-history-from">
-                  {formatDisplayNumber(item.fromValue)} {item.fromSymbol}
+          {history.map((item, index) => {
+            const cat = CATEGORIES.find((c) => c.id === item.categoryId);
+            const iconName = item.categoryIcon || cat?.icon || 'History';
+            const catName = item.categoryName || cat?.name || item.categoryId;
+
+            return (
+              <button
+                key={`${item.timestamp || index}-${item.categoryId}`}
+                type="button"
+                className={`ct-history-item ct-cat-${item.categoryId}`}
+                onClick={() => onSelectHistory(item)}
+              >
+                <div className="ct-history-expression">
+                  <span className="ct-history-from">
+                    {formatDisplayNumber(item.fromValue)} {item.fromSymbol}
+                  </span>
+                  <span className="ct-history-equals">=</span>
+                  <span className="ct-history-to">
+                    {formatDisplayNumber(item.toValue)} {item.toSymbol}
+                  </span>
+                </div>
+                <span
+                  className="ct-history-cat"
+                  title={catName}
+                  aria-label={catName}
+                >
+                  <Icon name={iconName} size={15} />
                 </span>
-                <span className="ct-history-equals">=</span>
-                <span className="ct-history-to">
-                  {formatDisplayNumber(item.toValue)} {item.toSymbol}
-                </span>
-              </div>
-              <span className="ct-history-cat">{item.categoryName}</span>
-            </button>
-          ))}
+              </button>
+            );
+          })}
         </div>
       )}
     </section>
   );
 }
+
