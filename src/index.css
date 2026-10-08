@@ -67,9 +67,9 @@
   --readout-border: #e2e8f0;
 
   /* Domain Category Chromatic Palette */
-  --cat-length: #eab308;
-  --cat-length-light: rgba(234, 179, 8, 0.12);
-  --cat-length-glow: rgba(234, 179, 8, 0.25);
+  --cat-length: #2563eb;
+  --cat-length-light: rgba(37, 99, 235, 0.12);
+  --cat-length-glow: rgba(37, 99, 235, 0.25);
 
   --cat-mass: #8b5cf6;
   --cat-mass-light: rgba(139, 92, 246, 0.12);

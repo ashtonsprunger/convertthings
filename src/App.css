@@ -202,8 +202,9 @@
 }
 
 .ct-logo-arrow-top {
-  fill: #2563eb;
+  fill: var(--cat-current, #2563eb);
   transform-origin: 747px 403px;
+  transition: fill 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.34, 1.45, 0.64, 1);
 }
 
 .ct-logo-arrow-bottom {
@@ -356,8 +357,9 @@
 
 .ct-brand-accent {
   font-weight: 800;
-  color: #2563eb;
+  color: var(--cat-current, #2563eb);
   margin-left: 0.5px;
+  transition: color 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .ct-brand-tagline {
@@ -1324,8 +1326,7 @@
 }
 
 /* Category-specific icon tinting in Omnibox */
-.ct-cat-length .ct-omnibox-item-icon { background-color: var(--cat-length-light); color: #a16207; }
-[data-theme="dark"] .ct-cat-length .ct-omnibox-item-icon { color: #facc15; }
+.ct-cat-length .ct-omnibox-item-icon { background-color: var(--cat-length-light); color: var(--cat-length); }
 .ct-cat-mass .ct-omnibox-item-icon { background-color: var(--cat-mass-light); color: var(--cat-mass); }
 .ct-cat-temperature .ct-omnibox-item-icon { background-color: var(--cat-temperature-light); color: var(--cat-temperature); }
 .ct-cat-area .ct-omnibox-item-icon { background-color: var(--cat-area-light); color: var(--cat-area); }
@@ -1616,12 +1617,10 @@
   transform: none;
 }
 
-.ct-category-tab.ct-cat-length.active,
 .ct-category-tab.ct-cat-data_rate.active {
   color: #0f172a;
 }
 
-.ct-category-tab.ct-cat-length.active .ct-tab-icon,
 .ct-category-tab.ct-cat-data_rate.active .ct-tab-icon {
   color: #0f172a !important;
 }
@@ -2760,17 +2759,14 @@
   transform: translateY(-0.5px);
 }
 
-.ct-cat-length .ct-integrated-unit-symbol.ct-unit-sym-to,
 .ct-cat-data_rate .ct-integrated-unit-symbol.ct-unit-sym-to {
   color: #a16207;
 }
 
-[data-theme="dark"] .ct-cat-length .ct-integrated-unit-symbol.ct-unit-sym-to,
 [data-theme="dark"] .ct-cat-data_rate .ct-integrated-unit-symbol.ct-unit-sym-to {
   color: #facc15;
 }
 
-.ct-cat-length .ct-integrated-unit-btn:hover .ct-integrated-unit-symbol.ct-unit-sym-to,
 .ct-cat-data_rate .ct-integrated-unit-btn:hover .ct-integrated-unit-symbol.ct-unit-sym-to {
   color: #0f172a;
 }
@@ -3272,18 +3268,14 @@
   box-shadow: 0 4px 14px var(--cat-current-glow), 0 0 0 3px var(--cat-current-light);
 }
 
-.ct-cat-length .ct-num-copy-btn,
 .ct-cat-data_rate .ct-num-copy-btn {
   color: #a16207;
 }
 
-[data-theme="dark"] .ct-cat-length .ct-num-copy-btn,
 [data-theme="dark"] .ct-cat-data_rate .ct-num-copy-btn {
   color: #facc15;
 }
 
-.ct-cat-length .ct-num-copy-btn:hover,
-.ct-cat-length .ct-num-copy-btn:focus-visible,
 .ct-cat-data_rate .ct-num-copy-btn:hover,
 .ct-cat-data_rate .ct-num-copy-btn:focus-visible {
   color: #0f172a;
@@ -3858,12 +3850,10 @@
   font-weight: 700;
 }
 
-.ct-cat-length .ct-formula-section .ct-fn-to,
 .ct-cat-data_rate .ct-formula-section .ct-fn-to {
   color: #a16207;
 }
 
-[data-theme="dark"] .ct-cat-length .ct-formula-section .ct-fn-to,
 [data-theme="dark"] .ct-cat-data_rate .ct-formula-section .ct-fn-to {
   color: #facc15;
 }
@@ -4104,7 +4094,6 @@
   box-shadow: 0 2px 8px var(--cat-current-glow, var(--shadow-sm));
 }
 
-.ct-cat-length .ct-table-tab.active,
 .ct-cat-data_rate .ct-table-tab.active {
   color: #0f172a;
 }

@@ -909,7 +909,7 @@ function App() {
   });
 
   return (
-    <div className="ct-app">
+    <div className={`ct-app ct-cat-${categoryId}`}>
       <Header
         theme={theme}
         onToggleTheme={toggleTheme}
