@@ -414,7 +414,7 @@ export function ConversionCard({
     onFromValueChange('');
   };
 
-  // Stepper logic: increment/decrement to next whole number
+  // Keyboard arrow stepping: increment/decrement to next whole number
   const getNextWholeNumber = (valStr, direction) => {
     const num = parseFloat(valStr);
     if (isNaN(num)) {
@@ -847,7 +847,7 @@ export function ConversionCard({
         </div>
       </div>
 
-      {/* Main Conversion Grid with Up/Down Steppers */}
+      {/* Main Conversion Grid */}
       <div className={`ct-conversion-grid ${isSwapping ? 'ct-grid-swapping' : ''}`}>
         {/* FIRST UNIT BLOCK (FROM - VIOLET) */}
         <div

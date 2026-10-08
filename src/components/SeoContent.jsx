@@ -417,80 +417,93 @@ export function SeoContent({ categoryId, fromUnitId, toUnitId, onSelectPair }) {
 
   return (
     <article className={`ct-seo-section ct-cat-${categoryId}`}>
-      <header className="ct-seo-header">
-        <h2 className="ct-seo-title">{info.title}</h2>
-        <p className="ct-seo-lead">{info.description}</p>
-      </header>
+      {/* Primary Guide & Reference Dossier Card */}
+      <section className="ct-seo-guide" aria-label={`${activeCategory.name} Conversion Guide`}>
+        <header className="ct-guide-header">
+          <h2 className="ct-seo-title">{info.title}</h2>
+          <p className="ct-seo-lead">{info.description}</p>
+        </header>
 
-      {/* Conversion Guide */}
-      <section className="ct-seo-guide">
-        <h3 className="ct-guide-heading">
-          <Icon name="BookOpen" size={18} />
-          <span>Understanding {activeCategory.name} Conversions</span>
-        </h3>
-        <p className="ct-guide-text">{info.baseUnitInfo}</p>
+        <div className="ct-guide-content">
+          <h3 className="ct-guide-heading">
+            <span>Understanding {activeCategory.name} Conversions</span>
+          </h3>
+          <p className="ct-guide-text">{info.baseUnitInfo}</p>
 
-        {fromUnit && toUnit && fromUnit.id !== toUnit.id && pairSeo && (
-          <div className="ct-guide-spotlight">
-            <h4 className="ct-spotlight-title">
-              How to Convert {fromUnit.plural || fromUnit.name} to {toUnit.plural || toUnit.name} ({fromUnit.symbol} to {toUnit.symbol})
-            </h4>
-            <p className="ct-spotlight-lead">
-              <strong>1 {fromUnit.name} ({fromUnit.symbol})</strong> is equal to{' '}
-              <strong>{pairSeo.baselineAnswer} {toUnit.plural || toUnit.name} ({toUnit.symbol})</strong>.
-              {pairSeo.formulaInstruction ? ` To convert ${fromUnit.plural?.toLowerCase() || fromUnit.name.toLowerCase()} to ${toUnit.plural?.toLowerCase() || toUnit.name.toLowerCase()}, ${pairSeo.formulaInstruction.toLowerCase()}.` : ''}
-            </p>
-            <div className="ct-spotlight-quickfacts">
-              <div className="ct-spotlight-fact">
-                <span className="ct-fact-label">Quick Answer</span>
-                <span className="ct-fact-value">1 {fromUnit.symbol} = {pairSeo.baselineAnswer} {toUnit.symbol}</span>
-              </div>
-              {pairSeo.formulaEquation && (
+          {fromUnit && toUnit && fromUnit.id !== toUnit.id && pairSeo && (
+            <div className="ct-guide-spotlight">
+              <h4 className="ct-spotlight-title">
+                How to Convert {fromUnit.plural || fromUnit.name} to {toUnit.plural || toUnit.name} ({fromUnit.symbol} to {toUnit.symbol})
+              </h4>
+              <p className="ct-spotlight-lead">
+                <strong>1 {fromUnit.name} ({fromUnit.symbol})</strong> is equal to{' '}
+                <strong>{pairSeo.baselineAnswer} {toUnit.plural || toUnit.name} ({toUnit.symbol})</strong>.
+                {pairSeo.formulaInstruction ? ` To convert ${fromUnit.plural?.toLowerCase() || fromUnit.name.toLowerCase()} to ${toUnit.plural?.toLowerCase() || toUnit.name.toLowerCase()}, ${pairSeo.formulaInstruction.toLowerCase()}.` : ''}
+              </p>
+              <div className="ct-spotlight-quickfacts">
                 <div className="ct-spotlight-fact">
-                  <span className="ct-fact-label">Formula</span>
-                  <span className="ct-fact-value">{pairSeo.formulaEquation}</span>
+                  <span className="ct-fact-label">Quick Answer</span>
+                  <span className="ct-fact-value">1 {fromUnit.symbol} = {pairSeo.baselineAnswer} {toUnit.symbol}</span>
                 </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {info.commonPairs && info.commonPairs.length > 0 && (
-          <div className="ct-popular-pairs-grid">
-            {info.commonPairs.map((pair, idx) => {
-              const u1 = getUnit(categoryId, pair.from);
-              const u2 = getUnit(categoryId, pair.to);
-              if (!u1 || !u2) return null;
-              const pairHref = `/convert/${u1.id}-to-${u2.id}`;
-
-              return (
-                <a
-                  key={idx}
-                  href={pairHref}
-                  className="ct-pair-card"
-                  onClick={(e) => {
-                    if (onSelectPair) {
-                      e.preventDefault();
-                      onSelectPair(categoryId, u1.id, u2.id);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }
-                  }}
-                  title={`Convert ${u1.plural || u1.name} to ${u2.plural || u2.name}`}
-                >
-                  <div className="ct-pair-name">
-                    {u1.name} ⇄ {u2.name}
+                {pairSeo.formulaEquation && (
+                  <div className="ct-spotlight-fact">
+                    <span className="ct-fact-label">Formula</span>
+                    <span className="ct-fact-value">{pairSeo.formulaEquation}</span>
                   </div>
-                  <div className="ct-pair-tip">{pair.tip}</div>
-                </a>
-              );
-            })}
-          </div>
-        )}
+                )}
+              </div>
+            </div>
+          )}
+
+          {info.commonPairs && info.commonPairs.length > 0 && (
+            <div className="ct-popular-pairs-section">
+              <h4 className="ct-pairs-heading">Popular {activeCategory.name} Conversions</h4>
+              <div className="ct-popular-pairs-grid">
+                {info.commonPairs.map((pair, idx) => {
+                  const u1 = getUnit(categoryId, pair.from);
+                  const u2 = getUnit(categoryId, pair.to);
+                  if (!u1 || !u2) return null;
+                  const pairHref = `/convert/${u1.id}-to-${u2.id}`;
+
+                  return (
+                    <a
+                      key={idx}
+                      href={pairHref}
+                      className="ct-pair-card"
+                      onClick={(e) => {
+                        if (onSelectPair) {
+                          e.preventDefault();
+                          onSelectPair(categoryId, u1.id, u2.id);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                      }}
+                      title={`Convert ${u1.plural || u1.name} to ${u2.plural || u2.name}`}
+                    >
+                      <div className="ct-pair-header">
+                        <span className="ct-pair-name">
+                          {u1.name} ⇄ {u2.name}
+                        </span>
+                        <span className="ct-pair-arrow" aria-hidden="true">→</span>
+                      </div>
+                      <div className="ct-pair-tip">{pair.tip}</div>
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
       </section>
 
-      {/* Frequently Asked Questions Accordion */}
-      <section className="ct-seo-faq" aria-label="Frequently Asked Questions">
-        <h3 className="ct-faq-heading">Frequently Asked Questions</h3>
+      {/* Frequently Asked Questions Card */}
+      <section className="ct-faq-card" aria-label="Frequently Asked Questions">
+        <header className="ct-faq-header">
+          <h3 className="ct-faq-heading">Frequently Asked Questions</h3>
+          <p className="ct-faq-lead">
+            Common questions and verified calculations for {activeCategory.name.toLowerCase()} units.
+          </p>
+        </header>
+
         <div className="ct-faq-list">
           {info.faqs.map((faq, index) => {
             const isOpen = openFaq === index;

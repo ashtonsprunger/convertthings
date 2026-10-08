@@ -218,7 +218,7 @@ convertThings/
 4. **Adhere to Google Material 3 Design Tokens:**
    - Always preserve the unified corner radius scale (`--radius-card: 28px`, `--radius-surface: 20px`, `--radius-chip: 14px`, `--radius-pill: 9999px`).
    - Use multi-tier ambient shadows (`--shadow-google-sm`, `--shadow-google-md`, `--shadow-google-lg`) and kinetic spring easing (`--ease-spring`).
-   - Maintain the dual-mode hierarchy: docked flush header, hero floating Omnibox with animated placeholder, clean mode divider, and conjoined vertical mobile steppers.
+   - Maintain the dual-mode hierarchy: docked flush header, hero floating Omnibox with animated placeholder, and clean mode divider.
 5. **Zero-Border & Surface-Driven Architecture (App-Wide)**:
    - Avoid reintroducing harsh wireframe outlines, boxed sub-containers, or horizontal divider lines across any card or component. Always rely on natural surface contrast (`--bg-card` vs `--bg-card-subtle`), dual-layer ambient shadows (`--shadow-google-sm`, `--shadow-google-md`, `--shadow-google-lg`), and calibrated whitespace.
    - Applies universally across:
@@ -226,7 +226,7 @@ convertThings/
      - **Reference Table & All Units Grid**: borderless `.ct-table-card`, header, floating tab pill container, and floating `.ct-unit-stat-card` cards.
      - **Recent Conversions Drawer**: borderless `.ct-history-section`, floating `.ct-history-item` cards, and pill buttons.
      - **Universal Omnibox**: borderless floating `.ct-omnibox-wrapper`, `.ct-omnibox-dropdown`, `.ct-omnibox-preview`, and badges with neutral focus ring.
-     - **SEO Guides & FAQs**: borderless `.ct-seo-guide`, `.ct-pair-card`, and soft floating accordion `.ct-faq-item` cards.
+     - **SEO Guides & FAQs**: borderless primary dossier `.ct-seo-guide` and `.ct-faq-card`, interactive `.ct-pair-card`, and soft floating accordion `.ct-faq-item` cards with active category accent.
      - **Kitchen View Drawer**: borderless `.ct-kitchen-drawer-card`, floating `.ct-kitchen-tool-chip` pills, and `.ct-kitchen-equiv-pill` cards.
      - **Developer & Legal Modals**: borderless `.ct-modal-dialog`, `.ct-dev-card`, `.ct-tester-input`, and action buttons.
 6. **Preserve the Single Hero Accent Rule**:
