@@ -32,6 +32,8 @@ export function ConversionCard({
   fromValue,
   toValue,
   precision,
+  kitchenMode = true,
+  onToggleKitchenMode,
   isFavorite,
   onFromUnitChange,
   onToUnitChange,
@@ -46,6 +48,8 @@ export function ConversionCard({
   const units = getUnitsForCategory(categoryId);
   const fromUnit = getUnit(categoryId, fromUnitId) || units[0];
   const toUnit = getUnit(categoryId, toUnitId) || units[1] || units[0];
+
+  const isKitchenActive = categoryId === 'cooking' && kitchenMode;
 
   const [fromSearch, setFromSearch] = useState('');
   const [toSearch, setToSearch] = useState('');
@@ -459,7 +463,7 @@ export function ConversionCard({
     return convertUnits(num, categoryId, fromUnit.id, toUnit.id);
   })();
 
-  const kitchenDrawer = categoryId === 'cooking'
+  const kitchenDrawer = isKitchenActive
     ? getKitchenDrawerBreakdown(fromValue, fromUnit.id)
     : null;
 
@@ -480,7 +484,7 @@ export function ConversionCard({
       ? PRECISION_OPTIONS.find((opt) => opt.id === 'fraction_tape')
       : PRECISION_OPTIONS[0]);
 
-  const smartEquation = precision === 'auto' && categoryId !== 'cooking'
+  const smartEquation = precision === 'auto' && !isKitchenActive
     ? getSmartEquationDisplay(categoryId, fromUnit, toUnit, fromValue, rawTargetValue, displayToValue)
     : { value: displayToValue, unit: toUnit.symbol, subtext: null, isSmart: false };
 
@@ -570,7 +574,7 @@ export function ConversionCard({
       }
 
       // Complex expressions (e.g. Temperature: "°C = (°F − 32) × 5/9"):
-      // Only highlight fromSym in Cyan, keep the rest clean neutral text
+      // Only highlight fromSym, keep the rest clean neutral text
       if (fromSym && right.includes(fromSym)) {
         const symIdx = right.indexOf(fromSym);
         const before = right.slice(0, symIdx);
@@ -698,7 +702,7 @@ export function ConversionCard({
 
   return (
     <div
-      className="ct-card"
+      className={`ct-card ct-cat-${categoryId}`}
       id="conversion-panel"
       role="tabpanel"
       aria-labelledby={`tab-${categoryId}`}
@@ -706,12 +710,28 @@ export function ConversionCard({
       {/* Card Header Actions */}
       <div className="ct-card-header">
         <div className="ct-card-header-left">
-          {categoryId === 'cooking' ? (
-            <div className="ct-kitchen-header-badge" title="Kitchen Mode: Physical drawer tools to measure recipe quantities">
-              <Icon name="ChefHat" size={16} />
-              <span className="ct-kitchen-header-badge-text">Kitchen Drawer Mode</span>
-            </div>
-          ) : (
+          {categoryId === 'cooking' && (
+            <button
+              type="button"
+              className={`ct-kitchen-mode-toggle ${kitchenMode ? 'active' : ''}`}
+              onClick={onToggleKitchenMode}
+              title={
+                kitchenMode
+                  ? 'Kitchen Drawer Mode active — click to switch to Standard Units'
+                  : 'Standard Units active — click to switch to Kitchen Drawer Mode'
+              }
+              aria-label="Toggle Kitchen Mode"
+              aria-pressed={kitchenMode}
+            >
+              <Icon name="ChefHat" size={15} />
+              <span className="ct-kitchen-toggle-text">Kitchen Mode</span>
+              <span className={`ct-kitchen-toggle-pill ${kitchenMode ? 'on' : 'off'}`}>
+                {kitchenMode ? 'ON' : 'OFF'}
+              </span>
+            </button>
+          )}
+
+          {!isKitchenActive && (
             <div className="ct-precision-wrap" ref={precisionRef}>
               <label htmlFor="ct-precision" className="ct-sr-only">
                 Decimal Precision
@@ -948,7 +968,7 @@ export function ConversionCard({
         </div>
 
         {/* CENTER SWAP BUTTON / KITCHEN TRANSFER PILL */}
-        {categoryId === 'cooking' ? (
+        {isKitchenActive ? (
           <div className="ct-swap-column ct-kitchen-transfer-column" aria-hidden="true">
             <div className="ct-kitchen-arrow-pill" title="Translates recipe quantity to physical kitchen tools">
               <Icon name="ArrowRight" size={18} />
@@ -992,7 +1012,7 @@ export function ConversionCard({
           className={`ct-unit-block ct-unit-block-to ${isSwapping ? 'ct-is-swapping' : ''}`}
         >
           <div className="ct-unit-label-wrap">
-            {categoryId === 'cooking' ? (
+            {isKitchenActive ? (
               <span className="ct-unit-header-label">Kitchen Tools</span>
             ) : (
               <label htmlFor="toInput" className="ct-unit-header-label">
@@ -1000,7 +1020,7 @@ export function ConversionCard({
               </label>
             )}
           </div>
-          {categoryId === 'cooking' ? (
+          {isKitchenActive ? (
             <div
               className="ct-integrated-input-box ct-kitchen-output-box"
               role="button"
@@ -1137,7 +1157,7 @@ export function ConversionCard({
       </div>
 
       {/* Unified Conversion Result & Formula Card or Kitchen Drawer Shelf */}
-      {categoryId === 'cooking' ? (
+      {isKitchenActive ? (
         <div className="ct-kitchen-drawer-card" aria-label="Kitchen Measuring Drawer">
           <div className="ct-kitchen-tools-section">
             <div className="ct-kitchen-shelf-header">

@@ -184,6 +184,48 @@ describe('ConvertThings URL Router', () => {
     expect(routeInvalid.precision).toBeUndefined();
   });
 
+  test('formats route paths with kitchen=1 query parameter when kitchenMode is active in cooking domain', () => {
+    // Cooking with kitchenMode = true adds ?kitchen=1
+    expect(formatRoutePath('cooking', 'cup_us', 'tbsp_us', '1', 'auto', true)).toBe('/convert/cup_us-to-tbsp_us?kitchen=1');
+    expect(formatRoutePath('cooking', 'cup_us', 'tbsp_us', '2', 'auto', true)).toBe('/convert/2-cup_us-to-tbsp_us?kitchen=1');
+    // In Kitchen Mode, precision is omitted from the URL since physical drawer measures are used
+    expect(formatRoutePath('cooking', 'cup_us', 'tbsp_us', '2', 'fraction', true)).toBe('/convert/2-cup_us-to-tbsp_us?kitchen=1');
+    // Cooking with kitchenMode = false remains clean
+    expect(formatRoutePath('cooking', 'cup_us', 'tbsp_us', '1', 'auto', false)).toBe('/convert/cup_us-to-tbsp_us');
+    // Non-cooking domains never append ?kitchen=1 even if passed true
+    expect(formatRoutePath('length', 'm', 'ft', '1', 'auto', true)).toBe('/convert/m-to-ft');
+  });
+
+  test('parses kitchen mode query parameters via ?kitchen= and ?mode=', () => {
+    const route1 = parseRoute('/convert/cup_us-to-tbsp_us', '?kitchen=1');
+    expect(route1).not.toBeNull();
+    expect(route1.isKitchenMode).toBe(true);
+
+    const route2 = parseRoute('/convert/cup_us-to-tbsp_us', '?kitchen=true');
+    expect(route2).not.toBeNull();
+    expect(route2.isKitchenMode).toBe(true);
+
+    const route3 = parseRoute('/convert/cup_us-to-tbsp_us', '?mode=kitchen');
+    expect(route3).not.toBeNull();
+    expect(route3.isKitchenMode).toBe(true);
+
+    const route4 = parseRoute('/convert/cup_us-to-tbsp_us', '?kitchen=0');
+    expect(route4).not.toBeNull();
+    expect(route4.isKitchenMode).toBe(false);
+
+    const route5 = parseRoute('/convert/cup_us-to-tbsp_us', '?mode=standard');
+    expect(route5).not.toBeNull();
+    expect(route5.isKitchenMode).toBe(false);
+
+    const routeDefault = parseRoute('/convert/cup_us-to-tbsp_us');
+    expect(routeDefault).not.toBeNull();
+    expect(routeDefault.isKitchenMode).toBeUndefined();
+
+    const routeCat = parseRoute('/cooking', '?kitchen=1');
+    expect(routeCat).not.toBeNull();
+    expect(routeCat.isKitchenMode).toBe(true);
+  });
+
 
   test('generates all unit pairs across all 15 categories', () => {
     const pairs = getAllUnitPairs();

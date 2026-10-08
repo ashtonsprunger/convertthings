@@ -412,27 +412,58 @@ describe('ConvertThings UI Integration', () => {
     expect(parseFloat(toInput.value)).toBeCloseTo(62.137, 2);
   });
 
-  test('automatically displays practical drawer tools and equivalents in Kitchen Mode', () => {
-    window.history.replaceState({}, '', '/convert/13-tbsp_us-to-cup_us');
+  test('automatically displays practical drawer tools and equivalents in Kitchen Mode when toggled or on category page', () => {
+    window.history.replaceState({}, '', '/cooking');
     render(<App />);
 
-    const fromInput = screen.getByLabelText(/Enter value in/i);
-    expect(fromInput.value).toBe('13');
+    // On /cooking landing page, Kitchen Mode is ON by default
+    const toggleBtn = screen.getByRole('button', { name: /Toggle Kitchen Mode/i });
+    expect(toggleBtn).toHaveTextContent(/Kitchen Mode\s*ON/i);
 
-    // In Kitchen Mode, 2nd input is replaced by the prominent kitchen drawer output
-    const kitchenOutput = screen.getByLabelText(/Kitchen measuring tools:.*¾ cup \+ 1 tbsp/i);
-    expect(kitchenOutput).toHaveTextContent('¾ cup + 1 tbsp');
+    const fromInput = screen.getByLabelText(/Enter value in/i);
+    fireEvent.change(fromInput, { target: { value: '1' } });
+    expect(fromInput.value).toBe('1');
 
     // The kitchen drawer shelf renders measuring tools needed
     const drawerCard = screen.getByLabelText(/Kitchen Measuring Drawer/i);
     expect(drawerCard).toBeInTheDocument();
-    expect(drawerCard).toHaveTextContent(/3\/4 cup|¾ cup/);
-    expect(drawerCard).toHaveTextContent('1 tbsp');
+    expect(drawerCard).toHaveTextContent(/1 cup/i);
 
     // And standard equivalents
     expect(drawerCard).toHaveTextContent(/Cups/i);
     expect(drawerCard).toHaveTextContent(/Tablespoons/i);
     expect(drawerCard).toHaveTextContent(/Teaspoons/i);
+
+    // Toggle Kitchen Mode OFF -> switches to standard converter view
+    fireEvent.click(toggleBtn);
+    expect(toggleBtn).toHaveTextContent(/Kitchen Mode\s*OFF/i);
+    expect(screen.getByLabelText(/Converted value in/i)).toBeInTheDocument();
+
+    // Toggle Kitchen Mode back ON -> restores drawer tools
+    fireEvent.click(toggleBtn);
+    expect(toggleBtn).toHaveTextContent(/Kitchen Mode\s*ON/i);
+    expect(screen.getByLabelText(/Kitchen Measuring Drawer/i)).toBeInTheDocument();
+  });
+
+  test('navigates with kitchen mode OFF when URL specifies a target unit (e.g. cups to butter)', () => {
+    window.history.replaceState({}, '', '/convert/cup_us-to-stick_butter');
+    render(<App />);
+
+    const fromInput = screen.getByLabelText(/Enter value in/i);
+    expect(fromInput.value).toBe('1');
+
+    // In a pair URL with a "to" unit, Kitchen Mode is OFF by default
+    const toggleBtn = screen.getByRole('button', { name: /Toggle Kitchen Mode/i });
+    expect(toggleBtn).toHaveTextContent(/Kitchen Mode\s*OFF/i);
+
+    // Standard converter input is visible and displays 2 sticks of butter!
+    const toInput = screen.getByLabelText(/Converted value in/i);
+    expect(toInput.value).toBe('2');
+
+    // Toggling Kitchen Mode ON enables drawer view for this value
+    fireEvent.click(toggleBtn);
+    expect(toggleBtn).toHaveTextContent(/Kitchen Mode\s*ON/i);
+    expect(screen.getByLabelText(/Kitchen Measuring Drawer/i)).toBeInTheDocument();
   });
 
   test('converts 34 mL in Kitchen Mode as real spoons (2 tbsp + 1 tsp) and never 5/32', () => {
@@ -441,6 +472,10 @@ describe('ConvertThings UI Integration', () => {
 
     const fromInput = screen.getByLabelText(/Enter value in/i);
     expect(fromInput.value).toBe('34');
+
+    // Pair URL starts in standard view; toggle Kitchen Mode ON to view drawer tools
+    const toggleBtn = screen.getByRole('button', { name: /Toggle Kitchen Mode/i });
+    fireEvent.click(toggleBtn);
 
     const kitchenOutput = screen.getByLabelText(/Kitchen measuring tools:.*2 tbsp \+ 1 tsp/i);
     expect(kitchenOutput).toHaveTextContent('2 tbsp + 1 tsp');
@@ -989,14 +1024,14 @@ describe('Dual-Tier Memory System (In-Session & Cross-Session Persistence)', () 
 
     unmount();
 
-    // 2. Category page with ?p=fraction
-    window.history.replaceState({}, '', '/cooking?p=fraction');
+    // 2. Category page with ?p=2 (e.g. /mass)
+    window.history.replaceState({}, '', '/mass?p=2');
     render(<App />);
 
-    expect(window.location.pathname).toBe('/cooking');
-    expect(window.location.search).toBe('?p=fraction');
+    expect(window.location.pathname).toBe('/mass');
+    expect(window.location.search).toBe('?p=2');
     const catCanonical = document.querySelector('link[rel="canonical"]');
-    expect(catCanonical.href).toBe('https://www.convertthings.com/cooking');
+    expect(catCanonical.href).toBe('https://www.convertthings.com/mass');
   });
 
   test('share button always generates full permalink even when sitting on clean root / or category hub', async () => {
@@ -1026,7 +1061,7 @@ describe('Dual-Tier Memory System (In-Session & Cross-Session Persistence)', () 
     expect(writeTextMock.mock.calls[0][0]).toBe('http://localhost/convert/mi-to-km');
     unmount();
 
-    // 2. Category hub /cooking
+    // 2. Category hub /cooking (Kitchen mode is ON by default)
     window.history.replaceState({}, '', '/cooking');
     render(<App />);
 
@@ -1037,7 +1072,20 @@ describe('Dual-Tier Memory System (In-Session & Cross-Session Persistence)', () 
     });
 
     expect(writeTextMock).toHaveBeenCalledTimes(2);
-    expect(writeTextMock.mock.calls[1][0]).toBe('http://localhost/convert/cup_us-to-tbsp_us');
+    expect(writeTextMock.mock.calls[1][0]).toBe('http://localhost/convert/cup_us-to-tbsp_us?kitchen=1');
+
+    // Toggle Kitchen Mode OFF -> share link should now be clean without ?kitchen=1
+    const toggleKitchenBtn = screen.getByRole('button', { name: /Toggle Kitchen Mode/i });
+    await act(async () => {
+      fireEvent.click(toggleKitchenBtn);
+    });
+
+    await act(async () => {
+      fireEvent.click(shareBtn2);
+    });
+
+    expect(writeTextMock).toHaveBeenCalledTimes(3);
+    expect(writeTextMock.mock.calls[2][0]).toBe('http://localhost/convert/cup_us-to-tbsp_us');
 
     Object.defineProperty(navigator, 'clipboard', {
       value: originalClipboard,
@@ -1090,6 +1138,39 @@ describe('Dual-Tier Memory System (In-Session & Cross-Session Persistence)', () 
 
     // Expanded categories should simultaneously collapse
     expect(expandBtn).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  test('loads /convert/...-to-...?kitchen=1 directly with Kitchen Mode ON and drawer active', () => {
+    window.history.replaceState({}, '', '/convert/cup_us-to-tbsp_us?kitchen=1');
+    render(<App />);
+
+    expect(window.location.pathname).toBe('/convert/cup_us-to-tbsp_us');
+    expect(window.location.search).toBe('?kitchen=1');
+
+    // Kitchen mode drawer elements should be visible
+    expect(screen.getByText('Drawer Tools to Pull')).toBeInTheDocument();
+    const toggleBtn = screen.getByRole('button', { name: /Toggle Kitchen Mode/i });
+    expect(toggleBtn).toHaveAttribute('aria-pressed', 'true');
+    expect(toggleBtn).toHaveTextContent('ON');
+  });
+
+  test('loads /convert/...-to-... with Kitchen Mode OFF by default and updates URL on toggle', () => {
+    window.history.replaceState({}, '', '/convert/cup_us-to-tbsp_us');
+    render(<App />);
+
+    expect(window.location.pathname).toBe('/convert/cup_us-to-tbsp_us');
+    expect(window.location.search).toBe('');
+
+    // Kitchen drawer should NOT be active
+    expect(screen.queryByText('Drawer Tools to Pull')).not.toBeInTheDocument();
+    const toggleBtn = screen.getByRole('button', { name: /Toggle Kitchen Mode/i });
+    expect(toggleBtn).toHaveAttribute('aria-pressed', 'false');
+    expect(toggleBtn).toHaveTextContent('OFF');
+
+    // Toggle Kitchen Mode ON
+    fireEvent.click(toggleBtn);
+    expect(window.location.search).toBe('?kitchen=1');
+    expect(screen.getByText('Drawer Tools to Pull')).toBeInTheDocument();
   });
 });
 

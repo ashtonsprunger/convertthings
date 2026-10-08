@@ -187,6 +187,7 @@ export function Omnibox({ onSelectConversion, onSelectCategory, history = [], fa
           toUnitId: item.payload.toUnitId,
           value: item.payload.value !== undefined ? item.payload.value : 1,
           hasExplicitValue: !!item.payload.hasExplicitValue,
+          hasExplicitTo: item.payload.hasExplicitTo !== false,
         });
       }
       setQuery('');

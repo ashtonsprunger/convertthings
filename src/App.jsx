@@ -121,8 +121,29 @@ function App() {
     return 'auto';
   };
 
+  const getInitialKitchenMode = () => {
+    try {
+      if (typeof window !== 'undefined') {
+        const parsed = parseRoute(window.location.pathname, window.location.search);
+        if (parsed && parsed.categoryId === 'cooking') {
+          // If explicit ?kitchen=1 query param was passed, obey it!
+          if (parsed.isKitchenMode !== undefined) {
+            return parsed.isKitchenMode;
+          }
+          // If category landing page (/cooking), Kitchen Mode is ON (true)
+          // If pair path (/convert/...-to-...), it has an explicit "to", so Kitchen Mode is OFF (false)
+          return !!parsed.isCategoryPage;
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+    return true;
+  };
+
   const initial = getInitialState();
   const initialPrecision = getInitialPrecision();
+  const [kitchenMode, setKitchenMode] = useState(getInitialKitchenMode);
   const [isRoot, setIsRoot] = useState(initial.isRoot ?? false);
   const [isCategoryPage, setIsCategoryPage] = useState(initial.isCategoryPage ?? false);
   const [categoryId, setCategoryId] = useState(initial.categoryId);
@@ -249,7 +270,12 @@ function App() {
         el.content = content;
       };
 
-      const targetSearch = precision && precision !== 'auto' ? `?p=${encodeURIComponent(precision)}` : '';
+      const targetSearch =
+        categoryId === 'cooking' && kitchenMode
+          ? ''
+          : precision && precision !== 'auto'
+          ? `?p=${encodeURIComponent(precision)}`
+          : '';
 
       if (isRoot) {
         const seo = getSeoMetadata({ isRoot: true });
@@ -352,8 +378,15 @@ function App() {
         setMetaTag('meta[name="twitter:title"]', 'name', 'twitter:title', seo.ogTitle);
         setMetaTag('meta[name="twitter:description"]', 'name', 'twitter:description', seo.ogDescription);
 
-        // Clean URL Route Path with ?p= if non-default
-        const routePath = formatRoutePath(categoryId, fromUnitId, toUnitId, fromValue, precision);
+        // Clean URL Route Path with ?p= if non-default and ?kitchen=1 if Kitchen Mode is active
+        const routePath = formatRoutePath(
+          categoryId,
+          fromUnitId,
+          toUnitId,
+          fromValue,
+          precision,
+          categoryId === 'cooking' ? kitchenMode : false
+        );
 
         // Update Canonical Link tag for search bots (always clean!)
         let canonical = document.querySelector('link[rel="canonical"]');
@@ -372,7 +405,7 @@ function App() {
     } catch (e) {
       // ignore
     }
-  }, [isRoot, isCategoryPage, categoryId, fromUnitId, toUnitId, fromValue, precision]);
+  }, [isRoot, isCategoryPage, categoryId, fromUnitId, toUnitId, fromValue, precision, kitchenMode]);
 
   // Listen for browser Back / Forward history navigation
   useEffect(() => {
@@ -430,6 +463,13 @@ function App() {
           }
 
           setCategoryId(nextCat);
+          if (nextCat === 'cooking') {
+            if (parsed.isKitchenMode !== undefined) {
+              setKitchenMode(parsed.isKitchenMode);
+            } else {
+              setKitchenMode(!!parsed.isCategoryPage);
+            }
+          }
           setFromUnitId(nextFrom);
           setToUnitId(nextTo);
           setFromValue(nextVal);
@@ -562,6 +602,10 @@ function App() {
     setIsCategoryPage(true);
     setLastEdited('from');
     setCategoryId(newCatId);
+    if (newCatId === 'cooking') {
+      // Category tab click navigates without a "to", so Kitchen Mode defaults to ON
+      setKitchenMode(true);
+    }
 
     // 1. Check in-memory session cache for this category
     const inSession = sessionStateRef.current ? sessionStateRef.current[newCatId] : null;
@@ -712,13 +756,17 @@ function App() {
   };
 
   // Handle Natural Language / Omnibox selection
-  const handleSelectConversion = ({ categoryId: cId, fromUnitId: fId, toUnitId: tId, value: val, hasExplicitValue }) => {
+  const handleSelectConversion = ({ categoryId: cId, fromUnitId: fId, toUnitId: tId, value: val, hasExplicitValue, hasExplicitTo }) => {
     setIsRoot(false);
     setIsCategoryPage(false);
     setLastEdited('from');
     setCategoryId(cId);
     setFromUnitId(fId);
     setToUnitId(tId);
+    if (cId === 'cooking') {
+      // Automatic rule: Searches with an explicit "to" navigate with kitchen mode OFF
+      setKitchenMode(hasExplicitTo === false ? true : false);
+    }
     const strVal = val !== undefined ? val.toString() : '1';
     setFromValue(strVal);
     saveCategoryUnits(cId, fId, tId);
@@ -768,6 +816,9 @@ function App() {
     setIsRoot(false);
     setIsCategoryPage(false);
     setCategoryId(fav.categoryId);
+    if (fav.categoryId === 'cooking') {
+      setKitchenMode(false);
+    }
 
     // If already on this exact direction, swap direction and invert value!
     const isExact =
@@ -836,7 +887,8 @@ function App() {
   };
 
   const handleShare = () => {
-    const routePath = formatRoutePath(categoryId, fromUnitId, toUnitId, fromValue, precision);
+    const isKitchen = categoryId === 'cooking' ? kitchenMode : false;
+    const routePath = formatRoutePath(categoryId, fromUnitId, toUnitId, fromValue, precision, isKitchen);
     const origin = typeof window !== 'undefined' && window.location.origin
       ? window.location.origin
       : 'https://www.convertthings.com';
@@ -898,6 +950,16 @@ function App() {
               fromValue={fromValue}
               toValue={toValue}
               precision={precision}
+              kitchenMode={kitchenMode}
+              onToggleKitchenMode={() => {
+                setKitchenMode((prev) => {
+                  const next = !prev;
+                  if (!next && isCategoryPage) {
+                    setIsCategoryPage(false);
+                  }
+                  return next;
+                });
+              }}
               isFavorite={isCurrentFavorite}
               onFromUnitChange={handleFromUnitChange}
               onToUnitChange={handleToUnitChange}
@@ -928,6 +990,9 @@ function App() {
           onSelectTargetUnit={(targetUnitId) => {
             setIsRoot(false);
             setIsCategoryPage(false);
+            if (categoryId === 'cooking') {
+              setKitchenMode(false);
+            }
             setToUnitId(targetUnitId);
             saveCategoryUnits(categoryId, fromUnitId, targetUnitId);
             if (sessionStateRef.current) {
@@ -952,6 +1017,9 @@ function App() {
             setToUnitId(item.toUnitId);
             setFromValue(item.fromValue);
             setToValue(item.toValue);
+            if (item.categoryId === 'cooking') {
+              setKitchenMode(false);
+            }
             saveCategoryUnits(item.categoryId, item.fromUnitId, item.toUnitId);
             if (sessionStateRef.current) {
               sessionStateRef.current[item.categoryId] = {

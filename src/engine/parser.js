@@ -490,6 +490,7 @@ export function parseCompoundConversion(rawQuery) {
             isCompound: true,
             compoundDisplay: displayLabel,
             hasExplicitValue: true,
+            hasExplicitTo: !!targetToken,
           };
         }
       }
@@ -533,6 +534,7 @@ export function parseCompoundConversion(rawQuery) {
             isCompound: true,
             compoundDisplay: displayLabel,
             hasExplicitValue: true,
+            hasExplicitTo: !!targetToken,
           };
         }
       }
@@ -576,6 +578,7 @@ export function parseCompoundConversion(rawQuery) {
             isCompound: true,
             compoundDisplay: displayLabel,
             hasExplicitValue: true,
+            hasExplicitTo: !!targetToken,
           };
         }
       }
@@ -647,6 +650,7 @@ export function parseConversionQuery(rawQuery) {
               formattedResult: formatNumber(converted, 'auto', targetCat),
               query: rawQuery,
               hasExplicitValue: !!rawVal,
+              hasExplicitTo: true,
             };
           }
         }
@@ -706,6 +710,7 @@ export function parseConversionQuery(rawQuery) {
               formattedResult: formatNumber(converted, 'auto', targetCat),
               query: rawQuery,
               hasExplicitValue: !!rawVal,
+              hasExplicitTo: true,
             };
           }
         }
@@ -757,6 +762,7 @@ export function parseConversionQuery(rawQuery) {
               formattedResult: formatNumber(converted, 'auto', targetCat),
               query: rawQuery,
               hasExplicitValue: !!rawVal,
+              hasExplicitTo: true,
             };
           }
         }
@@ -806,6 +812,7 @@ export function parseConversionQuery(rawQuery) {
             formattedResult: formatNumber(converted, 'auto', catId),
             query: rawQuery,
             hasExplicitValue: !!rawVal,
+            hasExplicitTo: false,
           };
         }
       }
@@ -862,6 +869,7 @@ export function getSearchSuggestions(rawQuery, options = {}) {
             fromUnitId: h.fromUnitId,
             toUnitId: h.toUnitId,
             value: h.fromValue,
+            hasExplicitTo: true,
           },
         });
       });
@@ -946,6 +954,7 @@ export function getSearchSuggestions(rawQuery, options = {}) {
               toUnitId: pop.to,
               value: pop.val,
               hasExplicitValue: false,
+              hasExplicitTo: true,
             },
           });
         }
@@ -995,6 +1004,7 @@ export function getSearchSuggestions(rawQuery, options = {}) {
         value: parsed.value,
         formattedResult: parsed.formattedResult,
         hasExplicitValue: isCompound || !!parsed.hasExplicitValue,
+        hasExplicitTo: parsed.hasExplicitTo !== false,
       },
     });
 
@@ -1048,6 +1058,7 @@ export function getSearchSuggestions(rawQuery, options = {}) {
               toUnitId: tUnit.id,
               value: val,
               hasExplicitValue: !!rawVal,
+              hasExplicitTo: true,
             },
           });
         }

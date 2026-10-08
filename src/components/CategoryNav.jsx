@@ -7,6 +7,7 @@ export function CategoryNav({ activeCategoryId, onSelectCategory }) {
   const navRef = useRef(null);
   const navInnerRef = useRef(null);
   const scrollRef = useRef(null);
+  const expandBtnRef = useRef(null);
   const prevSnapshotRef = useRef(null);
   const activeAnimationsRef = useRef([]);
   const isFirstMountRef = useRef(true);
@@ -68,7 +69,8 @@ export function CategoryNav({ activeCategoryId, onSelectCategory }) {
     });
 
     const containerRect = navInnerRef.current?.getBoundingClientRect() || null;
-    return { chips: chipMap, container: containerRect };
+    const btnRect = expandBtnRef.current?.getBoundingClientRect() || null;
+    return { chips: chipMap, container: containerRect, btn: btnRect };
   }, []);
 
   // Desktop mouse wheel scroll translation (vertical wheel -> horizontal track scroll)
@@ -119,7 +121,7 @@ export function CategoryNav({ activeCategoryId, onSelectCategory }) {
     }
 
     if (!prevSnapshotRef.current) return;
-    const { chips: prevChips, container: prevContainer } = prevSnapshotRef.current;
+    const { chips: prevChips, container: prevContainer, btn: prevBtn } = prevSnapshotRef.current;
     prevSnapshotRef.current = null;
 
     if (!scrollRef.current) return;
@@ -127,7 +129,8 @@ export function CategoryNav({ activeCategoryId, onSelectCategory }) {
     // When collapsing, immediately position scrollLeft to the active category BEFORE measuring Last
     // This eliminates any bounce or secondary scroll hitching on landing!
     if (!isExpanded) {
-      const activeTab = scrollRef.current.querySelector('.ct-category-tab.active');
+      const activeTab = scrollRef.current.querySelector('.ct-category-tab.active') ||
+                        scrollRef.current.querySelector(`[data-cat-id="${activeCategoryId}"]`);
       if (activeTab) {
         const container = scrollRef.current;
         const target = activeTab.offsetLeft - container.offsetWidth / 2 + activeTab.offsetWidth / 2;
@@ -145,10 +148,21 @@ export function CategoryNav({ activeCategoryId, onSelectCategory }) {
     });
     activeAnimationsRef.current = [];
 
-    const duration = isExpanded ? 300 : 250;
+    const duration = isExpanded ? 300 : 260;
     const easing = isExpanded
       ? 'cubic-bezier(0.16, 1, 0.3, 1)'
       : 'cubic-bezier(0.25, 1, 0.5, 1)';
+
+    // Temporarily suppress scrollbars and gradient mask clipping during the FLIP transition
+    if (scrollRef.current) {
+      scrollRef.current.classList.add('is-animating');
+      setTimeout(() => {
+        if (scrollRef.current) {
+          scrollRef.current.classList.remove('is-animating');
+          updateScrollOverflow();
+        }
+      }, duration + 30);
+    }
 
     // 1. Animate container height smoothly so ConversionCard below glides seamlessly
     if (navInnerRef.current && prevContainer && typeof navInnerRef.current.animate === 'function') {
@@ -169,15 +183,16 @@ export function CategoryNav({ activeCategoryId, onSelectCategory }) {
       }
     }
 
-    // 2. Animate scrollRef height on collapse so chips translated downwards are NEVER clipped by scroll container!
-    if (!isExpanded && scrollRef.current && prevContainer && typeof scrollRef.current.animate === 'function') {
-      const currentScroll = scrollRef.current.getBoundingClientRect();
-      const scrollHeightDelta = prevContainer.height - currentScroll.height;
-      if (Math.abs(scrollHeightDelta) > 2) {
-        const anim = scrollRef.current.animate(
+    // 2. Animate expand/collapse button seamlessly with FLIP so it NEVER jumps
+    if (prevBtn && expandBtnRef.current && typeof expandBtnRef.current.animate === 'function') {
+      const curBtn = expandBtnRef.current.getBoundingClientRect();
+      const btnDx = prevBtn.left - curBtn.left;
+      const btnDy = prevBtn.top - curBtn.top;
+      if (Math.abs(btnDx) > 0.5 || Math.abs(btnDy) > 0.5) {
+        const anim = expandBtnRef.current.animate(
           [
-            { height: `${prevContainer.height}px` },
-            { height: `${currentScroll.height}px` },
+            { transform: `translate(${btnDx}px, ${btnDy}px)` },
+            { transform: 'translate(0, 0)' },
           ],
           {
             duration,
@@ -189,7 +204,10 @@ export function CategoryNav({ activeCategoryId, onSelectCategory }) {
     }
 
     // 3. Physical FLIP translation for each category chip with true container visibility bounds
-    const containerRect = scrollRef.current.getBoundingClientRect();
+    const contRect = (navInnerRef.current || scrollRef.current).getBoundingClientRect();
+    const curBtnRect = expandBtnRef.current?.getBoundingClientRect();
+    const visibleRightLimit = isExpanded || !curBtnRect ? contRect.right : curBtnRect.left - 4;
+
     const chips = scrollRef.current.querySelectorAll('.ct-category-tab');
     chips.forEach((chip) => {
       if (typeof chip.animate !== 'function') return;
@@ -202,51 +220,61 @@ export function CategoryNav({ activeCategoryId, onSelectCategory }) {
       const dx = first.left - last.left;
       const dy = first.top - last.top;
 
-      const wasVisible = first.right > containerRect.left && first.left < containerRect.right;
-      const isNowVisible = last.right > containerRect.left && last.left < containerRect.right;
+      const wasInView = first.right > contRect.left && first.left < contRect.right;
+      // In collapsed state, is the chip comfortably inside the visible row without being chopped off on landing?
+      const isInView = isExpanded
+        ? (last.right > contRect.left && last.left < contRect.right)
+        : (last.left >= contRect.left - 4 && last.right <= visibleRightLimit + 2);
 
-      if (!wasVisible && isNowVisible) {
-        // Newly revealed item in grid: fade and pop in gently
-        const anim = chip.animate(
-          [
-            { opacity: 0, transform: 'scale(0.88)' },
-            { opacity: 1, transform: 'scale(1)' },
-          ],
-          {
-            duration: 240,
-            easing,
-          }
-        );
-        activeAnimationsRef.current.push(anim);
-      } else if (wasVisible && isNowVisible && (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5)) {
-        // Visible in both states: physically glide from First to Last position with 100% continuous visibility
-        const anim = chip.animate(
-          [
-            { transform: `translate(${dx}px, ${dy}px)` },
-            { transform: 'translate(0, 0)' },
-          ],
-          {
-            duration,
-            easing,
-          }
-        );
-        activeAnimationsRef.current.push(anim);
-      } else if (wasVisible && !isNowVisible) {
-        // Was visible in grid, now collapsing outside visible row: glide towards position while fading out gracefully
-        const anim = chip.animate(
-          [
-            { transform: `translate(${dx}px, ${dy}px)`, opacity: 1 },
-            { transform: 'translate(0, 0)', opacity: 0 },
-          ],
-          {
-            duration,
-            easing,
-          }
-        );
-        activeAnimationsRef.current.push(anim);
+      if (isExpanded) {
+        if (wasInView) {
+          // Smooth glide from collapsed single-row position to grid position
+          const anim = chip.animate(
+            [
+              { transform: `translate(${dx}px, ${dy}px)` },
+              { transform: 'translate(0, 0)' },
+            ],
+            { duration, easing }
+          );
+          activeAnimationsRef.current.push(anim);
+        } else {
+          // Newly revealed item in grid: cascade in smoothly from above
+          const anim = chip.animate(
+            [
+              { transform: 'translateY(-8px) scale(0.92)', opacity: 0 },
+              { transform: 'translateY(0) scale(1)', opacity: 1 },
+            ],
+            { duration: 240, easing }
+          );
+          activeAnimationsRef.current.push(anim);
+        }
+      } else {
+        // Collapsing back to single row
+        if (isInView) {
+          // Lands fully inside the visible row: physically glide smoothly into resting spot
+          const anim = chip.animate(
+            [
+              { transform: `translate(${dx}px, ${dy}px)` },
+              { transform: 'translate(0, 0)' },
+            ],
+            { duration, easing }
+          );
+          activeAnimationsRef.current.push(anim);
+        } else {
+          // Off-screen or cut off in single row: gently fold upward and fade out in place
+          // ZERO horizontal shooting across screen! ZERO cut-off chips on landing!
+          const anim = chip.animate(
+            [
+              { transform: `translate(${dx}px, ${dy}px) scale(1)`, opacity: 1 },
+              { transform: `translate(${dx}px, ${dy - 10}px) scale(0.9)`, opacity: 0 },
+            ],
+            { duration: 200, easing: 'cubic-bezier(0.25, 1, 0.5, 1)' }
+          );
+          activeAnimationsRef.current.push(anim);
+        }
       }
     });
-  }, [isExpanded]);
+  }, [isExpanded, activeCategoryId, updateScrollOverflow]);
 
   // Keep active category tab centered in view when activeCategoryId changes via external controls
   useEffect(() => {
@@ -313,6 +341,29 @@ export function CategoryNav({ activeCategoryId, onSelectCategory }) {
       >
         {/* Carousel track & persistent category chip track */}
         <div className={`ct-category-controls-row ${isExpanded ? 'is-expanded' : ''}`}>
+          <button
+            ref={expandBtnRef}
+            type="button"
+            className={`ct-category-expand-btn ${isExpanded ? 'is-expanded' : ''}`}
+            onClick={() => toggleExpand(!isExpanded)}
+            title={isExpanded ? 'Show fewer categories' : 'View all 15 categories'}
+            aria-expanded={isExpanded}
+            aria-label={isExpanded ? 'Show fewer categories' : 'View all 15 categories'}
+          >
+            {isExpanded ? (
+              <>
+                <Icon name="ChevronUp" size={13} />
+                <span className="ct-expand-text">Show less</span>
+              </>
+            ) : (
+              <>
+                <Icon name="Grid" size={13} />
+                <span className="ct-expand-text">All (15)</span>
+                <Icon name="ChevronDown" size={11} className="ct-expand-chevron" />
+              </>
+            )}
+          </button>
+
           {/* Persistent Chips Container (reused in both single-row and grid states) */}
           <div
             className={`ct-category-scroll ${isExpanded ? 'is-expanded' : ''} ${maskClass}`}
@@ -341,28 +392,6 @@ export function CategoryNav({ activeCategoryId, onSelectCategory }) {
             })}
 
           </div>
-
-          <button
-            type="button"
-            className={`ct-category-expand-btn ${isExpanded ? 'is-expanded' : ''}`}
-            onClick={() => toggleExpand(!isExpanded)}
-            title={isExpanded ? 'Show fewer categories' : 'View all 15 categories'}
-            aria-expanded={isExpanded}
-            aria-label={isExpanded ? 'Show fewer categories' : 'View all 15 categories'}
-          >
-            {isExpanded ? (
-              <>
-                <Icon name="ChevronUp" size={13} />
-                <span className="ct-expand-text">Show less</span>
-              </>
-            ) : (
-              <>
-                <Icon name="Grid" size={13} />
-                <span className="ct-expand-text">All (15)</span>
-                <Icon name="ChevronDown" size={11} className="ct-expand-chevron" />
-              </>
-            )}
-          </button>
         </div>
       </div>
     </nav>

@@ -36,11 +36,22 @@ export const VALID_PRECISIONS = [
 export function parseRoute(pathname = '', search = '') {
   try {
     let precision = undefined;
+    let isKitchenMode = undefined;
     if (search) {
       const pParams = new URLSearchParams(search);
       const rawP = pParams.get('p') || pParams.get('prec');
       if (rawP && VALID_PRECISIONS.includes(rawP.toLowerCase())) {
         precision = rawP.toLowerCase();
+      }
+
+      const rawK = pParams.get('kitchen') ?? pParams.get('mode');
+      if (rawK !== null && rawK !== undefined) {
+        const cleanK = String(rawK).trim().toLowerCase();
+        if (cleanK === '1' || cleanK === 'true' || cleanK === 'kitchen' || cleanK === '') {
+          isKitchenMode = true;
+        } else if (cleanK === '0' || cleanK === 'false' || cleanK === 'standard') {
+          isKitchenMode = false;
+        }
       }
     }
 
@@ -126,6 +137,7 @@ export function parseRoute(pathname = '', search = '') {
               toUnitId,
               fromValue: value,
               ...(precision ? { precision } : {}),
+              ...(isKitchenMode !== undefined ? { isKitchenMode } : {}),
             };
           }
         }
@@ -143,6 +155,7 @@ export function parseRoute(pathname = '', search = '') {
         fromValue: '1',
         isCategoryPage: true,
         ...(precision ? { precision } : {}),
+        ...(isKitchenMode !== undefined ? { isKitchenMode } : {}),
       };
     }
 
@@ -165,6 +178,7 @@ export function parseRoute(pathname = '', search = '') {
           toUnitId: validTo,
           fromValue: cleanVal !== null && !isNaN(cleanVal) ? cleanVal : '1',
           ...(precision ? { precision } : {}),
+          ...(isKitchenMode !== undefined ? { isKitchenMode } : {}),
         };
       }
     }
@@ -183,9 +197,10 @@ export function parseRoute(pathname = '', search = '') {
  * @param {string} toUnitId Target unit ID
  * @param {string|number} value Current calculation value
  * @param {string} [precision='auto'] Selected precision formatting
+ * @param {boolean} [isKitchenMode=false] Whether Kitchen Drawer Mode is active
  * @returns {string} Clean URL path (e.g. '/convert/km-to-mi', '/convert/100-km-to-mi', or '/convert/100-km-to-mi?p=4')
  */
-export function formatRoutePath(categoryId, fromUnitId, toUnitId, value = '1', precision = 'auto') {
+export function formatRoutePath(categoryId, fromUnitId, toUnitId, value = '1', precision = 'auto', isKitchenMode = false) {
   if (!fromUnitId || !toUnitId) return '/';
 
   const rawVal = value !== null && value !== undefined ? String(value).trim().replace(/,/g, '') : '1';
@@ -198,8 +213,16 @@ export function formatRoutePath(categoryId, fromUnitId, toUnitId, value = '1', p
     path = `/convert/${encodeURIComponent(valStr)}-${fromUnitId}-to-${toUnitId}`;
   }
 
-  if (precision && precision !== 'auto' && VALID_PRECISIONS.includes(precision)) {
-    return `${path}?p=${encodeURIComponent(precision)}`;
+  const queryParams = [];
+  if (categoryId === 'cooking' && isKitchenMode) {
+    // In Kitchen Mode, output uses physical measuring tools/drawer breakdown, so precision is omitted
+    queryParams.push('kitchen=1');
+  } else if (precision && precision !== 'auto' && VALID_PRECISIONS.includes(precision)) {
+    queryParams.push(`p=${encodeURIComponent(precision)}`);
+  }
+
+  if (queryParams.length > 0) {
+    return `${path}?${queryParams.join('&')}`;
   }
 
   return path;
