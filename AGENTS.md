@@ -50,20 +50,33 @@
 6. **Google Material 3 Rounded Design System (`src/App.css`, `src/index.css`)**:
    - **Full Pill & Floating Capsule Geometry**:
      - Main inputs (`.ct-integrated-input-box`) and Omnibox search bar use `border-radius: var(--radius-full)` (9999px) capsules.
-     - Docked unit selectors (`.ct-integrated-unit-btn`) nest inside the input capsule as Material pill chips.
+     - Interactive full-name unit selector chips (`.ct-unit-selector-chip`: `[ Millimeter  mm  ▾ ]`) sit inside the pod header as floating Material pill chips with subtle resting depth.
      - Primary cards (`.ct-card`, `.ct-table-card`, `.ct-history-section`, modals, SEO guides) use `--radius-card: 28px`.
      - Secondary surfaces and footers use `--radius-surface: 20px`.
      - Filter tags and dropdown results use `--radius-chip: 14px`.
-   - **Multi-Tier Ambient Elevation & Lighting**:
-     - Ambient shadows (`--shadow-google-sm`, `--shadow-google-md`, `--shadow-google-lg`) paired with specular inset highlight strokes (`--shadow-specular`) that adapt smoothly between light and dark modes.
-     - Tactile spring easings (`--ease-spring: cubic-bezier(0.34, 1.45, 0.64, 1)` and `--ease-smooth: cubic-bezier(0.16, 1, 0.3, 1)`).
+   - **Unified Unit Pod Architecture (`.ct-unit-block`)**:
+     - Organizes the "From" and "To" sides into two distinct, soft surface trays (`background-color: var(--bg-card-subtle)`, `border-radius: var(--radius-card)`, `border: 1px solid transparent;`) without harsh border lines.
+     - Leverages Gestalt *Law of Common Region*: enclosing both the unit selector dropdown chip and the floating numeric input inside the same physical pod boundary establishes an unmistakable, immediate visual connection between each unit and its value.
+     - The circular swap button (`.ct-swap-column`) floats vertically centered between both pods, visually bridging them.
+   - **Borderless Floating Inputs with Multi-Tier Ambient Elevation**:
+     - Zero hard outline borders (`border: 1px solid transparent`).
+     - Uses dual-layer ambient drop shadows at rest (`0 4px 18px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04)`) and expanded depth on hover (`0 8px 28px -3px rgba(15, 23, 42, 0.12)`).
+     - In dark mode, uses deep ambient drop shadows with an inset specular highlight stroke (`inset 0 1px 0 rgba(255, 255, 255, 0.08)`).
+     - Crisp neutral focus state: `box-shadow: 0 0 0 2px var(--text-main), 0 8px 30px -4px rgba(15, 23, 42, 0.14)` (zero colored outline or colored focus rings).
+   - **Single Hero Accent in Workbenches**:
+     - The converted result pill (`.ct-num-copy-btn`) is the **sole vibrant, category-colored hero element inside the conversion card** (`background: var(--cat-current-light); color: var(--cat-current)`).
+     - All surrounding controls—unit selector chips, center swap button, input borders, carets, precision dropdown, kitchen toggle, and educational formulas—are calm, refined monochrome.
+     - Commands 100% of the user's visual attention directly to the calculated answer.
+   - **Zero-Divider & Zero-Box Lower Section (`.ct-footnote-card`)**:
+     - The lower portion is completely free of enclosing boxes and dividing lines (`background: transparent; border: none; box-shadow: none; border-top: none`).
+     - Replaces artificial hairline divider rules with natural, generous vertical whitespace (`0.2rem`–`0.35rem`).
+     - The hero equation (`[ 0.03937 in ] ≈ [ 1 mm 📋 ]`) floats freely on the card canvas.
+     - The educational formula and instructions sit below as a quiet, borderless typographic caption strip with soft subtle hover capsules.
    - **Dual-Mode Architectural Hierarchy (Auto vs. Manual)**:
      - **Docked Header**: Sits flush at `top: 0` with edge-to-edge frosted glass (`backdrop-filter: blur(20px)`), allowing the Omnibox below to stand out as the **sole hero floating pill** on the page.
      - **Animated Omnibox**: Displays rotating double-quoted examples (`"100 km to miles"`, `"72°F in °C"`, `"1 cup to ml"`) with smooth vertical slide-and-fade transitions every 3.2s when unfocused.
      - **Mode Bridge Divider**: A clean, balanced hairline divider (`────────── or select units manually ──────────`) clearly distinguishing the fast Auto search above from the Manual interactive workbench below.
-     - **Unified Mobile Steppers**: On mobile screens (`<= 680px`), increment and decrement buttons merge into a contiguous vertical capsule rocker beside the input, featuring top/bottom rounded caps and a hairline divider.
    - **Zero Auto-Focus Stealing**: Focus is strictly user-initiated (tapping an input, pressing `/`, or clicking Clear). Programmatic focus is never called on category switches, unit changes, or swaps, ensuring mobile virtual keyboards never pop up unprompted.
-   - **Color-Highlighted Equation Readout**: Prominent live conversion statement (e.g. `1 ft = 12 in`) with high-contrast color badges and full-name captions.
    - **Developer Modal (`src/components/DeveloperModal.jsx`)**: Live interactive API tester and 1-click Claude Desktop configs.
    - Starred favorites bar, recent history drawer, and searchable unit dropdowns.
 
@@ -175,7 +188,7 @@ convertThings/
   ```powershell
   $env:CI="true"; npm test
   ```
-  Runs all 166 unit and integration tests across 6 suites without hanging.
+  Runs all 187 unit and integration tests across 7 suites without hanging.
 - **Execute API & MCP Test Suite:**
   ```powershell
   npm run test:api
@@ -188,7 +201,7 @@ convertThings/
   ```powershell
   npm run build
   ```
-  Prebuild generates sitemap with 1,244 URLs and creates optimized bundle with zero warnings.
+  Prebuild generates sitemap with 1,310 URLs and creates optimized bundle with zero warnings (1,325 pre-rendered static routes).
 
 ---
 
@@ -206,8 +219,20 @@ convertThings/
    - Always preserve the unified corner radius scale (`--radius-card: 28px`, `--radius-surface: 20px`, `--radius-chip: 14px`, `--radius-pill: 9999px`).
    - Use multi-tier ambient shadows (`--shadow-google-sm`, `--shadow-google-md`, `--shadow-google-lg`) and kinetic spring easing (`--ease-spring`).
    - Maintain the dual-mode hierarchy: docked flush header, hero floating Omnibox with animated placeholder, clean mode divider, and conjoined vertical mobile steppers.
-5. **Respect Intentional Focus (No Auto-Focus Stealing):**
+5. **Zero-Border & Surface-Driven Architecture (App-Wide)**:
+   - Avoid reintroducing harsh wireframe outlines, boxed sub-containers, or horizontal divider lines across any card or component. Always rely on natural surface contrast (`--bg-card` vs `--bg-card-subtle`), dual-layer ambient shadows (`--shadow-google-sm`, `--shadow-google-md`, `--shadow-google-lg`), and calibrated whitespace.
+   - Applies universally across:
+     - **Main Workbench**: borderless pods (`.ct-unit-block`), floating inputs, dissolved zero-divider footer.
+     - **Reference Table & All Units Grid**: borderless `.ct-table-card`, header, floating tab pill container, and floating `.ct-unit-stat-card` cards.
+     - **Recent Conversions Drawer**: borderless `.ct-history-section`, floating `.ct-history-item` cards, and pill buttons.
+     - **Universal Omnibox**: borderless floating `.ct-omnibox-wrapper`, `.ct-omnibox-dropdown`, `.ct-omnibox-preview`, and badges with neutral focus ring.
+     - **SEO Guides & FAQs**: borderless `.ct-seo-guide`, `.ct-pair-card`, and soft floating accordion `.ct-faq-item` cards.
+     - **Kitchen View Drawer**: borderless `.ct-kitchen-drawer-card`, floating `.ct-kitchen-tool-chip` pills, and `.ct-kitchen-equiv-pill` cards.
+     - **Developer & Legal Modals**: borderless `.ct-modal-dialog`, `.ct-dev-card`, `.ct-tester-input`, and action buttons.
+6. **Preserve the Single Hero Accent Rule**:
+   - Within interactive conversion cards, maintain strict monochrome calm across secondary controls, unit chips, swap buttons, and formula captions. The converted result pill (`.ct-num-copy-btn`) must remain the sole colorful hero focal point on the card.
+7. **Respect Intentional Focus (No Auto-Focus Stealing):**
    - Never call `.focus()` or `autoFocus` programmatically on category switches, unit changes, favorite loading, or swap operations.
    - Preserving passive focus prevents mobile virtual keyboards from jumping into view and obscuring results, and prevents desktop scroll hijacking.
-6. **Test Everything:**
+8. **Test Everything:**
    - Always run `$env:CI="true"; npm test` and `npm run test:api` before concluding turns.

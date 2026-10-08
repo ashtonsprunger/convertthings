@@ -852,14 +852,74 @@ export function ConversionCard({
         {/* FIRST UNIT BLOCK (FROM - VIOLET) */}
         <div
           ref={fromBlockRef}
-          className={`ct-unit-block ct-unit-block-from ${isSwapping ? 'ct-is-swapping' : ''}`}
+          className={`ct-unit-block ct-unit-block-from ${isSwapping ? 'ct-is-swapping' : ''} ${showFromDropdown ? 'ct-dropdown-open' : ''}`}
         >
-          <div className="ct-unit-label-wrap">
-            <label htmlFor="fromInput" className="ct-unit-header-label">
-              {fromUnit.name}
-            </label>
+          <div className="ct-unit-label-wrap" ref={fromDropdownRef}>
+            <button
+              type="button"
+              className={`ct-unit-selector-chip ct-chip-from ${showFromDropdown ? 'active' : ''}`}
+              onClick={() => {
+                setShowFromDropdown(!showFromDropdown);
+                setShowToDropdown(false);
+              }}
+              aria-haspopup="listbox"
+              aria-expanded={showFromDropdown}
+              title={`Change unit from ${fromUnit.name}`}
+              aria-label={`Current unit: ${fromUnit.name}. Click to change.`}
+            >
+              <span className="ct-unit-chip-name">{fromUnit.name}</span>
+              <span className="ct-unit-chip-symbol">{fromUnit.symbol}</span>
+              <Icon name="ChevronDown" size={14} strokeWidth={2.5} className={`ct-dropdown-chevron ${showFromDropdown ? 'rotated' : ''}`} />
+            </button>
+
+            {showFromDropdown && (
+              <div className="ct-dropdown-menu ct-integrated-dropdown" role="listbox">
+                <div className="ct-dropdown-search">
+                  <Icon name="Search" size={14} />
+                  <input
+                    type="text"
+                    className="ct-dropdown-search-input"
+                    placeholder="Search unit..."
+                    value={fromSearch}
+                    onChange={(e) => setFromSearch(e.target.value)}
+                    onKeyDown={handleFromSearchKeyDown}
+                  />
+                  {fromSearch && (
+                    <button
+                      type="button"
+                      className="ct-dropdown-clear-search"
+                      onClick={() => setFromSearch('')}
+                    >
+                      <Icon name="X" size={12} />
+                    </button>
+                  )}
+                </div>
+                <div className="ct-dropdown-list">
+                  {filteredFromUnits.map((u) => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      role="option"
+                      aria-selected={u.id === fromUnit.id}
+                      className={`ct-dropdown-item ${u.id === fromUnit.id ? 'selected' : ''}`}
+                      onClick={() => {
+                        onFromUnitChange(u.id);
+                        setShowFromDropdown(false);
+                        setFromSearch('');
+                      }}
+                    >
+                      <span className="ct-item-name">{u.plural || u.name}</span>
+                      <span className="ct-item-symbol">{u.symbol}</span>
+                    </button>
+                  ))}
+                  {filteredFromUnits.length === 0 && (
+                    <div className="ct-dropdown-empty">No units match "{fromSearch}"</div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
-          <div className={`ct-integrated-input-box ct-input-box-from ${showFromDropdown ? 'dropdown-active' : ''}`}>
+          <div className="ct-integrated-input-box ct-input-box-from">
             <div className="ct-input-inner">
               <input
                 id="fromInput"
@@ -896,72 +956,6 @@ export function ConversionCard({
                 >
                   <Icon name="X" size={16} />
                 </button>
-              )}
-            </div>
-
-            <div className="ct-integrated-divider" aria-hidden="true" />
-
-            <div className="ct-integrated-unit-wrap" ref={fromDropdownRef}>
-              <button
-                type="button"
-                className="ct-integrated-unit-btn"
-                onClick={() => {
-                  setShowFromDropdown(!showFromDropdown);
-                  setShowToDropdown(false);
-                }}
-                aria-haspopup="listbox"
-                aria-expanded={showFromDropdown}
-                title={`Change unit from ${fromUnit.name}`}
-              >
-                <span className="ct-integrated-unit-symbol ct-unit-sym-from">{fromUnit.symbol}</span>
-                <Icon name="ChevronDown" size={16} strokeWidth={2.5} className={`ct-dropdown-chevron ${showFromDropdown ? 'rotated' : ''}`} />
-              </button>
-
-              {showFromDropdown && (
-                <div className="ct-dropdown-menu ct-integrated-dropdown" role="listbox">
-                  <div className="ct-dropdown-search">
-                    <Icon name="Search" size={14} />
-                    <input
-                      type="text"
-                      className="ct-dropdown-search-input"
-                      placeholder="Search unit..."
-                      value={fromSearch}
-                      onChange={(e) => setFromSearch(e.target.value)}
-                      onKeyDown={handleFromSearchKeyDown}
-                    />
-                    {fromSearch && (
-                      <button
-                        type="button"
-                        className="ct-dropdown-clear-search"
-                        onClick={() => setFromSearch('')}
-                      >
-                        <Icon name="X" size={12} />
-                      </button>
-                    )}
-                  </div>
-                  <div className="ct-dropdown-list">
-                    {filteredFromUnits.map((u) => (
-                      <button
-                        key={u.id}
-                        type="button"
-                        role="option"
-                        aria-selected={u.id === fromUnit.id}
-                        className={`ct-dropdown-item ${u.id === fromUnit.id ? 'selected' : ''}`}
-                        onClick={() => {
-                          onFromUnitChange(u.id);
-                          setShowFromDropdown(false);
-                          setFromSearch('');
-                        }}
-                      >
-                        <span className="ct-item-name">{u.plural || u.name}</span>
-                        <span className="ct-item-symbol">{u.symbol}</span>
-                      </button>
-                    ))}
-                    {filteredFromUnits.length === 0 && (
-                      <div className="ct-dropdown-empty">No units match "{fromSearch}"</div>
-                    )}
-                  </div>
-                </div>
               )}
             </div>
           </div>
@@ -1009,15 +1003,75 @@ export function ConversionCard({
         {/* SECOND UNIT BLOCK (TO - EMERALD / KITCHEN OUTPUT) */}
         <div
           ref={toBlockRef}
-          className={`ct-unit-block ct-unit-block-to ${isSwapping ? 'ct-is-swapping' : ''}`}
+          className={`ct-unit-block ct-unit-block-to ${isSwapping ? 'ct-is-swapping' : ''} ${showToDropdown ? 'ct-dropdown-open' : ''}`}
         >
-          <div className="ct-unit-label-wrap">
+          <div className="ct-unit-label-wrap" ref={toDropdownRef}>
             {isKitchenActive ? (
               <span className="ct-unit-header-label">Kitchen Tools</span>
             ) : (
-              <label htmlFor="toInput" className="ct-unit-header-label">
-                {toUnit.name}
-              </label>
+              <button
+                type="button"
+                className={`ct-unit-selector-chip ct-chip-to ${showToDropdown ? 'active' : ''}`}
+                onClick={() => {
+                  setShowToDropdown(!showToDropdown);
+                  setShowFromDropdown(false);
+                }}
+                aria-haspopup="listbox"
+                aria-expanded={showToDropdown}
+                title={`Change unit to ${toUnit.name}`}
+                aria-label={`Target unit: ${toUnit.name}. Click to change.`}
+              >
+                <span className="ct-unit-chip-name">{toUnit.name}</span>
+                <span className="ct-unit-chip-symbol ct-unit-sym-to">{toUnit.symbol}</span>
+                <Icon name="ChevronDown" size={14} strokeWidth={2.5} className={`ct-dropdown-chevron ${showToDropdown ? 'rotated' : ''}`} />
+              </button>
+            )}
+
+            {!isKitchenActive && showToDropdown && (
+              <div className="ct-dropdown-menu ct-integrated-dropdown" role="listbox">
+                <div className="ct-dropdown-search">
+                  <Icon name="Search" size={14} />
+                  <input
+                    type="text"
+                    className="ct-dropdown-search-input"
+                    placeholder="Search unit..."
+                    value={toSearch}
+                    onChange={(e) => setToSearch(e.target.value)}
+                    onKeyDown={handleToSearchKeyDown}
+                  />
+                  {toSearch && (
+                    <button
+                      type="button"
+                      className="ct-dropdown-clear-search"
+                      onClick={() => setToSearch('')}
+                    >
+                      <Icon name="X" size={12} />
+                    </button>
+                  )}
+                </div>
+                <div className="ct-dropdown-list">
+                  {filteredToUnits.map((u) => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      role="option"
+                      aria-selected={u.id === toUnit.id}
+                      className={`ct-dropdown-item ${u.id === toUnit.id ? 'selected' : ''}`}
+                      onClick={() => {
+                        onToUnitChange(u.id);
+                        setShowToDropdown(false);
+                        setToSearch('');
+                      }}
+                    >
+                      <span className="ct-item-name">{u.plural || u.name}</span>
+                      <span className="ct-item-symbol">{u.symbol}</span>
+                    </button>
+                  ))}
+                  {filteredToUnits.length === 0 && (
+                    <div className="ct-dropdown-empty">No units match "{toSearch}"</div>
+                  )}
+                </div>
+              </div>
             )}
           </div>
           {isKitchenActive ? (
@@ -1046,7 +1100,7 @@ export function ConversionCard({
               </span>
             </div>
           ) : (
-            <div className={`ct-integrated-input-box ct-input-box-to ${showToDropdown ? 'dropdown-active' : ''}`}>
+            <div className="ct-integrated-input-box ct-input-box-to">
               <div className="ct-input-inner">
                 <input
                   id="toInput"
@@ -1083,72 +1137,6 @@ export function ConversionCard({
                   >
                     <Icon name="X" size={16} />
                   </button>
-                )}
-              </div>
-
-              <div className="ct-integrated-divider" aria-hidden="true" />
-
-              <div className="ct-integrated-unit-wrap" ref={toDropdownRef}>
-                <button
-                  type="button"
-                  className="ct-integrated-unit-btn"
-                  onClick={() => {
-                    setShowToDropdown(!showToDropdown);
-                    setShowFromDropdown(false);
-                  }}
-                  aria-haspopup="listbox"
-                  aria-expanded={showToDropdown}
-                  title={`Change unit to ${toUnit.name}`}
-                >
-                  <span className="ct-integrated-unit-symbol ct-unit-sym-to">{toUnit.symbol}</span>
-                  <Icon name="ChevronDown" size={16} strokeWidth={2.5} className={`ct-dropdown-chevron ${showToDropdown ? 'rotated' : ''}`} />
-                </button>
-
-                {showToDropdown && (
-                  <div className="ct-dropdown-menu ct-integrated-dropdown" role="listbox">
-                    <div className="ct-dropdown-search">
-                      <Icon name="Search" size={14} />
-                      <input
-                        type="text"
-                        className="ct-dropdown-search-input"
-                        placeholder="Search unit..."
-                        value={toSearch}
-                        onChange={(e) => setToSearch(e.target.value)}
-                        onKeyDown={handleToSearchKeyDown}
-                      />
-                      {toSearch && (
-                        <button
-                          type="button"
-                          className="ct-dropdown-clear-search"
-                          onClick={() => setToSearch('')}
-                        >
-                          <Icon name="X" size={12} />
-                        </button>
-                      )}
-                    </div>
-                    <div className="ct-dropdown-list">
-                      {filteredToUnits.map((u) => (
-                        <button
-                          key={u.id}
-                          type="button"
-                          role="option"
-                          aria-selected={u.id === toUnit.id}
-                          className={`ct-dropdown-item ${u.id === toUnit.id ? 'selected' : ''}`}
-                          onClick={() => {
-                            onToUnitChange(u.id);
-                            setShowToDropdown(false);
-                            setToSearch('');
-                          }}
-                        >
-                          <span className="ct-item-name">{u.plural || u.name}</span>
-                          <span className="ct-item-symbol">{u.symbol}</span>
-                        </button>
-                      ))}
-                      {filteredToUnits.length === 0 && (
-                        <div className="ct-dropdown-empty">No units match "{toSearch}"</div>
-                      )}
-                    </div>
-                  </div>
                 )}
               </div>
             </div>
