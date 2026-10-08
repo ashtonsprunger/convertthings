@@ -25,6 +25,35 @@ const PRECISION_OPTIONS = [
   { id: 'fraction_improper', label: 'Fractions (Improper: 11/8)', btnLabel: 'Improper Frac', icon: 'Divide' },
 ];
 
+/**
+ * Helper to determine if the user is on a desktop device (mouse/fine pointer, physical keyboard)
+ * vs mobile/tablet touch devices where focusing an input spawns an intrusive on-screen software keyboard.
+ */
+export function isDesktopDevice() {
+  if (typeof window === 'undefined') return false;
+
+  // 1. Touch / coarse pointer check (smartphones, iPads, tablets)
+  if (window.matchMedia) {
+    const isCoarse = window.matchMedia('(pointer: coarse)').matches;
+    const noHover = window.matchMedia('(hover: none)').matches;
+    if (isCoarse || noHover) {
+      return false;
+    }
+  }
+
+  // 2. Viewport width fallback (narrow mobile screens)
+  if (typeof window.innerWidth === 'number' && window.innerWidth <= 768) {
+    return false;
+  }
+
+  // 3. Touch event check without fine pointer
+  if ('ontouchstart' in window && window.matchMedia && !window.matchMedia('(pointer: fine)').matches) {
+    return false;
+  }
+
+  return true;
+}
+
 export function ConversionCard({
   categoryId,
   fromUnitId,
@@ -65,6 +94,8 @@ export function ConversionCard({
 
   const fromDropdownRef = useRef(null);
   const toDropdownRef = useRef(null);
+  const fromSearchInputRef = useRef(null);
+  const toSearchInputRef = useRef(null);
   const precisionRef = useRef(null);
   const fromBlockRef = useRef(null);
   const toBlockRef = useRef(null);
@@ -185,14 +216,30 @@ export function ConversionCard({
     }, 1600);
   };
 
+  // Auto-focus search input when dropdown opens, but ONLY on desktop
+  // (Prevents mobile software keyboard from popping up and obstructing the unit list)
+  useEffect(() => {
+    if (showFromDropdown && isDesktopDevice()) {
+      fromSearchInputRef.current?.focus({ preventScroll: true });
+    }
+  }, [showFromDropdown]);
+
+  useEffect(() => {
+    if (showToDropdown && isDesktopDevice()) {
+      toSearchInputRef.current?.focus({ preventScroll: true });
+    }
+  }, [showToDropdown]);
+
   // Close dropdowns on click outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (fromDropdownRef.current && !fromDropdownRef.current.contains(e.target)) {
         setShowFromDropdown(false);
+        setFromSearch('');
       }
       if (toDropdownRef.current && !toDropdownRef.current.contains(e.target)) {
         setShowToDropdown(false);
+        setToSearch('');
       }
       if (precisionRef.current && !precisionRef.current.contains(e.target)) {
         setShowPrecisionDropdown(false);
@@ -201,6 +248,14 @@ export function ConversionCard({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Close dropdowns and clear search queries on category change
+  useEffect(() => {
+    setShowFromDropdown(false);
+    setShowToDropdown(false);
+    setFromSearch('');
+    setToSearch('');
+  }, [categoryId]);
 
   // Filtered unit lists for searchable dropdowns (prioritizing prefix matches)
   const filteredFromUnits = filterAndSortUnits(units, fromSearch);
@@ -506,7 +561,14 @@ export function ConversionCard({
   // Calculate if the current conversion result is an approximation
   const isApproximate = (() => {
     if (!fromValue || !toValue || rawTargetValue === null) return false;
-    if (smartEquation.isSmart && smartEquation.subtext) return true;
+    if (smartEquation.isSmart) {
+      if (typeof smartEquation.isExact === 'boolean') {
+        return !smartEquation.isExact;
+      }
+      if (smartEquation.subtext && smartEquation.subtext.startsWith('=')) return false;
+      if (smartEquation.subtext && smartEquation.subtext.startsWith('≈')) return true;
+      return true;
+    }
     if (isFractionMode || isFractionLike(toValue)) {
       const fracVal = parseFractionString(toValue);
       return Math.abs(fracVal - rawTargetValue) > 1e-4;
@@ -859,7 +921,11 @@ export function ConversionCard({
               type="button"
               className={`ct-unit-selector-chip ct-chip-from ${showFromDropdown ? 'active' : ''}`}
               onClick={() => {
-                setShowFromDropdown(!showFromDropdown);
+                const nextState = !showFromDropdown;
+                if (nextState) {
+                  setFromSearch('');
+                }
+                setShowFromDropdown(nextState);
                 setShowToDropdown(false);
               }}
               aria-haspopup="listbox"
@@ -877,9 +943,11 @@ export function ConversionCard({
                 <div className="ct-dropdown-search">
                   <Icon name="Search" size={14} />
                   <input
+                    ref={fromSearchInputRef}
                     type="text"
                     className="ct-dropdown-search-input"
                     placeholder="Search unit..."
+                    aria-label={`Search ${fromUnit.name || 'units'}`}
                     value={fromSearch}
                     onChange={(e) => setFromSearch(e.target.value)}
                     onKeyDown={handleFromSearchKeyDown}
@@ -888,7 +956,13 @@ export function ConversionCard({
                     <button
                       type="button"
                       className="ct-dropdown-clear-search"
-                      onClick={() => setFromSearch('')}
+                      aria-label="Clear search"
+                      onClick={() => {
+                        setFromSearch('');
+                        if (isDesktopDevice()) {
+                          fromSearchInputRef.current?.focus({ preventScroll: true });
+                        }
+                      }}
                     >
                       <Icon name="X" size={12} />
                     </button>
@@ -1013,7 +1087,11 @@ export function ConversionCard({
                 type="button"
                 className={`ct-unit-selector-chip ct-chip-to ${showToDropdown ? 'active' : ''}`}
                 onClick={() => {
-                  setShowToDropdown(!showToDropdown);
+                  const nextState = !showToDropdown;
+                  if (nextState) {
+                    setToSearch('');
+                  }
+                  setShowToDropdown(nextState);
                   setShowFromDropdown(false);
                 }}
                 aria-haspopup="listbox"
@@ -1032,9 +1110,11 @@ export function ConversionCard({
                 <div className="ct-dropdown-search">
                   <Icon name="Search" size={14} />
                   <input
+                    ref={toSearchInputRef}
                     type="text"
                     className="ct-dropdown-search-input"
                     placeholder="Search unit..."
+                    aria-label={`Search ${toUnit.name || 'units'}`}
                     value={toSearch}
                     onChange={(e) => setToSearch(e.target.value)}
                     onKeyDown={handleToSearchKeyDown}
@@ -1043,7 +1123,13 @@ export function ConversionCard({
                     <button
                       type="button"
                       className="ct-dropdown-clear-search"
-                      onClick={() => setToSearch('')}
+                      aria-label="Clear search"
+                      onClick={() => {
+                        setToSearch('');
+                        if (isDesktopDevice()) {
+                          toSearchInputRef.current?.focus({ preventScroll: true });
+                        }
+                      }}
                     >
                       <Icon name="X" size={12} />
                     </button>

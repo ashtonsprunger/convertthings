@@ -11,6 +11,8 @@ import {
   getCookingCompoundMeasure,
   formatCulinaryFraction,
   convertUnits,
+  getSmartEquationDisplay,
+  UNIT_DEFINITIONS,
 } from './conversions';
 
 describe('filterAndSortUnits', () => {
@@ -414,6 +416,17 @@ describe('formatNumber precision modes', () => {
     expect(formatNumber(3 / 384, 'auto', 'cooking')).toBe('0.007813'); // 3 dashes to cup: never 1/1
     expect(formatNumber(1 / 384, 'auto', 'cooking')).toBe('0.002604'); // 1 dash to cup: never 1/1
   });
+
+  test('formats numbers using auto mode with clean 4 significant figures for small values and capped decimals for large values', () => {
+    expect(formatNumber(1 / 12, 'auto')).toBe('0.08333');
+    expect(formatNumber(1 / 25.4, 'auto')).toBe('0.03937');
+    expect(formatNumber(1 / 6, 'auto')).toBe('0.1667');
+    expect(formatNumber(1 / 3, 'auto')).toBe('0.3333');
+    expect(formatNumber(13 / 12, 'auto')).toBe('1.0833');
+    expect(formatNumber(2.5, 'auto')).toBe('2.5');
+    expect(formatNumber(1000, 'auto')).toBe('1000');
+    expect(formatNumber(1234.5678, 'auto')).toBe('1234.57');
+  });
 });
 
 describe('getCookingCompoundMeasure', () => {
@@ -503,5 +516,94 @@ describe('formatCulinaryFraction', () => {
     expect(formatCulinaryFraction(34 / 236.588)).toBeNull(); // 34 mL to cup
     expect(formatCulinaryFraction(20 / 236.588)).toBeNull(); // 20 mL to cup
     expect(formatCulinaryFraction(0.1437)).toBeNull();       // not 5/32
+  });
+});
+
+describe('getSmartEquationDisplay', () => {
+  const inUnit = UNIT_DEFINITIONS.length.units.find((u) => u.id === 'in');
+  const ftUnit = UNIT_DEFINITIONS.length.units.find((u) => u.id === 'ft');
+  const mUnit = UNIT_DEFINITIONS.length.units.find((u) => u.id === 'm');
+  const ozUnit = UNIT_DEFINITIONS.mass.units.find((u) => u.id === 'oz');
+  const lbUnit = UNIT_DEFINITIONS.mass.units.find((u) => u.id === 'lb');
+  const sUnit = UNIT_DEFINITIONS.time.units.find((u) => u.id === 's');
+  const minUnit = UNIT_DEFINITIONS.time.units.find((u) => u.id === 'min');
+  const tbspUnit = UNIT_DEFINITIONS.volume.units.find((u) => u.id === 'tbsp_us');
+  const cupUnit = UNIT_DEFINITIONS.volume.units.find((u) => u.id === 'cup_us');
+
+  test('formats 1 in to ft as exact fraction 1/12 ft (never 1 in ≈ 1 in)', () => {
+    const targetVal = convertUnits(1, 'length', 'in', 'ft');
+    const defaultFmt = formatNumber(targetVal, 'auto', 'length');
+    const result = getSmartEquationDisplay('length', inUnit, ftUnit, 1, targetVal, defaultFmt);
+
+    expect(result.value).toBe('1/12');
+    expect(result.unit).toBe('ft');
+    expect(result.isSmart).toBe(true);
+    expect(result.isExact).toBe(true);
+    expect(result.subtext).toBe('≈ 0.08333 ft');
+  });
+
+  test('formats multi-foot imperial conversions as compound architectural feet & inches', () => {
+    const targetVal18 = convertUnits(18, 'length', 'in', 'ft');
+    const defaultFmt18 = formatNumber(targetVal18, 'auto', 'length');
+    const result18 = getSmartEquationDisplay('length', inUnit, ftUnit, 18, targetVal18, defaultFmt18);
+
+    expect(result18.value).toBe('1 ft 6 in');
+    expect(result18.unit).toBe('');
+    expect(result18.isSmart).toBe(true);
+    expect(result18.isExact).toBe(true);
+
+    const targetValM = convertUnits(1, 'length', 'm', 'ft');
+    const defaultFmtM = formatNumber(targetValM, 'auto', 'length');
+    const resultM = getSmartEquationDisplay('length', mUnit, ftUnit, 1, targetValM, defaultFmtM);
+
+    expect(resultM.value).toBe('3 ft 3 3/8 in');
+    expect(resultM.isSmart).toBe(true);
+    expect(resultM.isExact).toBe(false);
+  });
+
+  test('formats mass sub-pound conversions as clean exact fractions and multi-pound as compound lb + oz', () => {
+    // 2 oz in lb = 1/8 lb
+    const targetVal2 = convertUnits(2, 'mass', 'oz', 'lb');
+    const defaultFmt2 = formatNumber(targetVal2, 'auto', 'mass');
+    const result2 = getSmartEquationDisplay('mass', ozUnit, lbUnit, 2, targetVal2, defaultFmt2);
+
+    expect(result2.value).toBe('1/8');
+    expect(result2.unit).toBe('lb');
+    expect(result2.isSmart).toBe(true);
+    expect(result2.isExact).toBe(true);
+
+    // 26 oz in lb = 1 lb 10 oz
+    const targetVal26 = convertUnits(26, 'mass', 'oz', 'lb');
+    const defaultFmt26 = formatNumber(targetVal26, 'auto', 'mass');
+    const result26 = getSmartEquationDisplay('mass', ozUnit, lbUnit, 26, targetVal26, defaultFmt26);
+
+    expect(result26.value).toBe('1 lb 10 oz');
+    expect(result26.unit).toBe('');
+    expect(result26.isSmart).toBe(true);
+    expect(result26.isExact).toBe(true);
+  });
+
+  test('formats time sub-unit conversions as clean exact fractions', () => {
+    // 45 s in min = 3/4 min
+    const targetVal45 = convertUnits(45, 'time', 's', 'min');
+    const defaultFmt45 = formatNumber(targetVal45, 'auto', 'time');
+    const result45 = getSmartEquationDisplay('time', sUnit, minUnit, 45, targetVal45, defaultFmt45);
+
+    expect(result45.value).toBe('3/4');
+    expect(result45.unit).toBe('min');
+    expect(result45.isSmart).toBe(true);
+    expect(result45.isExact).toBe(true);
+  });
+
+  test('formats volume exact unit fractions cleanly', () => {
+    // 1 tbsp in cup = 1/16 cup
+    const targetValTbsp = convertUnits(1, 'volume', 'tbsp_us', 'cup_us');
+    const defaultFmtTbsp = formatNumber(targetValTbsp, 'auto', 'volume');
+    const resultTbsp = getSmartEquationDisplay('volume', tbspUnit, cupUnit, 1, targetValTbsp, defaultFmtTbsp);
+
+    expect(resultTbsp.value).toBe('1/16');
+    expect(resultTbsp.unit).toBe('cup');
+    expect(resultTbsp.isSmart).toBe(true);
+    expect(resultTbsp.isExact).toBe(true);
   });
 });

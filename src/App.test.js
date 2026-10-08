@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import App from './App';
+import { isDesktopDevice } from './components/ConversionCard';
 import {
   convertUnits,
   formatNumber,
@@ -1234,6 +1235,87 @@ describe('Dual-Tier Memory System (In-Session & Cross-Session Persistence)', () 
 
     expect(logoWrap).not.toHaveClass('ct-turbine-active');
     jest.useRealTimers();
+  });
+
+  describe('Unit Dropdown Auto-Focus Behavior (Desktop vs Mobile)', () => {
+    const originalInnerWidth = window.innerWidth;
+    const originalMatchMedia = window.matchMedia;
+
+    afterEach(() => {
+      window.innerWidth = originalInnerWidth;
+      window.matchMedia = originalMatchMedia;
+    });
+
+    test('isDesktopDevice returns correct boolean based on pointer and screen width', () => {
+      // Desktop simulation
+      window.innerWidth = 1200;
+      window.matchMedia = jest.fn().mockImplementation((query) => ({
+        matches: query.includes('pointer: fine') || query.includes('hover: hover'),
+      }));
+      expect(isDesktopDevice()).toBe(true);
+
+      // Mobile touch screen simulation (pointer: coarse)
+      window.matchMedia = jest.fn().mockImplementation((query) => ({
+        matches: query.includes('pointer: coarse'),
+      }));
+      expect(isDesktopDevice()).toBe(false);
+
+      // Touch device with hover: none
+      window.matchMedia = jest.fn().mockImplementation((query) => ({
+        matches: query.includes('hover: none'),
+      }));
+      expect(isDesktopDevice()).toBe(false);
+
+      // Mobile narrow screen width <= 768
+      window.innerWidth = 414;
+      window.matchMedia = jest.fn().mockImplementation(() => ({ matches: false }));
+      expect(isDesktopDevice()).toBe(false);
+    });
+
+    test('opening unit dropdown on desktop automatically focuses the unit search input', () => {
+      window.innerWidth = 1200;
+      window.matchMedia = jest.fn().mockImplementation((query) => ({
+        matches: !query.includes('pointer: coarse') && !query.includes('hover: none'),
+      }));
+
+      render(<App />);
+
+      // Click From unit chip to open dropdown
+      const fromUnitBtn = screen.getByTitle(/Change unit from Meter/i);
+      fireEvent.click(fromUnitBtn);
+
+      const fromSearchInput = screen.getByPlaceholderText(/Search unit\.\.\./i);
+      expect(fromSearchInput).toBeInTheDocument();
+      // On desktop, the search input should receive active focus
+      expect(document.activeElement).toBe(fromSearchInput);
+
+      // Click To unit chip to open To dropdown
+      const toUnitBtn = screen.getByTitle(/Change unit to Foot/i);
+      fireEvent.click(toUnitBtn);
+
+      const toSearchInput = screen.getByPlaceholderText(/Search unit\.\.\./i);
+      expect(toSearchInput).toBeInTheDocument();
+      // On desktop, the To search input should now have active focus
+      expect(document.activeElement).toBe(toSearchInput);
+    });
+
+    test('opening unit dropdown on mobile does NOT focus unit search, avoiding virtual keyboard popup', () => {
+      // Simulate mobile device: coarse pointer (touchscreen) and narrow screen
+      window.innerWidth = 390;
+      window.matchMedia = jest.fn().mockImplementation((query) => ({
+        matches: query.includes('pointer: coarse') || query.includes('hover: none'),
+      }));
+
+      render(<App />);
+
+      const fromUnitBtn = screen.getByTitle(/Change unit from Meter/i);
+      fireEvent.click(fromUnitBtn);
+
+      const searchInput = screen.getByPlaceholderText(/Search unit\.\.\./i);
+      expect(searchInput).toBeInTheDocument();
+      // On mobile, the search input must NOT steal focus to keep on-screen keyboard from popping up
+      expect(document.activeElement).not.toBe(searchInput);
+    });
   });
 });
 

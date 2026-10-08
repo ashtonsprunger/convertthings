@@ -1015,7 +1015,7 @@ export function formatNumber(val, decimals = 'auto', categoryId = null) {
   }
 
   // Small values (< 1): guarantee at least 4 significant figures so it NEVER truncates to 0
-  // e.g. 0.000123456 -> 0.0001235 (4 sig figs), 0.000001 -> 0.000001
+  // e.g. 0.000123456 -> 0.0001235 (4 sig figs), 0.03937 (1 mm in in)
   if (abs < 1) {
     return parseFloat(clean.toPrecision(4)).toString();
   }
@@ -1393,6 +1393,7 @@ export function getSmartEquationDisplay(categoryId, fromUnit, toUnit, fromValue,
     unit: toUnit ? toUnit.symbol : '',
     subtext: null,
     isSmart: false,
+    isExact: true,
   };
 
   if (fromValue === null || fromValue === undefined || fromValue === '' || !toUnit || !fromUnit) {
@@ -1410,7 +1411,7 @@ export function getSmartEquationDisplay(categoryId, fromUnit, toUnit, fromValue,
     return fallback;
   }
 
-  // 1. Length (Inches & Feet) -> Tape Measure landmark ± 1/32"
+  // 1. Length (Inches & Feet) -> Tape Measure landmark ± 1/32" or Exact Fraction
   if (categoryId === 'length') {
     if (toUnit.id === 'in') {
       const tapeStr = toTapeMeasureFraction(rawTargetNum);
@@ -1422,29 +1423,57 @@ export function getSmartEquationDisplay(categoryId, fromUnit, toUnit, fromValue,
           unit: 'in',
           subtext: hasDiff ? `≈ ${defaultFormattedValue} in` : (tapeStr !== defaultFormattedValue ? `= ${defaultFormattedValue} in` : null),
           isSmart: tapeStr !== defaultFormattedValue,
+          isExact: !hasDiff,
         };
       }
     } else if (toUnit.id === 'ft') {
       const absTarget = Math.abs(rawTargetNum);
       const wholeFeet = Math.floor(absTarget);
       const remInches = (absTarget - wholeFeet) * 12;
-      if (remInches >= 0.02) {
+
+      // A. Multi-foot measurements (>= 1 ft): Compound Architectural feet & inches
+      // e.g. 18 in -> "1 ft 6 in", 1.8 m -> "5 ft 10 7/8 in"
+      if (wholeFeet >= 1 && remInches >= 0.02) {
         const tapeRem = toTapeMeasureFraction(remInches);
         if (tapeRem && tapeRem !== '0') {
           const sign = rawTargetNum < 0 ? '-' : '';
-          const archStr = `${sign}${wholeFeet > 0 ? `${formatDisplayNumber(wholeFeet)} ft ` : ''}${tapeRem} in`;
+          const archStr = `${sign}${formatDisplayNumber(wholeFeet)} ft ${tapeRem} in`;
+          const tapeNum = parseFractionString(tapeRem);
+          const totalArchFt = wholeFeet + tapeNum / 12;
+          const isExact = Math.abs(totalArchFt - absTarget) < 1e-4;
           return {
             value: archStr,
             unit: '',
-            subtext: `≈ ${defaultFormattedValue} ft`,
+            subtext: isExact ? `= ${defaultFormattedValue} ft` : `≈ ${defaultFormattedValue} ft`,
             isSmart: true,
+            isExact,
           };
+        }
+      }
+
+      // B. Sub-foot measurements (< 1 ft): Clean rational fraction of a foot
+      // e.g. 1 in -> "1/12 ft", 2 in -> "1/6 ft", 3 in -> "1/4 ft", 4 in -> "1/3 ft", 6 in -> "1/2 ft"
+      if (wholeFeet === 0) {
+        const fracStr = toFraction(absTarget, 64, false);
+        if (fracStr && fracStr.includes('/')) {
+          const fracVal = parseFractionString(fracStr);
+          const isExact = Math.abs(fracVal - absTarget) < 1e-5;
+          if (isExact || (fromUnit.id === 'in' && /\/(?:2|3|4|6|8|12|16|24|32|48|64)\b/.test(fracStr))) {
+            const sign = rawTargetNum < 0 ? '-' : '';
+            return {
+              value: `${sign}${fracStr}`,
+              unit: 'ft',
+              subtext: `≈ ${defaultFormattedValue} ft`,
+              isSmart: true,
+              isExact,
+            };
+          }
         }
       }
     }
   }
 
-  // 2. Time -> Practical Clock Breakdown (Days, Hours, Minutes, Seconds)
+  // 2. Time -> Practical Clock Breakdown (Days, Hours, Minutes, Seconds) or Clean Fractions
   if (categoryId === 'time') {
     const sec = convertUnits(rawFromNum, 'time', fromUnit.id, 's');
     const isTargetInteger = Math.abs(rawTargetNum - Math.round(rawTargetNum)) < 1e-4;
@@ -1464,39 +1493,104 @@ export function getSmartEquationDisplay(categoryId, fromUnit, toUnit, fromValue,
         const durStr = sign + parts.join(' ');
         const isDifferent = durStr !== `${defaultFormattedValue}${toUnit.symbol}` && durStr !== `${defaultFormattedValue} ${toUnit.symbol}`;
         if (isDifferent) {
+          const totalSecRec = (d * 86400) + (h * 3600) + (m * 60) + s;
+          const isExact = Math.abs(totalSecRec - absSec) < 1e-4;
           return {
             value: durStr,
             unit: '',
             subtext: `≈ ${defaultFormattedValue} ${toUnit.symbol}`,
             isSmart: true,
+            isExact,
+          };
+        }
+      }
+    }
+
+    // Sub-unit clean fractions for time (e.g. 45s -> "3/4 min", 20 min -> "1/3 h", 90s -> "1 1/2 min")
+    if (toUnit.id === 'min' || toUnit.id === 'h' || toUnit.id === 'day') {
+      const fracStr = toFraction(rawTargetNum, 60, false);
+      if (fracStr && fracStr.includes('/')) {
+        const fracVal = parseFractionString(fracStr);
+        const isExact = Math.abs(fracVal - rawTargetNum) < 1e-5;
+        if (isExact && /\/(?:2|3|4|5|6|10|12|15|20|24|30|60)\b/.test(fracStr)) {
+          return {
+            value: fracStr,
+            unit: toUnit.symbol,
+            subtext: `≈ ${defaultFormattedValue} ${toUnit.symbol}`,
+            isSmart: true,
+            isExact: true,
           };
         }
       }
     }
   }
 
-  // 3. Mass & Weight -> Pounds & Ounces
+  // 3. Mass & Weight -> Pounds & Ounces or Clean Fractions
   if (categoryId === 'mass') {
     const totalLb = convertUnits(rawFromNum, 'mass', fromUnit.id, 'lb');
-    if (totalLb !== null && Math.abs(totalLb) >= 1 && toUnit.id === 'lb') {
+    if (totalLb !== null && toUnit.id === 'lb') {
       const absLb = Math.abs(totalLb);
       const wholeLb = Math.floor(absLb);
       const remOz = (absLb - wholeLb) * 16;
-      if (remOz >= 0.05 && remOz <= 15.95) {
+
+      // A. Multi-pound measurements (>= 1 lb): Compound pounds & ounces
+      // e.g. 26 oz -> "1 lb 10 oz", 2.5 kg -> "5 lb 8.2 oz"
+      if (wholeLb >= 1 && remOz >= 0.05 && remOz <= 15.95) {
         const ozStr = parseFloat(remOz.toFixed(1)).toString();
         const sign = totalLb < 0 ? '-' : '';
-        const massStr = `${sign}${wholeLb > 0 ? `${formatDisplayNumber(wholeLb)} lb ` : ''}${ozStr} oz`;
+        const massStr = `${sign}${formatDisplayNumber(wholeLb)} lb ${ozStr} oz`;
+        const totalArchLb = wholeLb + remOz / 16;
+        const isExact = Math.abs(totalArchLb - absLb) < 1e-4;
         return {
           value: massStr,
           unit: '',
-          subtext: `≈ ${defaultFormattedValue} lb`,
+          subtext: isExact ? `= ${defaultFormattedValue} lb` : `≈ ${defaultFormattedValue} lb`,
           isSmart: true,
+          isExact,
+        };
+      }
+
+      // B. Sub-pound measurements (< 1 lb): Clean rational fraction of a pound
+      // e.g. 1 oz -> "1/16 lb", 2 oz -> "1/8 lb", 4 oz -> "1/4 lb", 8 oz -> "1/2 lb", 12 oz -> "3/4 lb"
+      if (wholeLb === 0) {
+        const fracStr = toFraction(absLb, 64, false);
+        if (fracStr && fracStr.includes('/')) {
+          const fracVal = parseFractionString(fracStr);
+          const isExact = Math.abs(fracVal - absLb) < 1e-5;
+          if (isExact || (fromUnit.id === 'oz' && /\/(?:2|4|8|16|32|64)\b/.test(fracStr))) {
+            const sign = totalLb < 0 ? '-' : '';
+            return {
+              value: `${sign}${fracStr}`,
+              unit: 'lb',
+              subtext: isExact ? `≈ ${defaultFormattedValue} lb` : `≈ ${defaultFormattedValue} lb`,
+              isSmart: true,
+              isExact,
+            };
+          }
+        }
+      }
+    }
+  }
+
+  // 4. Volume & Capacity -> Exact culinary / fluid fractions
+  if (categoryId === 'volume') {
+    const fracStr = toFraction(rawTargetNum, 128, false);
+    if (fracStr && fracStr.includes('/')) {
+      const fracVal = parseFractionString(fracStr);
+      const isExact = Math.abs(fracVal - rawTargetNum) < 1e-5;
+      if (isExact && /\/(?:2|3|4|6|8|12|16|24|32|64|128)\b/.test(fracStr)) {
+        return {
+          value: fracStr,
+          unit: toUnit.symbol,
+          subtext: `≈ ${defaultFormattedValue} ${toUnit.symbol}`,
+          isSmart: true,
+          isExact: true,
         };
       }
     }
   }
 
-  // 4. Digital Storage & Data Transfer Rate -> Exact Rational Ratio
+  // 5. Digital Storage & Data Transfer Rate -> Exact Rational Ratio
   if (categoryId === 'digital' || categoryId === 'data_rate') {
     const fracStr = toFraction(rawTargetNum, 8192, false);
     if (fracStr && fracStr.includes('/')) {
@@ -1510,6 +1604,7 @@ export function getSmartEquationDisplay(categoryId, fromUnit, toUnit, fromValue,
           unit: toUnit.symbol,
           subtext: `${op} ${defaultFormattedValue} ${toUnit.symbol}`,
           isSmart: true,
+          isExact,
         };
       }
     }
