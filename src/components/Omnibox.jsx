@@ -82,8 +82,90 @@ export function Omnibox({ onSelectConversion, onSelectCategory, history = [], fa
     };
   }, []);
 
+  // Trigger visual flight spring animation from omnibox dropdown into conversion workbench
+  const triggerSuggestionFlight = (item, sourceEl) => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    const prefersReducedMotion =
+      window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) return;
+
+    let startRect = null;
+    if (sourceEl && typeof sourceEl.getBoundingClientRect === 'function') {
+      startRect = sourceEl.getBoundingClientRect();
+    } else if (containerRef.current) {
+      startRect = containerRef.current.getBoundingClientRect();
+    }
+    if (!startRect) return;
+
+    const targetEl = document.querySelector('.ct-conversion-grid') || document.getElementById('conversion-panel');
+    if (!targetEl) return;
+    const targetRect = targetEl.getBoundingClientRect();
+
+    const isMobile = window.innerWidth <= 680;
+    if (isMobile) {
+      try {
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } catch (err) {
+        // fallback
+      }
+    }
+
+    const pill = document.createElement('div');
+    pill.className = 'ct-flying-suggestion-pill';
+
+    let displayTxt = item.title || 'Converting...';
+    if (item.equation) {
+      displayTxt = `${item.equation.fromVal}${item.equation.fromUnit ? ' ' + item.equation.fromUnit : ''} = ${item.equation.toVal} ${item.equation.toUnit}`;
+    }
+    pill.textContent = displayTxt;
+    document.body.appendChild(pill);
+
+    const pillRect = pill.getBoundingClientRect();
+    const startX = Math.max(12, Math.min(startRect.left + (startRect.width / 2) - (pillRect.width / 2), window.innerWidth - pillRect.width - 12));
+    const startY = Math.max(12, startRect.top + (startRect.height / 2) - (pillRect.height / 2));
+    const endX = Math.max(12, Math.min(targetRect.left + (targetRect.width / 2) - (pillRect.width / 2), window.innerWidth - pillRect.width - 12));
+    const endY = isMobile
+      ? Math.min(Math.max(targetRect.top + 24, 70), window.innerHeight - 70)
+      : targetRect.top + 24;
+
+    if (typeof pill.animate === 'function') {
+      const anim = pill.animate(
+        [
+          {
+            transform: `translate3d(${startX}px, ${startY}px, 0) scale(1)`,
+            opacity: 1,
+          },
+          {
+            transform: `translate3d(${(startX + endX) / 2}px, ${(startY + endY) / 2 - (isMobile ? 10 : 20)}px, 0) scale(1.06)`,
+            opacity: 1,
+            offset: 0.45,
+          },
+          {
+            transform: `translate3d(${endX}px, ${endY}px, 0) scale(0.92)`,
+            opacity: 0,
+          },
+        ],
+        {
+          duration: isMobile ? 380 : 440,
+          easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)',
+          fill: 'forwards',
+        }
+      );
+
+      anim.onfinish = () => {
+        pill.remove();
+        targetEl.classList.add('ct-workbench-received');
+        setTimeout(() => {
+          targetEl.classList.remove('ct-workbench-received');
+        }, 500);
+      };
+    } else {
+      pill.remove();
+    }
+  };
+
   // Execute selected suggestion
-  const handleExecuteSuggestion = (item) => {
+  const handleExecuteSuggestion = (item, sourceEl = null) => {
     if (!item || !item.payload) return;
 
     if (item.payload.action === 'navigate_category') {
@@ -97,6 +179,7 @@ export function Omnibox({ onSelectConversion, onSelectCategory, history = [], fa
     }
 
     if (item.payload.action === 'convert') {
+      triggerSuggestionFlight(item, sourceEl);
       if (onSelectConversion) {
         onSelectConversion({
           categoryId: item.payload.categoryId,
@@ -137,7 +220,8 @@ export function Omnibox({ onSelectConversion, onSelectCategory, history = [], fa
       e.preventDefault();
       const current = suggestions[selectedIndex] || suggestions[0];
       if (current) {
-        handleExecuteSuggestion(current);
+        const activeItemEl = document.querySelector('#ct-omnibox-listbox .ct-omnibox-item.active');
+        handleExecuteSuggestion(current, activeItemEl);
       }
     } else if (e.key === 'Escape') {
       e.preventDefault();
@@ -146,17 +230,6 @@ export function Omnibox({ onSelectConversion, onSelectCategory, history = [], fa
     }
   };
 
-  const handleTipClick = (tipQuery) => {
-    setQuery(tipQuery);
-    const results = getSearchSuggestions(tipQuery, { history, favorites });
-    const instant = results.find((r) => r.badge === 'Instant Match') || results[0];
-    if (instant && instant.payload?.action === 'convert') {
-      handleExecuteSuggestion(instant);
-    } else {
-      setIsOpen(true);
-      inputRef.current?.focus();
-    }
-  };
 
   const handleClear = () => {
     setQuery('');
@@ -168,8 +241,8 @@ export function Omnibox({ onSelectConversion, onSelectCategory, history = [], fa
   return (
     <section className="ct-omnibox-section" ref={containerRef} aria-label="Smart conversion and category search">
       <div className={`ct-omnibox-wrapper ${isOpen ? 'focused' : ''}`}>
-        <div className="ct-omnibox-icon" title="Smart conversion engine">
-          <Icon name="Sparkles" size={17} />
+        <div className="ct-omnibox-icon" title="Search conversions">
+          <Icon name="Search" size={16} />
         </div>
 
         <div className="ct-omnibox-input-area">
@@ -218,33 +291,6 @@ export function Omnibox({ onSelectConversion, onSelectCategory, history = [], fa
         {/* Floating Dropdown Autocomplete Palette (Zero CLS) */}
         {isOpen && (
           <div id="ct-omnibox-listbox" className="ct-omnibox-dropdown" role="listbox">
-            {!query.trim() && (
-              <div className="ct-omnibox-tips-card">
-                <div className="ct-tips-card-header">
-                  <Icon name="Sparkles" size={14} />
-                  <span>Smart Convert — Natural Language Power</span>
-                </div>
-                <div className="ct-tips-card-grid">
-                  <div className="ct-tip-item" onClick={() => handleTipClick('100 km to miles')} role="button" tabIndex={0}>
-                    <span className="ct-tip-dot" />
-                    <span className="ct-tip-text"><strong>"100 km to miles"</strong> — Distance</span>
-                  </div>
-                  <div className="ct-tip-item" onClick={() => handleTipClick('72 f in c')} role="button" tabIndex={0}>
-                    <span className="ct-tip-dot" />
-                    <span className="ct-tip-text"><strong>"72 f in c"</strong> — Temperature</span>
-                  </div>
-                  <div className="ct-tip-item" onClick={() => handleTipClick('1 cup to ml')} role="button" tabIndex={0}>
-                    <span className="ct-tip-dot" />
-                    <span className="ct-tip-text"><strong>"1 cup to ml"</strong> — Cooking</span>
-                  </div>
-                  <div className="ct-tip-item" onClick={() => handleTipClick("5'11 to cm")} role="button" tabIndex={0}>
-                    <span className="ct-tip-dot" />
-                    <span className="ct-tip-text"><strong>"5'11 to cm"</strong> — Height</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {suggestions.map((item, idx) => {
               const isSelected = idx === selectedIndex;
               const isCategory = item.type === 'category';
@@ -252,16 +298,33 @@ export function Omnibox({ onSelectConversion, onSelectCategory, history = [], fa
               const isUnsupported = item.type === 'unsupported';
               const isInstantMatch = item.badge === 'Instant Match';
 
+              // Minimalist section headers when query is empty
+              const showRecentHeader = !query.trim() && idx === 0 && item.type === 'history';
+              const showCategoryHeader =
+                !query.trim() &&
+                item.type === 'category' &&
+                (idx === 0 || suggestions[idx - 1]?.type !== 'category');
+
               return (
-                <div
-                  key={item.id || idx}
-                  className={`ct-omnibox-item ${isSelected ? 'active' : ''} ${isInstantMatch ? 'ct-item-instant-card' : ''} ${item.categoryId ? `ct-cat-${item.categoryId}` : ''} ${isCategory ? 'ct-item-category' : ''} ${isCompound ? 'ct-item-compound' : ''} ${isUnsupported ? 'ct-item-unsupported' : ''}`}
-                  onMouseEnter={() => setSelectedIndex(idx)}
-                  onClick={() => handleExecuteSuggestion(item)}
-                  role="button"
-                  aria-label={item.badge === 'Instant Match' ? 'Apply parsed conversion' : item.title}
-                  tabIndex={0}
-                >
+                <React.Fragment key={item.id || idx}>
+                  {showRecentHeader && (
+                    <div className="ct-omnibox-section-header" aria-hidden="true">
+                      <span>Recent Conversions</span>
+                    </div>
+                  )}
+                  {showCategoryHeader && (
+                    <div className="ct-omnibox-section-header" aria-hidden="true">
+                      <span>Browse Categories</span>
+                    </div>
+                  )}
+                  <div
+                    className={`ct-omnibox-item ${isSelected ? 'active' : ''} ${isInstantMatch ? 'ct-item-instant-card' : ''} ${item.categoryId ? `ct-cat-${item.categoryId}` : ''} ${isCategory ? 'ct-item-category' : ''} ${isCompound ? 'ct-item-compound' : ''} ${isUnsupported ? 'ct-item-unsupported' : ''}`}
+                    onMouseEnter={() => setSelectedIndex(idx)}
+                    onClick={(e) => handleExecuteSuggestion(item, e.currentTarget)}
+                    role="button"
+                    aria-label={item.badge === 'Instant Match' ? 'Apply parsed conversion' : item.title}
+                    tabIndex={0}
+                  >
                   <div className="ct-omnibox-item-icon">
                     <Icon name={item.icon || 'Sparkles'} size={18} />
                   </div>
@@ -311,8 +374,9 @@ export function Omnibox({ onSelectConversion, onSelectCategory, history = [], fa
                     )}
                   </div>
                 </div>
-              );
-            })}
+              </React.Fragment>
+            );
+          })}
           </div>
         )}
       </div>

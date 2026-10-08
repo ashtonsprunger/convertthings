@@ -7,7 +7,19 @@
 import { CATEGORIES, UNIT_DEFINITIONS, getUnit } from './conversions.js';
 import { findUnit, findAllUnits } from './parser.js';
 
-export const VALID_PRECISIONS = ['auto', '2', '4', 'exact', 'fraction', 'fraction_improper'];
+export const VALID_PRECISIONS = [
+  'auto',
+  '2',
+  '4',
+  'exact',
+  'fraction_tape',
+  'fraction',
+  'fraction_improper',
+  'tape',
+  'fraction_16',
+  'fraction_32',
+  'fraction_64',
+];
 
 /**
  * Parses current location (pathname and search) into structured conversion state.

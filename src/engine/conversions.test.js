@@ -4,6 +4,7 @@ import {
   formatDisplayNumber,
   formatNumber,
   toFraction,
+  toTapeMeasureFraction,
   parseFractionString,
   formatFractionForDisplay,
   isFractionLike,
@@ -205,10 +206,45 @@ describe('toFraction', () => {
     expect(toFraction(-0.25)).toBe('-1/4');
   });
 
-  test('returns 0 for values too small to represent as standard fractions without claiming 1/1', () => {
-    expect(toFraction(3 / 384)).toBe('0'); // 3 dashes in cup (0.0078125)
-    expect(toFraction(1 / 384)).toBe('0'); // 1 dash in cup (0.002604)
-    expect(toFraction(0.001)).toBe('0');
+  test('accurately resolves exact small fractions for unit ratios and returns 0 for non-fraction tiny decimals', () => {
+    expect(toFraction(3 / 384)).toBe('1/128'); // 3 dashes in cup (0.0078125)
+    expect(toFraction(1 / 384)).toBe('1/384'); // 1 dash in cup (0.002604)
+    expect(toFraction(0.001)).toBe('1/1000'); // 1 mm in meter or 1 g in kg
+    expect(toFraction(0.000125)).toBe('1/8000'); // 1 Mbps in GB/s
+    expect(toFraction(1 / 3600)).toBe('1/3600'); // 1 sec in hr
+    expect(toFraction(1 / 5280)).toBe('1/5280'); // 1 ft in mi
+    expect(toFraction(0.00123456)).toBe('0'); // unresolvable small decimal
+  });
+});
+
+describe('toTapeMeasureFraction', () => {
+  test('snaps decimal values to nearest 1/16th or landmark 8th with +/- 1/32 offset', () => {
+    expect(toTapeMeasureFraction(1 / 25.4)).toBe('1/32'); // 1 mm in inches
+    expect(toTapeMeasureFraction(35 / 25.4)).toBe('1 3/8'); // 35 mm in inches
+    expect(toTapeMeasureFraction(1 / 0.3048)).toBe('3 1/4 +1/32'); // 1 m in ft (3.28084 ft)
+    expect(toTapeMeasureFraction(3.40625)).toBe('3 3/8 +1/32'); // 3 + 13/32
+    expect(toTapeMeasureFraction(3.34375)).toBe('3 3/8 -1/32'); // 3 + 11/32
+    expect(toTapeMeasureFraction(3.96875)).toBe('4 -1/32'); // 3 + 31/32
+    expect(toTapeMeasureFraction(0.03125)).toBe('1/32');
+    expect(toTapeMeasureFraction(0.0625)).toBe('1/16');
+    expect(toTapeMeasureFraction(0.125)).toBe('1/8');
+  });
+
+  test('simplifies fractions to lowest terms (halves, quarters, eighths, sixteenths)', () => {
+    expect(toTapeMeasureFraction(0.5)).toBe('1/2');
+    expect(toTapeMeasureFraction(0.25)).toBe('1/4');
+    expect(toTapeMeasureFraction(0.75)).toBe('3/4');
+    expect(toTapeMeasureFraction(0.375)).toBe('3/8');
+    expect(toTapeMeasureFraction(0.625)).toBe('5/8');
+    expect(toTapeMeasureFraction(0.3125)).toBe('5/16');
+  });
+
+  test('handles zero, whole numbers, and negatives correctly', () => {
+    expect(toTapeMeasureFraction(0)).toBe('0');
+    expect(toTapeMeasureFraction(5)).toBe('5');
+    expect(toTapeMeasureFraction(-1.5)).toBe('-1 1/2');
+    expect(toTapeMeasureFraction(0.01)).toBe('0');
+    expect(toTapeMeasureFraction(0.999)).toBe('1');
   });
 });
 
@@ -248,6 +284,16 @@ describe('parseFractionString', () => {
     expect(parseFractionString('-1 ⅜')).toBe(-1.375);
     expect(parseFractionString('-½')).toBe(-0.5);
     expect(parseFractionString('1 3⁄8')).toBe(1.375); // Unicode fraction slash U+2044
+  });
+
+  test('parses tape measure landmark fractions with +/- 1/32 offsets', () => {
+    expect(parseFractionString('3 3/8 +1/32')).toBe(3.40625);
+    expect(parseFractionString('3 3/8 -1/32')).toBe(3.34375);
+    expect(parseFractionString('3 3/8 + 1/32')).toBe(3.40625);
+    expect(parseFractionString('3 ⅜ +1/32')).toBe(3.40625);
+    expect(parseFractionString('3 ⅜ -1/32')).toBe(3.34375);
+    expect(parseFractionString('1/8 +1/32')).toBe(0.15625);
+    expect(parseFractionString('4 -1/32')).toBe(3.96875);
   });
 
   test('handles empty, null, undefined, and non-numeric edge cases gracefully', () => {
@@ -324,6 +370,9 @@ describe('formatNumber precision modes', () => {
     expect(formatNumber(1.375, 'fraction')).toBe('1 3/8');
     expect(formatNumber(0.5, 'fraction')).toBe('1/2');
     expect(formatNumber(2, 'fraction')).toBe('2');
+    expect(formatNumber(0.000125, 'fraction')).toBe('1/8000'); // 1 Mbps in GB/s
+    expect(formatNumber(1 / 12, 'fraction')).toBe('1/12'); // 1 in in ft
+    expect(formatNumber(1 / 60, 'fraction')).toBe('1/60'); // 1 s in min
   });
 
   test('formats numbers using improper fraction mode', () => {
@@ -331,6 +380,21 @@ describe('formatNumber precision modes', () => {
     expect(formatNumber(0.5, 'fraction_improper')).toBe('1/2');
     expect(formatNumber(2.5, 'fraction_improper')).toBe('5/2');
     expect(formatNumber(2, 'fraction_improper')).toBe('2');
+    expect(formatNumber(0.000125, 'fraction_improper')).toBe('1/8000'); // 1 Mbps in GB/s
+    expect(formatNumber(3 / 8000, 'fraction_improper')).toBe('3/8000'); // 3 Mbps in GB/s
+    expect(formatNumber(1 / 12, 'fraction_improper')).toBe('1/12'); // 1 in in ft
+    expect(formatNumber(1 / 3600, 'fraction_improper')).toBe('1/3600'); // 1 s in hr
+  });
+
+  test('formats numbers using tape measure mode with landmark 16ths and +/- 1/32 offsets', () => {
+    expect(formatNumber(1.375, 'fraction_tape')).toBe('1 3/8');
+    expect(formatNumber(1.37795, 'fraction_tape')).toBe('1 3/8'); // 35mm in inches snaps to 1 3/8
+    expect(formatNumber(3.40625, 'fraction_tape')).toBe('3 3/8 +1/32'); // 3 + 13/32
+    expect(formatNumber(3.34375, 'fraction_tape')).toBe('3 3/8 -1/32'); // 3 + 11/32
+    expect(formatNumber(1 / 25.4, 'fraction_tape')).toBe('1/32'); // 1 mm to in on tape
+    expect(formatNumber(1 / 25.4, 'fraction')).toBe('5/127'); // 1 mm to in exact algebraic fraction
+    expect(formatNumber(1.375, 'tape')).toBe('1 3/8'); // legacy alias
+    expect(formatNumber(1.375, 'fraction_16')).toBe('1 3/8'); // legacy alias
   });
 
   test('formats numbers using exact full precision mode', () => {

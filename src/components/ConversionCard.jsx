@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
 import { Icon } from './Icons';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+import { Fraction } from './Fraction';
 import {
   getUnitsForCategory,
   getUnit,
@@ -9,20 +9,20 @@ import {
   convertUnits,
   filterAndSortUnits,
   formatDisplayNumber,
-  formatFractionForDisplay,
-  formatCulinaryFraction,
   parseFractionString,
   isFractionLike,
-  getCookingCompoundMeasure,
+  getKitchenDrawerBreakdown,
+  getSmartEquationDisplay,
 } from '../engine/conversions';
 
 const PRECISION_OPTIONS = [
-  { id: 'auto', label: 'Auto (Smart)', btnLabel: 'Auto' },
-  { id: '2', label: '2 Decimals', btnLabel: '2 Decimals' },
-  { id: '4', label: '4 Decimals', btnLabel: '4 Decimals' },
-  { id: 'exact', label: 'Exact', btnLabel: 'Exact' },
-  { id: 'fraction', label: 'Fractions (Mixed: 1 ⅜)', btnLabel: 'Fractions' },
-  { id: 'fraction_improper', label: 'Fractions (Improper: 11/8)', btnLabel: 'Improper Frac' },
+  { id: 'auto', label: 'Auto (Smart)', btnLabel: 'Auto', icon: 'Sparkles' },
+  { id: '2', label: '2 Decimals', btnLabel: '2 Decimals', icon: 'DecimalTwo' },
+  { id: '4', label: '4 Decimals', btnLabel: '4 Decimals', icon: 'DecimalFour' },
+  { id: 'exact', label: 'Exact', btnLabel: 'Exact', icon: 'Target' },
+  { id: 'fraction_tape', label: 'Tape Measure (1/16″ ± 1/32″)', btnLabel: 'Tape Measure', icon: 'Ruler' },
+  { id: 'fraction', label: 'Fractions (Mixed: 1 ⅜)', btnLabel: 'Fractions', icon: 'Fraction' },
+  { id: 'fraction_improper', label: 'Fractions (Improper: 11/8)', btnLabel: 'Improper Frac', icon: 'Divide' },
 ];
 
 export function ConversionCard({
@@ -41,6 +41,7 @@ export function ConversionCard({
   onPrecisionChange,
   onToggleFavorite,
   onCopy,
+  onShare,
 }) {
   const units = getUnitsForCategory(categoryId);
   const fromUnit = getUnit(categoryId, fromUnitId) || units[0];
@@ -56,8 +57,7 @@ export function ConversionCard({
   const [copiedFormula, setCopiedFormula] = useState(false);
   const [copiedInstruction, setCopiedInstruction] = useState(false);
   const [copiedKitchen, setCopiedKitchen] = useState(false);
-  const [kitchenMode, setKitchenMode] = useLocalStorage('ct-kitchen-mode', true);
-  const isKitchenActive = categoryId === 'cooking' && kitchenMode;
+  const [copiedShare, setCopiedShare] = useState(false);
 
   const fromDropdownRef = useRef(null);
   const toDropdownRef = useRef(null);
@@ -72,6 +72,7 @@ export function ConversionCard({
   const copiedFormulaTimeoutRef = useRef(null);
   const copiedInstructionTimeoutRef = useRef(null);
   const copiedKitchenTimeoutRef = useRef(null);
+  const copiedShareTimeoutRef = useRef(null);
 
   const formulaDetails = getFormulaDetails(categoryId, fromUnit.id, toUnit.id);
   const formula = formulaDetails.equation || getFormulaString(categoryId, fromUnit.id, toUnit.id);
@@ -82,6 +83,7 @@ export function ConversionCard({
     setCopiedFormula(false);
     setCopiedInstruction(false);
     setCopiedKitchen(false);
+    setCopiedShare(false);
   }, [fromValue, toValue, fromUnitId, toUnitId]);
 
   // Clean up timers and running animations on unmount
@@ -91,6 +93,7 @@ export function ConversionCard({
       if (copiedFormulaTimeoutRef.current) clearTimeout(copiedFormulaTimeoutRef.current);
       if (copiedInstructionTimeoutRef.current) clearTimeout(copiedInstructionTimeoutRef.current);
       if (copiedKitchenTimeoutRef.current) clearTimeout(copiedKitchenTimeoutRef.current);
+      if (copiedShareTimeoutRef.current) clearTimeout(copiedShareTimeoutRef.current);
       activeAnimationsRef.current.forEach((a) => {
         try {
           a.cancel();
@@ -105,17 +108,48 @@ export function ConversionCard({
   const displayFromValue = formatDisplayNumber(fromValue || '0');
   const displayToValue = formatDisplayNumber(toValue || '0');
 
-  const handleCopyNumber = (e) => {
+  const tempVibe = useMemo(() => {
+    if (categoryId !== 'temperature' || !fromValue) return null;
+    const num = parseFloat(fromValue);
+    if (isNaN(num)) return null;
+    if ((fromUnitId === 'k' && num <= 5) || (fromUnitId === 'c' && num <= -268) || (fromUnitId === 'f' && num <= -450)) {
+      return 'ct-temp-absolute-zero';
+    }
+    if ((fromUnitId === 'c' && num >= 100) || (fromUnitId === 'f' && num >= 212) || (fromUnitId === 'k' && num >= 373.15)) {
+      return 'ct-temp-boiling';
+    }
+    return null;
+  }, [categoryId, fromValue, fromUnitId]);
+
+  // Hyperspace / Supersonic speed detection (> Mach 1 or > Speed of Light)
+  const isHyperspace = useMemo(() => {
+    if (categoryId !== 'speed' || !fromValue) return false;
+    const num = parseFloat(fromValue);
+    if (isNaN(num) || num <= 0) return false;
+    const factor = fromUnit?.factor || 1;
+    const speedInMps = num * factor;
+    return speedInMps >= 340.29; // >= Mach 1 standard sea level (340.29 m/s)
+  }, [categoryId, fromValue, fromUnit]);
+
+  const isFasterThanLight = useMemo(() => {
+    if (categoryId !== 'speed' || !fromValue) return false;
+    const num = parseFloat(fromValue);
+    if (isNaN(num) || num <= 0) return false;
+    const factor = fromUnit?.factor || 1;
+    const speedInMps = num * factor;
+    return speedInMps >= 299792458; // >= Speed of light c (299,792,458 m/s)
+  }, [categoryId, fromValue, fromUnit]);
+
+  const handleShareClick = (e) => {
     if (e) {
       e.stopPropagation();
       e.preventDefault();
     }
-    const valToCopy = displayToValue || '0';
-    onCopy(valToCopy, `${valToCopy} copied to clipboard!`);
-    setCopiedNumber(true);
-    if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
-    copiedTimeoutRef.current = setTimeout(() => {
-      setCopiedNumber(false);
+    if (onShare) onShare();
+    setCopiedShare(true);
+    if (copiedShareTimeoutRef.current) clearTimeout(copiedShareTimeoutRef.current);
+    copiedShareTimeoutRef.current = setTimeout(() => {
+      setCopiedShare(false);
     }, 1600);
   };
 
@@ -410,7 +444,11 @@ export function ConversionCard({
   const isFractionMode =
     precision === 'fraction' ||
     precision === 'fraction_improper' ||
-    (precision === 'auto' && categoryId === 'cooking');
+    precision === 'fraction_tape' ||
+    precision === 'tape' ||
+    precision === 'fraction_16' ||
+    precision === 'fraction_32' ||
+    precision === 'fraction_64';
 
   const rawTargetValue = (() => {
     if (!fromValue) return null;
@@ -421,142 +459,13 @@ export function ConversionCard({
     return convertUnits(num, categoryId, fromUnit.id, toUnit.id);
   })();
 
-  const kitchenCompound = getCookingCompoundMeasure(rawTargetValue, toUnit.id, categoryId);
-
-  const smartKitchenMeasure = (() => {
-    if (categoryId !== 'cooking' || !toValue || toValue === '') return null;
-    if (kitchenCompound) return formatFractionForDisplay(kitchenCompound);
-
-    const targetNum = rawTargetValue !== null && !isNaN(rawTargetValue)
-      ? rawTargetValue
-      : (typeof toValue === 'string' && isFractionLike(toValue)
-          ? parseFractionString(toValue)
-          : parseFloat(toValue));
-
-    if (isNaN(targetNum) || targetNum <= 0) {
-      return targetNum === 0 ? `0 ${toUnit.symbol}` : null;
-    }
-
-    const fracStr = formatCulinaryFraction(targetNum);
-    const dispVal = fracStr ? formatFractionForDisplay(fracStr) : formatDisplayNumber(toValue);
-
-    if (toUnit.id === 'cup_us') {
-      if (Math.abs(targetNum - 1) < 0.05) return '1 cup';
-      if (targetNum < 1) return `${dispVal} cup`;
-      return `${dispVal} cups`;
-    }
-    if (toUnit.id === 'tbsp_us') {
-      if (Math.abs(targetNum - 16) < 0.1) return '16 tbsp (1 cup)';
-      if (Math.abs(targetNum - 12) < 0.1) return '12 tbsp (¾ cup)';
-      if (Math.abs(targetNum - 8) < 0.1) return '8 tbsp (½ cup)';
-      if (Math.abs(targetNum - 4) < 0.1) return '4 tbsp (¼ cup)';
-      if (Math.abs(targetNum - 2) < 0.1) return '2 tbsp (⅛ cup)';
-      if (Math.abs(targetNum - 1) < 0.1) return '1 tbsp';
-      return `${dispVal} tbsp`;
-    }
-    if (toUnit.id === 'tsp_us') {
-      if (Math.abs(targetNum - 3) < 0.1) return '3 tsp (1 tbsp)';
-      if (Math.abs(targetNum - 6) < 0.1) return '6 tsp (2 tbsp)';
-      if (Math.abs(targetNum - 1) < 0.1) return '1 tsp';
-      return `${dispVal} tsp`;
-    }
-    if (toUnit.id === 'stick_butter') {
-      if (Math.abs(targetNum - 1) < 0.1) return '1 stick of butter (½ cup)';
-      if (Math.abs(targetNum - 2) < 0.1) return '2 sticks of butter (1 cup)';
-      if (Math.abs(targetNum - 0.5) < 0.1) return '½ stick of butter (¼ cup)';
-      if (Math.abs(targetNum - 4) < 0.1) return '4 sticks of butter (1 lb / 2 cups)';
-      if (Math.abs(targetNum - 0.25) < 0.1) return '¼ stick of butter (2 tbsp)';
-      return targetNum === 1 ? '1 stick of butter' : `${dispVal} sticks of butter`;
-    }
-    if (toUnit.id === 'floz_us') {
-      if (Math.abs(targetNum - 8) < 0.1) return '8 fl oz (1 cup)';
-      if (Math.abs(targetNum - 4) < 0.1) return '4 fl oz (½ cup)';
-      if (Math.abs(targetNum - 2) < 0.1) return '2 fl oz (¼ cup / 4 tbsp)';
-      if (Math.abs(targetNum - 1) < 0.1) return '1 fl oz (2 tbsp)';
-      return `${dispVal} fl oz`;
-    }
-    if (toUnit.id === 'pinch') {
-      if (Math.abs(targetNum - 8) < 0.1) return '8 pinches (1 tsp)';
-      if (Math.abs(targetNum - 4) < 0.1) return '4 pinches (½ tsp)';
-      if (Math.abs(targetNum - 2) < 0.1) return '2 pinches (¼ tsp)';
-      if (Math.abs(targetNum - 1) < 0.1) return '1 pinch (⅛ tsp)';
-      return targetNum === 1 ? '1 pinch' : `${dispVal} pinches`;
-    }
-    if (toUnit.id === 'dash') {
-      if (Math.abs(targetNum - 1) < 0.1) return '1 dash (approx. ⅛ tsp)';
-      if (Math.abs(targetNum - 2) < 0.1) return '2 dashes (¼ tsp)';
-      return targetNum === 1 ? '1 dash' : `${dispVal} dashes`;
-    }
-    if (toUnit.id === 'drop') {
-      if (Math.abs(targetNum - 60) < 3) return 'approx. 60 drops (1 tsp)';
-      return targetNum === 1 ? '1 drop' : `${dispVal} drops`;
-    }
-    return `${dispVal} ${toUnit.symbol}`;
-  })();
-
-  const kitchenDisplayText = kitchenCompound
-    ? formatFractionForDisplay(kitchenCompound)
-    : (formatDisplayNumber(toValue || '0') || '0');
-
-  const kitchenSubtext = (() => {
-    if (kitchenCompound) {
-      if (!toValue || toValue === kitchenDisplayText) return null;
-      // If toValue is an exact fraction (e.g. "13/16")
-      if (isFractionLike(toValue)) {
-        return `(${formatDisplayNumber(toValue)} ${toUnit.symbol})`;
-      }
-      // If toValue is numeric decimal (e.g. "0.1437")
-      const num = parseFloat(toValue);
-      if (!isNaN(num)) {
-        const rounded = parseFloat(num.toFixed(2)).toString();
-        const isSubCup = toUnit.id === 'cup_us' && num < 0.25;
-        return isSubCup
-          ? `≈ ${rounded} ${toUnit.symbol} (spoon measure)`
-          : `≈ ${rounded} ${toUnit.symbol}`;
-      }
-      return `(${formatDisplayNumber(toValue)} ${toUnit.symbol})`;
-    }
-
-    // Contextual equivalence subtext when not compound
-    const targetNum = rawTargetValue !== null && !isNaN(rawTargetValue)
-      ? rawTargetValue
-      : (typeof toValue === 'string' && isFractionLike(toValue)
-          ? parseFractionString(toValue)
-          : parseFloat(toValue));
-
-    if (isNaN(targetNum)) return null;
-
-    if (toUnit.id === 'tbsp_us') {
-      if (Math.abs(targetNum - 16) < 0.1) return '(1 cup)';
-      if (Math.abs(targetNum - 12) < 0.1) return '(¾ cup)';
-      if (Math.abs(targetNum - 8) < 0.1) return '(½ cup)';
-      if (Math.abs(targetNum - 4) < 0.1) return '(¼ cup)';
-      if (Math.abs(targetNum - 2) < 0.1) return '(⅛ cup)';
-    }
-    if (toUnit.id === 'stick_butter') {
-      if (Math.abs(targetNum - 1) < 0.1) return '(½ cup / 8 tbsp)';
-      if (Math.abs(targetNum - 2) < 0.1) return '(1 cup / 16 tbsp)';
-      if (Math.abs(targetNum - 0.5) < 0.1) return '(¼ cup / 4 tbsp)';
-      if (Math.abs(targetNum - 4) < 0.1) return '(1 lb / 2 cups)';
-    }
-    if (toUnit.id === 'tsp_us') {
-      if (Math.abs(targetNum - 3) < 0.1) return '(1 tbsp)';
-      if (Math.abs(targetNum - 6) < 0.1) return '(2 tbsp)';
-    }
-    if (toUnit.id === 'floz_us') {
-      if (Math.abs(targetNum - 8) < 0.1) return '(1 cup)';
-      if (Math.abs(targetNum - 4) < 0.1) return '(½ cup)';
-      if (Math.abs(targetNum - 2) < 0.1) return '(¼ cup / 4 tbsp)';
-      if (Math.abs(targetNum - 1) < 0.1) return '(2 tbsp)';
-    }
-    return null;
-  })();
+  const kitchenDrawer = categoryId === 'cooking'
+    ? getKitchenDrawerBreakdown(fromValue, fromUnit.id)
+    : null;
 
   const handleCopyKitchenOutput = () => {
-    if (!kitchenDisplayText) return;
-    const textToCopy = smartKitchenMeasure || (kitchenCompound
-      ? kitchenDisplayText
-      : `${kitchenDisplayText} ${toUnit.symbol}`);
+    if (!kitchenDrawer || !kitchenDrawer.primary) return;
+    const textToCopy = kitchenDrawer.primary;
     onCopy(textToCopy, `${textToCopy} copied to clipboard!`);
     setCopiedKitchen(true);
     if (copiedKitchenTimeoutRef.current) clearTimeout(copiedKitchenTimeoutRef.current);
@@ -565,19 +474,35 @@ export function ConversionCard({
     }, 1600);
   };
 
-  const handleCopyKitchen = () => {
-    if (!smartKitchenMeasure) return;
-    onCopy(smartKitchenMeasure, `${smartKitchenMeasure} copied to clipboard!`);
-    setCopiedKitchen(true);
-    if (copiedKitchenTimeoutRef.current) clearTimeout(copiedKitchenTimeoutRef.current);
-    copiedKitchenTimeoutRef.current = setTimeout(() => {
-      setCopiedKitchen(false);
+  const currentPrecisionOption =
+    PRECISION_OPTIONS.find((opt) => opt.id === precision) ||
+    (precision === 'fraction_tape' || precision === 'tape' || precision === 'fraction_16' || precision === 'fraction_32' || precision === 'fraction_64'
+      ? PRECISION_OPTIONS.find((opt) => opt.id === 'fraction_tape')
+      : PRECISION_OPTIONS[0]);
+
+  const smartEquation = precision === 'auto' && categoryId !== 'cooking'
+    ? getSmartEquationDisplay(categoryId, fromUnit, toUnit, fromValue, rawTargetValue, displayToValue)
+    : { value: displayToValue, unit: toUnit.symbol, subtext: null, isSmart: false };
+
+  const handleCopyNumber = (e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    const valToCopy = smartEquation.value || displayToValue || '0';
+    const copyLabel = smartEquation.unit ? `${valToCopy} ${smartEquation.unit}` : valToCopy;
+    onCopy(valToCopy, `${copyLabel} copied to clipboard!`);
+    setCopiedNumber(true);
+    if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
+    copiedTimeoutRef.current = setTimeout(() => {
+      setCopiedNumber(false);
     }, 1600);
   };
 
   // Calculate if the current conversion result is an approximation
   const isApproximate = (() => {
     if (!fromValue || !toValue || rawTargetValue === null) return false;
+    if (smartEquation.isSmart && smartEquation.subtext) return true;
     if (isFractionMode || isFractionLike(toValue)) {
       const fracVal = parseFractionString(toValue);
       return Math.abs(fracVal - rawTargetValue) > 1e-4;
@@ -592,7 +517,7 @@ export function ConversionCard({
   // Formatted equation strings for copy footer and formula
   const formulaEquation = formulaDetails.equation || formula || 'Direct calculation';
   const formulaInstruction = formulaDetails.instruction || '';
-  const symbolText = `${displayFromValue} ${fromUnit.symbol} ${relOperator} ${displayToValue} ${toUnit.symbol}`;
+  const symbolText = `${displayFromValue} ${fromUnit.symbol} ${relOperator} ${smartEquation.value}${smartEquation.unit ? ' ' + smartEquation.unit : ''}`;
 
   // Helper to colorize formula equation components cleanly
   const renderFormulaContent = (text, fromSym) => {
@@ -781,100 +706,109 @@ export function ConversionCard({
       {/* Card Header Actions */}
       <div className="ct-card-header">
         <div className="ct-card-header-left">
-          <div className="ct-precision-wrap" ref={precisionRef}>
-            <label htmlFor="ct-precision" className="ct-sr-only">
-              Decimal Precision
-            </label>
-            <select
-              id="ct-precision"
-              className="ct-sr-only"
-              value={precision}
-              onChange={(e) => onPrecisionChange(e.target.value)}
-              aria-label="Decimal Precision and Formatting"
-              tabIndex={-1}
-            >
-              {PRECISION_OPTIONS.map((opt) => (
-                <option key={opt.id} value={opt.id}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-
-            <button
-              type="button"
-              className={`ct-precision-btn ${showPrecisionDropdown ? 'active' : ''}`}
-              onClick={() => {
-                setShowPrecisionDropdown(!showPrecisionDropdown);
-                setShowFromDropdown(false);
-                setShowToDropdown(false);
-              }}
-              aria-haspopup="listbox"
-              aria-expanded={showPrecisionDropdown}
-              title="Select formatting and decimal precision"
-            >
-              <span className="ct-precision-btn-prefix">Precision:</span>
-              <span className="ct-precision-btn-val">
-                {PRECISION_OPTIONS.find((opt) => opt.id === precision)?.btnLabel || 'Auto'}
-              </span>
-              <Icon
-                name="ChevronDown"
-                size={14}
-                className={`ct-dropdown-chevron ${showPrecisionDropdown ? 'rotated' : ''}`}
-              />
-            </button>
-
-            {showPrecisionDropdown && (
-              <div
-                className="ct-dropdown-menu ct-precision-dropdown"
-                role="listbox"
-                aria-label="Precision options"
+          {categoryId === 'cooking' ? (
+            <div className="ct-kitchen-header-badge" title="Kitchen Mode: Physical drawer tools to measure recipe quantities">
+              <Icon name="ChefHat" size={16} />
+              <span className="ct-kitchen-header-badge-text">Kitchen Drawer Mode</span>
+            </div>
+          ) : (
+            <div className="ct-precision-wrap" ref={precisionRef}>
+              <label htmlFor="ct-precision" className="ct-sr-only">
+                Decimal Precision
+              </label>
+              <select
+                id="ct-precision"
+                className="ct-sr-only"
+                value={precision}
+                onChange={(e) => onPrecisionChange(e.target.value)}
+                aria-label="Decimal Precision and Formatting"
+                tabIndex={-1}
               >
-                {PRECISION_OPTIONS.map((opt) => {
-                  const isSelected = opt.id === precision;
-                  return (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      role="option"
-                      aria-selected={isSelected}
-                      className={`ct-dropdown-item ct-precision-item ${isSelected ? 'selected' : ''}`}
-                      onClick={() => {
-                        onPrecisionChange(opt.id);
-                        setShowPrecisionDropdown(false);
-                      }}
-                    >
-                      <span className="ct-precision-item-label">{opt.label}</span>
-                      {isSelected && (
-                        <span className="ct-precision-item-check" aria-hidden="true">
-                          <Icon name="Check" size={14} />
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                {PRECISION_OPTIONS.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
 
-          {categoryId === 'cooking' && (
-            <button
-              type="button"
-              className={`ct-kitchen-mode-toggle ${kitchenMode ? 'active' : ''}`}
-              onClick={() => setKitchenMode(!kitchenMode)}
-              title={kitchenMode ? 'Kitchen View active — click to switch to Standard View' : 'Standard View active — click to switch to Kitchen View'}
-              aria-label="Toggle Kitchen Mode"
-              aria-pressed={kitchenMode}
-            >
-              <Icon name="ChefHat" size={15} />
-              <span className="ct-kitchen-toggle-text">Kitchen View</span>
-              <span className={`ct-kitchen-toggle-pill ${kitchenMode ? 'on' : 'off'}`}>
-                {kitchenMode ? 'ON' : 'OFF'}
-              </span>
-            </button>
+              <button
+                type="button"
+                className={`ct-precision-btn ${showPrecisionDropdown ? 'active' : ''}`}
+                onClick={() => {
+                  setShowPrecisionDropdown(!showPrecisionDropdown);
+                  setShowFromDropdown(false);
+                  setShowToDropdown(false);
+                }}
+                aria-haspopup="listbox"
+                aria-expanded={showPrecisionDropdown}
+                title="Select formatting and decimal precision"
+              >
+                <span className="ct-precision-btn-icon" aria-hidden="true">
+                  <Icon name={currentPrecisionOption?.icon || 'Sparkles'} size={14} />
+                </span>
+                <span className="ct-precision-btn-prefix">Precision:</span>
+                <span className="ct-precision-btn-val">
+                  {currentPrecisionOption?.btnLabel || 'Auto'}
+                </span>
+                <Icon
+                  name="ChevronDown"
+                  size={14}
+                  className={`ct-dropdown-chevron ${showPrecisionDropdown ? 'rotated' : ''}`}
+                />
+              </button>
+
+              {showPrecisionDropdown && (
+                <div
+                  className="ct-dropdown-menu ct-precision-dropdown"
+                  role="listbox"
+                  aria-label="Precision options"
+                >
+                  {PRECISION_OPTIONS.map((opt) => {
+                    const isSelected =
+                      opt.id === precision ||
+                      (opt.id === 'fraction_tape' &&
+                        (precision === 'tape' || precision === 'fraction_16' || precision === 'fraction_32' || precision === 'fraction_64'));
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        role="option"
+                        aria-selected={isSelected}
+                        className={`ct-dropdown-item ct-precision-item ${isSelected ? 'selected' : ''}`}
+                        onClick={() => {
+                          onPrecisionChange(opt.id);
+                          setShowPrecisionDropdown(false);
+                        }}
+                      >
+                        <span className="ct-precision-item-icon" aria-hidden="true">
+                          <Icon name={opt.icon} size={15} />
+                        </span>
+                        <span className="ct-precision-item-label">{opt.label}</span>
+                        {isSelected && (
+                          <span className="ct-precision-item-check" aria-hidden="true">
+                            <Icon name="Check" size={14} />
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           )}
         </div>
 
         <div className="ct-card-header-right">
+          <button
+            type="button"
+            className={`ct-btn-icon ${copiedShare ? 'copied' : ''}`}
+            onClick={handleShareClick}
+            title={copiedShare ? 'Link copied to clipboard!' : 'Share this conversion'}
+            aria-label="Share conversion link"
+          >
+            <Icon name={copiedShare ? 'Check' : 'Share'} size={18} />
+          </button>
+
           <button
             type="button"
             className={`ct-btn-icon ${isFavorite ? 'active' : ''}`}
@@ -882,11 +816,13 @@ export function ConversionCard({
             title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
             aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
           >
-            <Icon
-              name="Star"
-              size={18}
-              fill={isFavorite ? 'currentColor' : 'none'}
-            />
+            <span key={isFavorite ? 'fav' : 'unfav'} className={isFavorite ? 'ct-star-burst' : ''}>
+              <Icon
+                name="Star"
+                size={18}
+                fill={isFavorite ? 'currentColor' : 'none'}
+              />
+            </span>
           </button>
         </div>
       </div>
@@ -898,6 +834,11 @@ export function ConversionCard({
           ref={fromBlockRef}
           className={`ct-unit-block ct-unit-block-from ${isSwapping ? 'ct-is-swapping' : ''}`}
         >
+          <div className="ct-unit-label-wrap">
+            <label htmlFor="fromInput" className="ct-unit-header-label">
+              {fromUnit.name}
+            </label>
+          </div>
           <div className={`ct-integrated-input-box ct-input-box-from ${showFromDropdown ? 'dropdown-active' : ''}`}>
             <div className="ct-input-inner">
               <input
@@ -1006,62 +947,86 @@ export function ConversionCard({
           </div>
         </div>
 
-        {/* CENTER SWAP BUTTON */}
-        <div className="ct-swap-column">
-          <button
-            ref={swapBtnRef}
-            type="button"
-            className={`ct-swap-btn ${isSwapping ? 'ct-swap-active' : ''}`}
-            onClick={handleSwapClick}
-            title="Swap units (Alt + S)"
-            aria-label="Swap from and to units"
-          >
-            <Icon
-              name="Swap"
-              size={20}
-              className={isSwapping && typeof swapBtnRef.current?.animate !== 'function' ? 'ct-swap-icon-spin' : ''}
-            />
-          </button>
-        </div>
+        {/* CENTER SWAP BUTTON / KITCHEN TRANSFER PILL */}
+        {categoryId === 'cooking' ? (
+          <div className="ct-swap-column ct-kitchen-transfer-column" aria-hidden="true">
+            <div className="ct-kitchen-arrow-pill" title="Translates recipe quantity to physical kitchen tools">
+              <Icon name="ArrowRight" size={18} />
+            </div>
+          </div>
+        ) : (
+          <div className="ct-swap-column">
+            <button
+              ref={swapBtnRef}
+              type="button"
+              className={`ct-swap-btn ${isSwapping ? 'ct-swap-active' : ''} ${isHyperspace ? 'ct-swap-hyperspace' : ''} ${isFasterThanLight ? 'ct-swap-ftl' : ''}`}
+              onClick={handleSwapClick}
+              title={
+                isFasterThanLight
+                  ? 'Faster-than-Light speed! Hyperspace engaged. Swap units (Alt + S)'
+                  : isHyperspace
+                  ? 'Supersonic (Mach 1+) speed! Hyperspace trail active. Swap units (Alt + S)'
+                  : 'Swap units (Alt + S)'
+              }
+              aria-label="Swap from and to units"
+            >
+              <Icon
+                name="Swap"
+                size={20}
+                className={isSwapping && typeof swapBtnRef.current?.animate !== 'function' ? 'ct-swap-icon-spin' : ''}
+              />
+              {isHyperspace && (
+                <span className="ct-hyperspace-trail" aria-hidden="true">
+                  <span className="ct-hyperspace-line ct-hl-1" />
+                  <span className="ct-hyperspace-line ct-hl-2" />
+                  <span className="ct-hyperspace-line ct-hl-3" />
+                </span>
+              )}
+            </button>
+          </div>
+        )}
 
-        {/* SECOND UNIT BLOCK (TO - EMERALD) */}
+        {/* SECOND UNIT BLOCK (TO - EMERALD / KITCHEN OUTPUT) */}
         <div
           ref={toBlockRef}
           className={`ct-unit-block ct-unit-block-to ${isSwapping ? 'ct-is-swapping' : ''}`}
         >
-          <div className={`ct-integrated-input-box ct-input-box-to ${showToDropdown ? 'dropdown-active' : ''} ${isKitchenActive ? 'ct-kitchen-box' : ''}`}>
-            {isKitchenActive ? (
-              <div
-                className="ct-kitchen-output-box"
-                role="button"
-                tabIndex={0}
-                onClick={handleCopyKitchenOutput}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleCopyKitchenOutput();
-                  }
-                }}
-                title={copiedKitchen ? 'Copied to clipboard!' : `Click to copy: ${kitchenDisplayText}`}
-                aria-label={`Converted value in ${toUnit.plural || toUnit.name}: ${kitchenDisplayText}. Click to copy.`}
-              >
-                <div className="ct-kitchen-output-content">
-                  <span
-                    className={`ct-kitchen-output-text ${getNumberFontSizeClass(kitchenDisplayText)} ${toValue === '' ? 'ct-kitchen-placeholder' : ''}`}
-                  >
-                    {kitchenDisplayText}
-                  </span>
-                  {kitchenSubtext && (
-                    <span className="ct-kitchen-output-sub" title="Target unit context">
-                      {kitchenSubtext}
-                    </span>
-                  )}
-                </div>
-                <span className={`ct-kitchen-copy-indicator ${copiedKitchen ? 'copied' : ''}`} aria-hidden="true">
-                  <Icon name={copiedKitchen ? 'Check' : 'Copy'} size={15} />
+          <div className="ct-unit-label-wrap">
+            {categoryId === 'cooking' ? (
+              <span className="ct-unit-header-label">Kitchen Tools</span>
+            ) : (
+              <label htmlFor="toInput" className="ct-unit-header-label">
+                {toUnit.name}
+              </label>
+            )}
+          </div>
+          {categoryId === 'cooking' ? (
+            <div
+              className="ct-integrated-input-box ct-kitchen-output-box"
+              role="button"
+              tabIndex={0}
+              onClick={handleCopyKitchenOutput}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleCopyKitchenOutput();
+                }
+              }}
+              title={copiedKitchen ? 'Copied to clipboard!' : `Click to copy: ${kitchenDrawer?.primary || '0'}`}
+              aria-label={`Kitchen measuring tools: ${kitchenDrawer?.primary || '0'}. Click to copy.`}
+            >
+              <div className="ct-kitchen-output-content">
+                <span className="ct-kitchen-output-caption">Drawer Tools to Pull</span>
+                <span className={`ct-kitchen-output-text ${getNumberFontSizeClass(kitchenDrawer?.primary || '0')}`}>
+                  {kitchenDrawer?.primary || '0'}
                 </span>
               </div>
-            ) : (
+              <span className={`ct-kitchen-copy-indicator ${copiedKitchen ? 'copied' : ''}`} aria-hidden="true">
+                <Icon name={copiedKitchen ? 'Check' : 'Copy'} size={16} />
+              </span>
+            </div>
+          ) : (
+            <div className={`ct-integrated-input-box ct-input-box-to ${showToDropdown ? 'dropdown-active' : ''}`}>
               <div className="ct-input-inner">
                 <input
                   id="toInput"
@@ -1100,85 +1065,178 @@ export function ConversionCard({
                   </button>
                 )}
               </div>
-            )}
 
-            <div className="ct-integrated-divider" aria-hidden="true" />
+              <div className="ct-integrated-divider" aria-hidden="true" />
 
-            <div className="ct-integrated-unit-wrap" ref={toDropdownRef}>
-              <button
-                type="button"
-                className="ct-integrated-unit-btn"
-                onClick={() => {
-                  setShowToDropdown(!showToDropdown);
-                  setShowFromDropdown(false);
-                }}
-                aria-haspopup="listbox"
-                aria-expanded={showToDropdown}
-                title={`Change unit to ${toUnit.name}`}
-              >
-                <span className="ct-integrated-unit-symbol ct-unit-sym-to">{toUnit.symbol}</span>
-                <Icon name="ChevronDown" size={16} strokeWidth={2.5} className={`ct-dropdown-chevron ${showToDropdown ? 'rotated' : ''}`} />
-              </button>
+              <div className="ct-integrated-unit-wrap" ref={toDropdownRef}>
+                <button
+                  type="button"
+                  className="ct-integrated-unit-btn"
+                  onClick={() => {
+                    setShowToDropdown(!showToDropdown);
+                    setShowFromDropdown(false);
+                  }}
+                  aria-haspopup="listbox"
+                  aria-expanded={showToDropdown}
+                  title={`Change unit to ${toUnit.name}`}
+                >
+                  <span className="ct-integrated-unit-symbol ct-unit-sym-to">{toUnit.symbol}</span>
+                  <Icon name="ChevronDown" size={16} strokeWidth={2.5} className={`ct-dropdown-chevron ${showToDropdown ? 'rotated' : ''}`} />
+                </button>
 
-              {showToDropdown && (
-                <div className="ct-dropdown-menu ct-integrated-dropdown" role="listbox">
-                  <div className="ct-dropdown-search">
-                    <Icon name="Search" size={14} />
-                    <input
-                      type="text"
-                      className="ct-dropdown-search-input"
-                      placeholder="Search unit..."
-                      value={toSearch}
-                      onChange={(e) => setToSearch(e.target.value)}
-                      onKeyDown={handleToSearchKeyDown}
-                    />
-                    {toSearch && (
-                      <button
-                        type="button"
-                        className="ct-dropdown-clear-search"
-                        onClick={() => setToSearch('')}
-                      >
-                        <Icon name="X" size={12} />
-                      </button>
-                    )}
+                {showToDropdown && (
+                  <div className="ct-dropdown-menu ct-integrated-dropdown" role="listbox">
+                    <div className="ct-dropdown-search">
+                      <Icon name="Search" size={14} />
+                      <input
+                        type="text"
+                        className="ct-dropdown-search-input"
+                        placeholder="Search unit..."
+                        value={toSearch}
+                        onChange={(e) => setToSearch(e.target.value)}
+                        onKeyDown={handleToSearchKeyDown}
+                      />
+                      {toSearch && (
+                        <button
+                          type="button"
+                          className="ct-dropdown-clear-search"
+                          onClick={() => setToSearch('')}
+                        >
+                          <Icon name="X" size={12} />
+                        </button>
+                      )}
+                    </div>
+                    <div className="ct-dropdown-list">
+                      {filteredToUnits.map((u) => (
+                        <button
+                          key={u.id}
+                          type="button"
+                          role="option"
+                          aria-selected={u.id === toUnit.id}
+                          className={`ct-dropdown-item ${u.id === toUnit.id ? 'selected' : ''}`}
+                          onClick={() => {
+                            onToUnitChange(u.id);
+                            setShowToDropdown(false);
+                            setToSearch('');
+                          }}
+                        >
+                          <span className="ct-item-name">{u.plural || u.name}</span>
+                          <span className="ct-item-symbol">{u.symbol}</span>
+                        </button>
+                      ))}
+                      {filteredToUnits.length === 0 && (
+                        <div className="ct-dropdown-empty">No units match "{toSearch}"</div>
+                      )}
+                    </div>
                   </div>
-                  <div className="ct-dropdown-list">
-                    {filteredToUnits.map((u) => (
-                      <button
-                        key={u.id}
-                        type="button"
-                        role="option"
-                        aria-selected={u.id === toUnit.id}
-                        className={`ct-dropdown-item ${u.id === toUnit.id ? 'selected' : ''}`}
-                        onClick={() => {
-                          onToUnitChange(u.id);
-                          setShowToDropdown(false);
-                          setToSearch('');
-                        }}
-                      >
-                        <span className="ct-item-name">{u.plural || u.name}</span>
-                        <span className="ct-item-symbol">{u.symbol}</span>
-                      </button>
-                    ))}
-                    {filteredToUnits.length === 0 && (
-                      <div className="ct-dropdown-empty">No units match "{toSearch}"</div>
-                    )}
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
-      {/* Unified Conversion Result & Formula Card */}
-      {!isKitchenActive && (
+      {/* Unified Conversion Result & Formula Card or Kitchen Drawer Shelf */}
+      {categoryId === 'cooking' ? (
+        <div className="ct-kitchen-drawer-card" aria-label="Kitchen Measuring Drawer">
+          <div className="ct-kitchen-tools-section">
+            <div className="ct-kitchen-shelf-header">
+              <span className="ct-kitchen-shelf-title">
+                <Icon name="ChefHat" size={16} />
+                <span>Measuring Tools Needed</span>
+              </span>
+              <span className="ct-kitchen-shelf-hint">Pull these from your kitchen drawer</span>
+            </div>
+            <div className="ct-kitchen-tools-pills">
+              {kitchenDrawer && kitchenDrawer.tools && kitchenDrawer.tools.length > 0 ? (
+                kitchenDrawer.tools.map((tool, idx) => (
+                  <React.Fragment key={idx}>
+                    {idx > 0 && <span className="ct-kitchen-plus" aria-hidden="true">+</span>}
+                    <button
+                      type="button"
+                      className="ct-kitchen-tool-chip"
+                      onClick={() => onCopy(tool, `${tool} copied!`)}
+                      title={`Click to copy: ${tool}`}
+                    >
+                      <span className="ct-tool-chip-icon" aria-hidden="true">🥄</span>
+                      <span className="ct-tool-chip-text"><Fraction value={tool} /></span>
+                    </button>
+                  </React.Fragment>
+                ))
+              ) : (
+                <span className="ct-kitchen-tool-chip empty">0</span>
+              )}
+            </div>
+          </div>
+
+          {kitchenDrawer && (
+            <div className="ct-kitchen-equivalents-section">
+              <div className="ct-kitchen-shelf-header">
+                <span className="ct-kitchen-shelf-title">
+                  <Icon name="Sparkles" size={14} />
+                  <span>Standard Equivalents</span>
+                </span>
+                <span className="ct-kitchen-shelf-hint">Quick reference for common measures</span>
+              </div>
+              <div className="ct-kitchen-equiv-grid">
+                <button
+                  type="button"
+                  className="ct-kitchen-equiv-pill"
+                  onClick={() => onCopy(kitchenDrawer.cups, `${kitchenDrawer.cups} copied!`)}
+                  title={`Click to copy cups: ${kitchenDrawer.cups}`}
+                >
+                  <span className="ct-equiv-label">Cups</span>
+                  <span className="ct-equiv-val">{kitchenDrawer.cups}</span>
+                </button>
+                <button
+                  type="button"
+                  className="ct-kitchen-equiv-pill"
+                  onClick={() => onCopy(kitchenDrawer.tbsp, `${kitchenDrawer.tbsp} copied!`)}
+                  title={`Click to copy tablespoons: ${kitchenDrawer.tbsp}`}
+                >
+                  <span className="ct-equiv-label">Tablespoons</span>
+                  <span className="ct-equiv-val">{kitchenDrawer.tbsp}</span>
+                </button>
+                <button
+                  type="button"
+                  className="ct-kitchen-equiv-pill"
+                  onClick={() => onCopy(kitchenDrawer.tsp, `${kitchenDrawer.tsp} copied!`)}
+                  title={`Click to copy teaspoons: ${kitchenDrawer.tsp}`}
+                >
+                  <span className="ct-equiv-label">Teaspoons</span>
+                  <span className="ct-equiv-val">{kitchenDrawer.tsp}</span>
+                </button>
+                <button
+                  type="button"
+                  className="ct-kitchen-equiv-pill"
+                  onClick={() => onCopy(kitchenDrawer.flOz, `${kitchenDrawer.flOz} copied!`)}
+                  title={`Click to copy fluid ounces: ${kitchenDrawer.flOz}`}
+                >
+                  <span className="ct-equiv-label">Fluid Ounces</span>
+                  <span className="ct-equiv-val">{kitchenDrawer.flOz}</span>
+                </button>
+                <button
+                  type="button"
+                  className="ct-kitchen-equiv-pill"
+                  onClick={() => onCopy(kitchenDrawer.ml, `${kitchenDrawer.ml} copied!`)}
+                  title={`Click to copy metric milliliters: ${kitchenDrawer.ml}`}
+                >
+                  <span className="ct-equiv-label">Metric</span>
+                  <span className="ct-equiv-val">{kitchenDrawer.ml}</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
         <div className="ct-footnote-card" aria-label="Conversion equations">
           {/* Row 1: Primary Equation (Hero) */}
-          <div className="ct-footnote-row ct-footnote-row-hero">
+          <div className={`ct-footnote-row ct-footnote-row-hero ${tempVibe || ''}`}>
             <div className="ct-footnote-val ct-val-hero" title={symbolText}>
               <span className="ct-fn-from">
-                <span className="ct-fn-num">{displayFromValue}</span>{' '}
+                <span className="ct-fn-num">
+                  <Fraction value={displayFromValue} />
+                </span>{' '}
                 <span className="ct-fn-sym">{fromUnit.symbol}</span>
               </span>
               <span className="ct-fn-operator"> {relOperator} </span>
@@ -1186,40 +1244,52 @@ export function ConversionCard({
                 type="button"
                 className={`ct-num-copy-btn ct-fn-to ${copiedNumber ? 'copied' : ''}`}
                 onClick={handleCopyNumber}
-                title={copiedNumber ? 'Copied to clipboard!' : `Copy ${displayToValue} ${toUnit.symbol}`}
-                aria-label={copiedNumber ? 'Number copied to clipboard' : `Copy result number ${displayToValue}`}
+                title={
+                  copiedNumber
+                    ? 'Copied to clipboard!'
+                    : smartEquation.subtext
+                    ? `Copy ${smartEquation.value}${smartEquation.unit ? ' ' + smartEquation.unit : ''} (${smartEquation.subtext})`
+                    : `Copy ${smartEquation.value}${smartEquation.unit ? ' ' + smartEquation.unit : ''}`
+                }
+                aria-label={
+                  copiedNumber
+                    ? 'Number copied to clipboard'
+                    : smartEquation.subtext
+                    ? `Copy result number ${smartEquation.value} (${smartEquation.subtext})`
+                    : `Copy result number ${smartEquation.value}`
+                }
               >
-                <span className="ct-fn-num">{displayToValue}</span>{' '}
-                <span className="ct-fn-sym">{toUnit.symbol}</span>
-                <span className="ct-num-copy-icon" aria-hidden="true">
+                <span className="ct-fn-num">
+                  <Fraction value={smartEquation.value} />
+                </span>
+                {smartEquation.unit ? (
+                  <>
+                    {' '}
+                    <span className="ct-fn-sym">{smartEquation.unit}</span>
+                  </>
+                ) : null}
+                <span className="ct-num-copy-icon" key={copiedNumber ? 'chk' : 'cpy'} aria-hidden="true">
                   <Icon name={copiedNumber ? 'Check' : 'Copy'} size={13} />
                 </span>
                 <span className="ct-num-tooltip" role="tooltip" aria-hidden="true">
-                  {copiedNumber ? 'Copied!' : (displayToValue && displayToValue.toString().length <= 10 ? `Copy ${displayToValue}` : 'Copy number')}
+                  {copiedNumber ? 'Copied!' : (smartEquation.value && smartEquation.value.toString().length <= 14 ? `Copy ${smartEquation.value}` : 'Copy result')}
                 </span>
               </button>
             </div>
-          </div>
 
-          {/* Kitchen Measure Breakdown (Always shown in Cooking domain) */}
-          {categoryId === 'cooking' && smartKitchenMeasure && (
-            <div className="ct-kitchen-measure-row" aria-label="Kitchen measuring breakdown">
-              <button
-                type="button"
-                className={`ct-kitchen-badge ${copiedKitchen ? 'copied' : ''}`}
-                onClick={handleCopyKitchen}
-                title={copiedKitchen ? 'Copied to clipboard!' : `Copy kitchen measure: ${smartKitchenMeasure}`}
-                aria-label={copiedKitchen ? 'Kitchen measure copied' : `Kitchen measure: ${smartKitchenMeasure}`}
-              >
-                <Icon name="ChefHat" size={15} className="ct-kitchen-icon" />
-                <span className="ct-kitchen-label">Kitchen Measure:</span>
-                <strong className="ct-kitchen-val">{smartKitchenMeasure}</strong>
-                <span className="ct-kitchen-copy-icon" aria-hidden="true">
-                  <Icon name={copiedKitchen ? 'Check' : 'Copy'} size={12} />
-                </span>
-              </button>
-            </div>
-          )}
+            {tempVibe === 'ct-temp-absolute-zero' && (
+              <div className="ct-temp-dynamic-pill ct-temp-pill-zero" title="Approaching Absolute Zero (0 Kelvin)">
+                <span className="ct-temp-pill-icon">❄️</span>
+                <span className="ct-temp-pill-label">Cryogenic Zone</span>
+              </div>
+            )}
+            {tempVibe === 'ct-temp-boiling' && (
+              <div className="ct-temp-dynamic-pill ct-temp-pill-boiling" title="At or above Boiling Point of Water">
+                <span className="ct-temp-pill-icon">🔥</span>
+                <span className="ct-temp-pill-label">Boiling Point</span>
+              </div>
+            )}
+          </div>
 
           {/* Row 2: Invariant Educational Formula & Instruction (Separately copy-able) */}
           {(formulaInstruction || formulaEquation) && (
@@ -1234,21 +1304,16 @@ export function ConversionCard({
                     title={copiedFormula ? 'Copied to clipboard!' : 'Copy formula'}
                     aria-label={copiedFormula ? 'Formula copied to clipboard' : 'Conversion formula'}
                   >
-                    <span className="ct-formula-prefix">Formula:</span>
                     <span className="ct-formula-item-text">
                       {renderFormulaContent(formulaEquation, fromUnit.symbol)}
                     </span>
-                    <span className="ct-formula-copy-icon" aria-hidden="true">
+                    <span className="ct-formula-copy-icon" key={copiedFormula ? 'chk' : 'cpy'} aria-hidden="true">
                       <Icon name={copiedFormula ? 'Check' : 'Copy'} size={12} />
                     </span>
                     <span className="ct-formula-tooltip" role="tooltip" aria-hidden="true">
                       {copiedFormula ? 'Copied!' : 'Copy formula'}
                     </span>
                   </button>
-                )}
-
-                {formulaEquation && formulaInstruction && (
-                  <span className="ct-formula-bullet" aria-hidden="true">·</span>
                 )}
 
                 {/* 2. Practical Sentence Instruction */}
@@ -1263,7 +1328,7 @@ export function ConversionCard({
                     <span className="ct-formula-item-text">
                       {renderInstructionContent(formulaInstruction, fromUnit)}
                     </span>
-                    <span className="ct-formula-copy-icon" aria-hidden="true">
+                    <span className="ct-formula-copy-icon" key={copiedInstruction ? 'chk' : 'cpy'} aria-hidden="true">
                       <Icon name={copiedInstruction ? 'Check' : 'Copy'} size={12} />
                     </span>
                     <span className="ct-formula-tooltip" role="tooltip" aria-hidden="true">

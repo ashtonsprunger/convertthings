@@ -271,6 +271,48 @@ export function Icon({ name, size = 18, className = '', ...props }) {
           <line x1="12" y1="16" x2="12.01" y2="16" />
         </svg>
       );
+    case 'Target':
+      return (
+        <svg {...defaultProps}>
+          <circle cx="12" cy="12" r="10" />
+          <circle cx="12" cy="12" r="6" />
+          <circle cx="12" cy="12" r="2" />
+        </svg>
+      );
+    case 'DecimalTwo':
+      return (
+        <svg {...defaultProps}>
+          <circle cx="3.5" cy="16.5" r="1.5" fill="currentColor" stroke="none" />
+          <rect x="7" y="7" width="6" height="10" rx="3" strokeWidth="2" />
+          <rect x="15" y="7" width="6" height="10" rx="3" strokeWidth="2" />
+        </svg>
+      );
+    case 'DecimalFour':
+      return (
+        <svg {...defaultProps}>
+          <circle cx="2.5" cy="16.5" r="1.2" fill="currentColor" stroke="none" />
+          <rect x="5.5" y="8" width="3.8" height="8" rx="1.9" strokeWidth="1.8" />
+          <rect x="10.2" y="8" width="3.8" height="8" rx="1.9" strokeWidth="1.8" />
+          <rect x="14.9" y="8" width="3.8" height="8" rx="1.9" strokeWidth="1.8" />
+          <rect x="19.6" y="8" width="3.8" height="8" rx="1.9" strokeWidth="1.8" />
+        </svg>
+      );
+    case 'Fraction':
+      return (
+        <svg {...defaultProps}>
+          <line x1="19" y1="5" x2="5" y2="19" strokeWidth="2" />
+          <circle cx="7.5" cy="7.5" r="2.2" strokeWidth="2" />
+          <circle cx="16.5" cy="16.5" r="2.2" strokeWidth="2" />
+        </svg>
+      );
+    case 'Divide':
+      return (
+        <svg {...defaultProps}>
+          <circle cx="12" cy="6" r="1.8" fill="currentColor" stroke="none" />
+          <line x1="5" y1="12" x2="19" y2="12" strokeWidth="2" />
+          <circle cx="12" cy="18" r="1.8" fill="currentColor" stroke="none" />
+        </svg>
+      );
     default:
       return (
         <svg {...defaultProps}>

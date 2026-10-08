@@ -59,6 +59,67 @@
   --readout-bg: #f8fafc;
   --readout-border: #e2e8f0;
 
+  /* Domain Category Chromatic Palette */
+  --cat-length: #06b6d4;
+  --cat-length-light: rgba(6, 182, 212, 0.12);
+  --cat-length-glow: rgba(6, 182, 212, 0.25);
+
+  --cat-mass: #8b5cf6;
+  --cat-mass-light: rgba(139, 92, 246, 0.12);
+  --cat-mass-glow: rgba(139, 92, 246, 0.25);
+
+  --cat-temperature: #ef4444;
+  --cat-temperature-light: rgba(239, 68, 68, 0.12);
+  --cat-temperature-glow: rgba(239, 68, 68, 0.25);
+
+  --cat-area: #10b981;
+  --cat-area-light: rgba(16, 185, 129, 0.12);
+  --cat-area-glow: rgba(16, 185, 129, 0.25);
+
+  --cat-volume: #0ea5e9;
+  --cat-volume-light: rgba(14, 165, 233, 0.12);
+  --cat-volume-glow: rgba(14, 165, 233, 0.25);
+
+  --cat-speed: #f59e0b;
+  --cat-speed-light: rgba(245, 158, 11, 0.12);
+  --cat-speed-glow: rgba(245, 158, 11, 0.25);
+
+  --cat-time: #3b82f6;
+  --cat-time-light: rgba(59, 130, 246, 0.12);
+  --cat-time-glow: rgba(59, 130, 246, 0.25);
+
+  --cat-digital: #a855f7;
+  --cat-digital-light: rgba(168, 85, 247, 0.12);
+  --cat-digital-glow: rgba(168, 85, 247, 0.25);
+
+  --cat-data_rate: #eab308;
+  --cat-data_rate-light: rgba(234, 179, 8, 0.12);
+  --cat-data_rate-glow: rgba(234, 179, 8, 0.25);
+
+  --cat-pressure: #6366f1;
+  --cat-pressure-light: rgba(99, 102, 241, 0.12);
+  --cat-pressure-glow: rgba(99, 102, 241, 0.25);
+
+  --cat-energy: #ec4899;
+  --cat-energy-light: rgba(236, 72, 153, 0.12);
+  --cat-energy-glow: rgba(236, 72, 153, 0.25);
+
+  --cat-power: #f97316;
+  --cat-power-light: rgba(249, 115, 22, 0.12);
+  --cat-power-glow: rgba(249, 115, 22, 0.25);
+
+  --cat-angle: #14b8a6;
+  --cat-angle-light: rgba(20, 184, 166, 0.12);
+  --cat-angle-glow: rgba(20, 184, 166, 0.25);
+
+  --cat-fuel: #ef4444;
+  --cat-fuel-light: rgba(239, 68, 68, 0.12);
+  --cat-fuel-glow: rgba(239, 68, 68, 0.25);
+
+  --cat-cooking: #f59e0b;
+  --cat-cooking-light: rgba(245, 158, 11, 0.12);
+  --cat-cooking-glow: rgba(245, 158, 11, 0.25);
+
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 18px;

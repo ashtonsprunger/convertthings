@@ -10,7 +10,6 @@ import {
 import { parseRoute, formatRoutePath, VALID_PRECISIONS } from './engine/urlRouter';
 import { getSeoMetadata } from './engine/seo';
 import { Header } from './components/Header';
-import { Omnibox } from './components/Omnibox';
 import { CategoryNav } from './components/CategoryNav';
 import { FavoritesBar } from './components/FavoritesBar';
 import { ConversionCard } from './components/ConversionCard';
@@ -862,50 +861,36 @@ function App() {
       <Header
         theme={theme}
         onToggleTheme={toggleTheme}
-        onShare={handleShare}
         onGoHome={handleGoHome}
+        onSelectConversion={handleSelectConversion}
+        onSelectCategory={handleSelectCategory}
+        history={history}
+        favorites={favorites}
       />
 
       <main className="ct-main">
         {/* Future top ad slot (zero layout shift) */}
         <AdSlot position="top-banner" />
 
-        {/* Universal Omnibox Search */}
-        <Omnibox
-          onSelectConversion={handleSelectConversion}
-          onSelectCategory={handleSelectCategory}
-          history={history}
-          favorites={favorites}
-        />
-
-        {/* Visual Mode Bridge Divider */}
-        <div className="ct-mode-bridge" role="separator" aria-label="Conversion Modes">
-          <span className="ct-mode-bridge-line" />
-          <span className="ct-mode-bridge-badge">
-            or select units manually
-          </span>
-          <span className="ct-mode-bridge-line" />
-        </div>
-
-        {/* Category Navigation Pills */}
-        <CategoryNav
-          activeCategoryId={categoryId}
-          onSelectCategory={handleSelectCategory}
-        />
-
-        {/* Favorites Bar */}
-        <FavoritesBar
-          favorites={favorites}
-          activeCategoryId={categoryId}
-          activeFromUnitId={fromUnitId}
-          activeToUnitId={toUnitId}
-          onSelectFavorite={handleSelectFavorite}
-          onRemoveFavorite={handleRemoveFavorite}
-        />
-
         {/* Core Conversion Panel with Desktop Side Rail */}
         <div className="ct-hero-layout">
           <div className="ct-hero-main">
+            {/* Category Navigation Pills */}
+            <CategoryNav
+              activeCategoryId={categoryId}
+              onSelectCategory={handleSelectCategory}
+            />
+
+            {/* Favorites Bar */}
+            <FavoritesBar
+              favorites={favorites}
+              activeCategoryId={categoryId}
+              activeFromUnitId={fromUnitId}
+              activeToUnitId={toUnitId}
+              onSelectFavorite={handleSelectFavorite}
+              onRemoveFavorite={handleRemoveFavorite}
+            />
+
             <ConversionCard
               categoryId={categoryId}
               fromUnitId={fromUnitId}
@@ -922,6 +907,7 @@ function App() {
               onPrecisionChange={handlePrecisionChange}
               onToggleFavorite={handleToggleFavorite}
               onCopy={handleCopyResult}
+              onShare={handleShare}
             />
           </div>
 

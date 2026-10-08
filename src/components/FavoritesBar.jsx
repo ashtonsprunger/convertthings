@@ -37,7 +37,7 @@ export function FavoritesBar({
           return (
             <div
               key={`${fav.categoryId}-${fav.fromUnitId}-${fav.toUnitId}`}
-              className={`ct-favorite-pill ${isActive ? 'active' : ''}`}
+              className={`ct-favorite-pill ${isActive ? 'active' : ''} ct-cat-${fav.categoryId}`}
             >
               <button
                 type="button"
@@ -46,6 +46,7 @@ export function FavoritesBar({
                 title={`Convert ${fromUnit.name} to ${toUnit.name}${isActive ? ' (currently active)' : ''}`}
                 aria-pressed={isActive}
               >
+                <span className="ct-fav-dot" aria-hidden="true" />
                 <span>{fromUnit.symbol}</span>
                 <span className="ct-fav-arrow">⇄</span>
                 <span>{toUnit.symbol}</span>

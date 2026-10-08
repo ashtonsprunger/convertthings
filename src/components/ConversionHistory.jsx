@@ -40,7 +40,7 @@ export function ConversionHistory({ history, onSelectHistory, onClearHistory }) 
             <button
               key={`${item.timestamp || index}-${item.categoryId}`}
               type="button"
-              className="ct-history-item"
+              className={`ct-history-item ct-cat-${item.categoryId}`}
               onClick={() => onSelectHistory(item)}
             >
               <div className="ct-history-expression">

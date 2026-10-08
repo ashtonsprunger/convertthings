@@ -10,6 +10,43 @@ export function CategoryNav({ activeCategoryId, onSelectCategory }) {
   const prevSnapshotRef = useRef(null);
   const activeAnimationsRef = useRef([]);
   const isFirstMountRef = useRef(true);
+  const [scrollOverflow, setScrollOverflow] = useState({ left: false, right: true });
+
+  // Dynamically compute scroll overflow to fade carousel edges when overflowing
+  const updateScrollOverflow = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el || isExpanded) {
+      setScrollOverflow((prev) => (prev.left || prev.right ? { left: false, right: false } : prev));
+      return;
+    }
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    const canLeft = scrollLeft > 2;
+    const canRight = scrollLeft + clientWidth < scrollWidth - 2;
+
+    setScrollOverflow((prev) => {
+      if (prev.left === canLeft && prev.right === canRight) return prev;
+      return { left: canLeft, right: canRight };
+    });
+  }, [isExpanded]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    updateScrollOverflow();
+
+    const onScroll = () => {
+      updateScrollOverflow();
+    };
+
+    el.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', updateScrollOverflow);
+
+    return () => {
+      el.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', updateScrollOverflow);
+    };
+  }, [updateScrollOverflow]);
 
   // Take a bounding rect snapshot of all category chips and container (FLIP "First")
   const takeSnapshot = useCallback(() => {
@@ -34,15 +71,28 @@ export function CategoryNav({ activeCategoryId, onSelectCategory }) {
     return { chips: chipMap, container: containerRect };
   }, []);
 
-  const handleScroll = (direction) => {
-    if (scrollRef.current) {
-      if (typeof scrollRef.current.scrollBy === 'function') {
-        scrollRef.current.scrollBy({ left: direction * 220, behavior: 'smooth' });
-      } else {
-        scrollRef.current.scrollLeft += direction * 220;
+  // Desktop mouse wheel scroll translation (vertical wheel -> horizontal track scroll)
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const onWheel = (e) => {
+      if (isExpanded) return;
+      const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+      if (!delta) return;
+
+      const canScrollRight = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+      const canScrollLeft = el.scrollLeft > 1;
+
+      if ((delta > 0 && canScrollRight) || (delta < 0 && canScrollLeft)) {
+        e.preventDefault();
+        el.scrollLeft += delta;
       }
-    }
-  };
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [isExpanded]);
 
   const toggleExpand = useCallback((targetState) => {
     setIsExpanded((prev) => {
@@ -214,18 +264,42 @@ export function CategoryNav({ activeCategoryId, onSelectCategory }) {
     } else {
       container.scrollLeft = Math.max(0, target);
     }
-  }, [activeCategoryId, isExpanded]);
+    const t = setTimeout(updateScrollOverflow, 320);
+    return () => clearTimeout(t);
+  }, [activeCategoryId, isExpanded, updateScrollOverflow]);
 
-  // Pressing Escape closes expanded grid view
+  // Pressing Escape or clicking outside closes expanded grid view
   useEffect(() => {
+    if (!isExpanded) return;
+
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isExpanded) {
+      if (e.key === 'Escape') {
         toggleExpand(false);
       }
     };
+
+    const handleClickOutside = (e) => {
+      if (navRef.current && !navRef.current.contains(e.target)) {
+        toggleExpand(false);
+      }
+    };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener('click', handleClickOutside);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('click', handleClickOutside);
+    };
   }, [isExpanded, toggleExpand]);
+
+  const maskClass = (() => {
+    if (isExpanded) return 'ct-mask-none';
+    if (scrollOverflow.left && scrollOverflow.right) return 'ct-mask-both';
+    if (scrollOverflow.left) return 'ct-mask-left';
+    if (scrollOverflow.right) return 'ct-mask-right';
+    return 'ct-mask-none';
+  })();
 
   return (
     <nav
@@ -237,42 +311,11 @@ export function CategoryNav({ activeCategoryId, onSelectCategory }) {
         className={`ct-category-nav-inner ${isExpanded ? 'is-expanded' : ''}`}
         ref={navInnerRef}
       >
-        {/* Top Header Row for Expanded Grid */}
-        {isExpanded && (
-          <div className="ct-category-expanded-header">
-            <span className="ct-category-expanded-title">
-              All 15 Measurement Domains
-            </span>
-            <button
-              type="button"
-              className="ct-category-expand-btn ct-category-expand-btn-active"
-              onClick={() => toggleExpand(false)}
-              aria-expanded="true"
-              aria-label="Collapse categories to single row"
-            >
-              <Icon name="ChevronUp" size={13} />
-              <span>Collapse</span>
-            </button>
-          </div>
-        )}
-
-        {/* Carousel controls row & persistent category chip track */}
+        {/* Carousel track & persistent category chip track */}
         <div className={`ct-category-controls-row ${isExpanded ? 'is-expanded' : ''}`}>
-          {!isExpanded && (
-            <button
-              type="button"
-              className="ct-nav-arrow ct-nav-arrow-prev"
-              onClick={() => handleScroll(-1)}
-              title="Scroll left"
-              aria-label="Scroll categories left"
-            >
-              <Icon name="ChevronDown" size={14} className="ct-arrow-rot-left" />
-            </button>
-          )}
-
           {/* Persistent Chips Container (reused in both single-row and grid states) */}
           <div
-            className={`ct-category-scroll ${isExpanded ? 'is-expanded' : ''}`}
+            className={`ct-category-scroll ${isExpanded ? 'is-expanded' : ''} ${maskClass}`}
             ref={scrollRef}
             role="tablist"
           >
@@ -286,7 +329,7 @@ export function CategoryNav({ activeCategoryId, onSelectCategory }) {
                   aria-controls="conversion-panel"
                   id={`tab-${cat.id}`}
                   data-cat-id={cat.id}
-                  className={`ct-category-tab ${isActive ? 'active' : ''}`}
+                  className={`ct-category-tab ${isActive ? 'active' : ''} ct-cat-${cat.id}`}
                   onClick={() => handleSelect(cat.id)}
                 >
                   <span className="ct-tab-icon" aria-hidden="true">
@@ -296,34 +339,30 @@ export function CategoryNav({ activeCategoryId, onSelectCategory }) {
                 </button>
               );
             })}
+
           </div>
 
-          {!isExpanded && (
-            <>
-              <button
-                type="button"
-                className="ct-nav-arrow ct-nav-arrow-next"
-                onClick={() => handleScroll(1)}
-                title="Scroll right"
-                aria-label="Scroll categories right"
-              >
-                <Icon name="ChevronDown" size={14} className="ct-arrow-rot-right" />
-              </button>
-
-              <button
-                type="button"
-                className="ct-category-expand-btn"
-                onClick={() => toggleExpand(true)}
-                title="View all 15 categories in a grid"
-                aria-expanded="false"
-                aria-label="View all 15 categories"
-              >
+          <button
+            type="button"
+            className={`ct-category-expand-btn ${isExpanded ? 'is-expanded' : ''}`}
+            onClick={() => toggleExpand(!isExpanded)}
+            title={isExpanded ? 'Show fewer categories' : 'View all 15 categories'}
+            aria-expanded={isExpanded}
+            aria-label={isExpanded ? 'Show fewer categories' : 'View all 15 categories'}
+          >
+            {isExpanded ? (
+              <>
+                <Icon name="ChevronUp" size={13} />
+                <span className="ct-expand-text">Show less</span>
+              </>
+            ) : (
+              <>
                 <Icon name="Grid" size={13} />
                 <span className="ct-expand-text">All (15)</span>
                 <Icon name="ChevronDown" size={11} className="ct-expand-chevron" />
-              </button>
-            </>
-          )}
+              </>
+            )}
+          </button>
         </div>
       </div>
     </nav>

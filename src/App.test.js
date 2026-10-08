@@ -412,97 +412,78 @@ describe('ConvertThings UI Integration', () => {
     expect(parseFloat(toInput.value)).toBeCloseTo(62.137, 2);
   });
 
-  test('automatically displays practical fractions and kitchen view for cooking in auto mode', () => {
+  test('automatically displays practical drawer tools and equivalents in Kitchen Mode', () => {
     window.history.replaceState({}, '', '/convert/13-tbsp_us-to-cup_us');
     render(<App />);
 
     const fromInput = screen.getByLabelText(/Enter value in/i);
     expect(fromInput.value).toBe('13');
 
-    // Default Kitchen Mode is ON:
-    const kitchenToggle = screen.getByLabelText(/Toggle Kitchen Mode/i);
-    expect(kitchenToggle).toHaveAttribute('aria-pressed', 'true');
-
-    // In Kitchen Mode, 2nd input is replaced by the prominent kitchen-readable output
-    const kitchenOutput = screen.getByLabelText(/Converted value in.*¾ cup \+ 1 tbsp/i);
+    // In Kitchen Mode, 2nd input is replaced by the prominent kitchen drawer output
+    const kitchenOutput = screen.getByLabelText(/Kitchen measuring tools:.*¾ cup \+ 1 tbsp/i);
     expect(kitchenOutput).toHaveTextContent('¾ cup + 1 tbsp');
-    expect(kitchenOutput).toHaveTextContent('(13/16 cup)');
 
-    // Everything below the inputs in the card is removed
-    expect(screen.queryByLabelText(/Conversion equations/i)).not.toBeInTheDocument();
+    // The kitchen drawer shelf renders measuring tools needed
+    const drawerCard = screen.getByLabelText(/Kitchen Measuring Drawer/i);
+    expect(drawerCard).toBeInTheDocument();
+    expect(drawerCard).toHaveTextContent(/3\/4 cup|¾ cup/);
+    expect(drawerCard).toHaveTextContent('1 tbsp');
 
-    // Toggle Kitchen Mode OFF to enter Standard View
-    fireEvent.click(kitchenToggle);
-    expect(kitchenToggle).toHaveAttribute('aria-pressed', 'false');
-
-    // Standard 2nd input is restored with fraction formatting
-    const toInput = screen.getByLabelText(/Converted value in/i);
-    expect(toInput.value).toBe('13/16');
-
-    // Footnote card below inputs is restored
-    const equationCard = screen.getByLabelText(/Conversion equations/i);
-    expect(equationCard).toHaveTextContent(/13 tbsp = 13\/16.*cup/i);
-
-    // Toggle back ON
-    fireEvent.click(kitchenToggle);
-    expect(kitchenToggle).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.queryByLabelText(/Conversion equations/i)).not.toBeInTheDocument();
+    // And standard equivalents
+    expect(drawerCard).toHaveTextContent(/Cups/i);
+    expect(drawerCard).toHaveTextContent(/Tablespoons/i);
+    expect(drawerCard).toHaveTextContent(/Teaspoons/i);
   });
 
-  test('converts 34 mL to cups in Kitchen View as real spoons (2 tbsp + 1 tsp) and never 5/32', () => {
+  test('converts 34 mL in Kitchen Mode as real spoons (2 tbsp + 1 tsp) and never 5/32', () => {
     window.history.replaceState({}, '', '/convert/34-ml-to-cup_us');
     render(<App />);
 
     const fromInput = screen.getByLabelText(/Enter value in/i);
     expect(fromInput.value).toBe('34');
 
-    // In Kitchen Mode (default ON):
-    const kitchenOutput = screen.getByLabelText(/Converted value in.*2 tbsp \+ 1 tsp/i);
+    const kitchenOutput = screen.getByLabelText(/Kitchen measuring tools:.*2 tbsp \+ 1 tsp/i);
     expect(kitchenOutput).toHaveTextContent('2 tbsp + 1 tsp');
     expect(kitchenOutput).not.toHaveTextContent('5/32');
 
-    // Subtitle displays clean decimal (0.1437 cup), NEVER 5/32
-    expect(kitchenOutput).toHaveTextContent(/0\.14.*cup/i);
-    expect(kitchenOutput).not.toHaveTextContent('/32');
-
-    // Toggle to Standard View:
-    const kitchenToggle = screen.getByLabelText(/Toggle Kitchen Mode/i);
-    fireEvent.click(kitchenToggle);
-
-    const toInput = screen.getByLabelText(/Converted value in/i);
-    expect(toInput.value).not.toBe('5/32');
-    expect(parseFloat(toInput.value)).toBeCloseTo(0.1437, 3);
-
-    // Kitchen Measure helper badge is visible in Standard View with spoon measurement
-    const kitchenBadge = screen.getByLabelText(/Kitchen measure: 2 tbsp \+ 1 tsp/i);
-    expect(kitchenBadge).toBeInTheDocument();
+    const drawerCard = screen.getByLabelText(/Kitchen Measuring Drawer/i);
+    expect(drawerCard).toHaveTextContent('2 tbsp');
+    expect(drawerCard).toHaveTextContent('1 tsp');
+    expect(drawerCard).toHaveTextContent(/34 mL/i);
   });
 
-  test('always shows the smart Kitchen measure helper badge in Cooking Standard View for clean and compound values', () => {
-    // 1. 1 stick of butter to cups -> "½ cup"
-    window.history.replaceState({}, '', '/convert/1-stick_butter-to-cup_us');
+  test('displays smart human-friendly readouts directly in the equation button with subtext in auto mode', () => {
+    // 1. Length (inches): 1 mm to in -> clean decimal 0.03937 in input, smart 1/32 in in green button with (≈ 0.03937 in)
+    window.history.replaceState({}, '', '/convert/1-mm-to-in');
     const { unmount } = render(<App />);
 
-    // Toggle to Standard View
-    const kitchenToggle = screen.getByLabelText(/Toggle Kitchen Mode/i);
-    fireEvent.click(kitchenToggle);
+    const toInput = screen.getByLabelText(/Converted value in/i);
+    expect(toInput.value).toBe('0.03937');
 
-    // Kitchen Measure badge should be displayed with "½ cup"
-    expect(screen.getByRole('button', { name: /Kitchen measure: ½ cup/i })).toBeInTheDocument();
+    const copyBtn = screen.getByLabelText(/Copy result number 1\/32/i);
+    expect(copyBtn).toBeInTheDocument();
+    expect(copyBtn).toHaveTextContent('1/32 in');
+
+    // Decimal equivalent is cleanly surfaced in tooltip and aria-label rather than cluttering display text
+    expect(copyBtn).toHaveAttribute('title', expect.stringContaining('≈ 0.03937 in'));
+
+    // Switch precision dropdown to Tape Measure mode
+    const precisionSelect = screen.getByLabelText(/Decimal Precision and Formatting/i);
+    fireEvent.change(precisionSelect, { target: { value: 'fraction_tape' } });
+
+    // Now input also updates to tape fraction
+    expect(toInput.value).toBe('1/32');
 
     unmount();
+    window.localStorage.clear();
 
-    // 2. 1 cup to tablespoons: shows smart equivalence context "16 tbsp (1 cup)"
-    window.history.replaceState({}, '', '/convert/1-cup_us-to-tbsp_us');
+    // 2. Time: 5000 s to min -> Clock duration 1h 23m 20s in green button with subtext
+    window.history.replaceState({}, '', '/convert/5000-s-to-min');
     render(<App />);
 
-    // Ensure we are in Standard View (localStorage persisted or toggle)
-    const toggle2 = screen.getByLabelText(/Toggle Kitchen Mode/i);
-    if (toggle2.getAttribute('aria-pressed') === 'true') {
-      fireEvent.click(toggle2);
-    }
-
-    expect(screen.getByRole('button', { name: /Kitchen measure: 1 cup \(16 tbsp\)/i })).toBeInTheDocument();
+    const timeCopyBtn = screen.getByLabelText(/Copy result number 1h 23m 20s/i);
+    expect(timeCopyBtn).toBeInTheDocument();
+    expect(timeCopyBtn).toHaveAttribute('title', expect.stringContaining('≈ 83.3333 min'));
   });
 
   test('respects stored decimal precision on initial mount and page reload', () => {
@@ -730,13 +711,13 @@ describe('ConvertThings UI Integration', () => {
   test('renders on unit-pair sub-url without crashing', () => {
     window.history.pushState({}, '', '/convert/cup_us-to-tbsp_us');
     render(<App />);
-    expect(screen.getByRole('tab', { name: /Cooking/i })).toHaveClass('active');
+    expect(screen.getByRole('tab', { name: /Kitchen/i })).toHaveClass('active');
   });
 
   test('renders on category sub-url /cooking without crashing', () => {
     window.history.pushState({}, '', '/cooking');
     render(<App />);
-    expect(screen.getByRole('tab', { name: /Cooking/i })).toHaveClass('active');
+    expect(screen.getByRole('tab', { name: /Kitchen/i })).toHaveClass('active');
   });
 
   test('renders on /mass without crashing', () => {
@@ -769,13 +750,13 @@ describe('ConvertThings UI Integration', () => {
     window.history.replaceState({}, '', '/');
     render(<App />);
 
-    const cookingTab = screen.getByRole('tab', { name: /Cooking/i });
-    fireEvent.click(cookingTab);
+    const massTab = screen.getByRole('tab', { name: /Weight & Mass/i });
+    fireEvent.click(massTab);
 
-    expect(window.location.pathname).toBe('/cooking');
+    expect(window.location.pathname).toBe('/mass');
     const canonical = document.querySelector('link[rel="canonical"]');
-    expect(canonical.href).toBe('https://www.convertthings.com/cooking');
-    expect(document.title).toContain('Cooking & Kitchen');
+    expect(canonical.href).toBe('https://www.convertthings.com/mass');
+    expect(document.title).toContain('Weight & Mass');
 
     // Subsequent user calculation transitions to conversion slug
     const swapButton = screen.getByLabelText(/Swap from and to units/i);
@@ -813,17 +794,17 @@ describe('Dual-Tier Memory System (In-Session & Cross-Session Persistence)', () 
     fireEvent.change(fromInput, { target: { value: '42' } });
     expect(fromInput.value).toBe('42');
 
-    // Switch to Cooking tab
-    const cookingTab = screen.getByRole('tab', { name: /Cooking/i });
-    fireEvent.click(cookingTab);
+    // Switch to Kitchen tab
+    const kitchenTab = screen.getByRole('tab', { name: /Kitchen/i });
+    fireEvent.click(kitchenTab);
 
-    // Cooking starts with fresh 1
-    const cookingInput = screen.getByLabelText(/Enter value in/i);
-    expect(cookingInput.value).toBe('1');
+    // Kitchen starts with fresh 1
+    const kitchenInput = screen.getByLabelText(/Enter value in/i);
+    expect(kitchenInput.value).toBe('1');
 
-    // Change Cooking to 3.5
-    fireEvent.change(cookingInput, { target: { value: '3.5' } });
-    expect(cookingInput.value).toBe('3.5');
+    // Change Kitchen to 3.5
+    fireEvent.change(kitchenInput, { target: { value: '3.5' } });
+    expect(kitchenInput.value).toBe('3.5');
 
     // Switch back to Length tab
     const lengthTab = screen.getByRole('tab', { name: /Length & Distance/i });
@@ -833,10 +814,10 @@ describe('Dual-Tier Memory System (In-Session & Cross-Session Persistence)', () 
     const restoredLengthInput = screen.getByLabelText(/Enter value in/i);
     expect(restoredLengthInput.value).toBe('42');
 
-    // Switch back to Cooking tab
-    fireEvent.click(cookingTab);
-    const restoredCookingInput = screen.getByLabelText(/Enter value in/i);
-    expect(restoredCookingInput.value).toBe('3.5');
+    // Switch back to Kitchen tab
+    fireEvent.click(kitchenTab);
+    const restoredKitchenInput = screen.getByLabelText(/Enter value in/i);
+    expect(restoredKitchenInput.value).toBe('3.5');
   });
 
   test('loads cross-session preferred units for category hubs while starting with clean 1', () => {
@@ -1084,6 +1065,31 @@ describe('Dual-Tier Memory System (In-Session & Cross-Session Persistence)', () 
 
     expect(window.location.pathname).toContain('/convert/');
     expect(window.location.pathname).toContain('-ft-to-m');
+  });
+
+  test('opens unit dropdown on the first click even when categories are expanded', async () => {
+    window.history.replaceState({}, '', '/');
+    render(<App />);
+
+    // Expand categories
+    const expandBtn = screen.getByRole('button', { name: /View all 15 categories/i });
+    expect(expandBtn).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(expandBtn);
+    expect(expandBtn).toHaveAttribute('aria-expanded', 'true');
+
+    // Click From unit dropdown button on first attempt
+    const fromUnitBtn = screen.getByTitle(/Change unit from Meter/i);
+    expect(fromUnitBtn).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/Search unit.../i)).not.toBeInTheDocument();
+
+    // First click should immediately open the dropdown
+    fireEvent.click(fromUnitBtn);
+
+    // Dropdown search input should now be visible on the very first click
+    expect(screen.getByPlaceholderText(/Search unit.../i)).toBeInTheDocument();
+
+    // Expanded categories should simultaneously collapse
+    expect(expandBtn).toHaveAttribute('aria-expanded', 'false');
   });
 });
 

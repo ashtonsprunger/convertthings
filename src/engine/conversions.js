@@ -19,7 +19,7 @@ export const CATEGORIES = [
   { id: 'power', name: 'Power', icon: 'Lightbulb', defaultFrom: 'kw', defaultTo: 'hp' },
   { id: 'angle', name: 'Angle', icon: 'RotateCw', defaultFrom: 'deg', defaultTo: 'rad' },
   { id: 'fuel', name: 'Fuel Economy', icon: 'Fuel', defaultFrom: 'mpg_us', defaultTo: 'l100km' },
-  { id: 'cooking', name: 'Cooking & Kitchen', icon: 'ChefHat', defaultFrom: 'cup_us', defaultTo: 'tbsp_us' },
+  { id: 'cooking', name: 'Kitchen Mode', icon: 'ChefHat', defaultFrom: 'cup_us', defaultTo: 'tbsp_us' },
 ];
 
 /**
@@ -306,6 +306,9 @@ export const UNIT_DEFINITIONS = {
       { id: 'drop', name: 'Drop', plural: 'Drops', symbol: 'drop', factor: 0.05, aliases: ['drop', 'drops', 'gtt'] },
       { id: 'stick_butter', name: 'Stick of Butter (US)', plural: 'Sticks of Butter', symbol: 'stick', factor: 118.29411825, aliases: ['stick of butter', 'stick butter', 'butter stick', 'sticks'] },
       { id: 'l', name: 'Liter', plural: 'Liters', symbol: 'L', factor: 1000, aliases: ['liter', 'liters', 'l'] },
+      { id: 'pt_us', name: 'US Pint', plural: 'US Pints', symbol: 'pt', factor: 473.176473, aliases: ['pint', 'pints', 'pt'] },
+      { id: 'qt_us', name: 'US Quart', plural: 'US Quarts', symbol: 'qt', factor: 946.352946, aliases: ['quart', 'quarts', 'qt'] },
+      { id: 'gal_us', name: 'US Gallon', plural: 'US Gallons', symbol: 'gal', factor: 3785.411784, aliases: ['gallon', 'gallons', 'gal'] },
     ]
   }
 };
@@ -381,12 +384,17 @@ export function convertUnits(value, categoryId, fromUnitId, toUnitId) {
 /**
  * Convert a decimal number to a practical mixed or improper fraction string.
  * e.g., 1.375 -> "1 3/8" (mixed) or "11/8" (improper), 0.75 -> "3/4", 2 -> "2"
- * Snaps to standard tape-measure and culinary denominators (2, 3, 4, 8, 16, 32).
+ * High-precision algorithm accurately resolves exact rational conversions across all domains
+ * (e.g., 1/8000 for Mbps to GB/s, 1/60 for sec to min, 1/3600 for sec to hr,
+ * 1/12 for in to ft, 1/5280 for ft to mi, 1/1000 for mm to m, 1/1024 for B to KiB)
+ * while also snapping continuous measurements to nearest tape increments (1/16, 1/32, 1/64)
+ * and thirds (1/3, 2/3).
  */
 export function toFraction(val, maxDenominator = 32, improper = false) {
   if (val === null || val === undefined || isNaN(val)) return '';
   const num = Number(val);
   if (!isFinite(num)) return num.toString();
+  if (num === 0) return '0';
 
   const isNeg = num < 0;
   const abs = Math.abs(num);
@@ -394,63 +402,216 @@ export function toFraction(val, maxDenominator = 32, improper = false) {
   const frac = abs - whole;
 
   // Exact or near-exact whole number
-  if (frac < 0.005) {
+  if (frac < 1e-9) {
     return (isNeg ? '-' : '') + whole.toString();
+  }
+  if (frac > 1 - 1e-9) {
+    return (isNeg ? '-' : '') + (whole + 1).toString();
+  }
+
+  // 1. Exact reciprocal integer unit fraction (e.g. 1/8000, 1/1000, 1/1024, 1/3600, 1/60, 1/12, 1/5280, 1/63360, 1/7, 1/24, 1/384, 1/768)
+  const inv = 1 / frac;
+  const roundInv = Math.round(inv);
+  if (roundInv >= 1 && roundInv <= 10000000 && Math.abs(inv - roundInv) < 1e-5) {
+    if (improper && whole > 0) {
+      const impNum = whole * roundInv + 1;
+      return (isNeg ? '-' : '') + impNum + '/' + roundInv;
+    }
+    const wStr = whole > 0 ? whole + ' ' : '';
+    return (isNeg ? '-' : '') + wStr + '1/' + roundInv;
+  }
+
+  // 2. Common thirds check within 0.015 tolerance (e.g. 1/3 ~ 0.3333, 2/3 ~ 0.6667)
+  if (Math.abs(frac - 1 / 3) < 0.015) {
+    if (improper && whole > 0) return (isNeg ? '-' : '') + (whole * 3 + 1) + '/3';
+    const wStr = whole > 0 ? whole + ' ' : '';
+    return (isNeg ? '-' : '') + wStr + '1/3';
+  }
+  if (Math.abs(frac - 2 / 3) < 0.015) {
+    if (improper && whole > 0) return (isNeg ? '-' : '') + (whole * 3 + 2) + '/3';
+    const wStr = whole > 0 ? whole + ' ' : '';
+    return (isNeg ? '-' : '') + wStr + '2/3';
+  }
+
+  // 3. Check tape measure binary denominators (2, 4, 8, 16, 32, 64) with snap tolerance of 0.0045
+  // (matches 1.375 -> 3/8, 1.37795 -> 3/8, 1.251 -> 1/4, 1 m to ft = 3.28084 -> 9/32)
+  const effectiveMaxDenom = maxDenominator || 32;
+  let bestTapeNum = 0;
+  let bestTapeDenom = 1;
+  let minTapeDiff = Infinity;
+
+  for (let denom = 2; denom <= effectiveMaxDenom; denom *= 2) {
+    const numerator = Math.round(frac * denom);
+    if (numerator <= 0 || numerator >= denom) continue;
+    const diff = Math.abs(frac - numerator / denom);
+    if (diff < minTapeDiff) {
+      minTapeDiff = diff;
+      bestTapeNum = numerator;
+      bestTapeDenom = denom;
+      if (diff < 0.0001) break;
+    }
+  }
+
+  if (bestTapeNum > 0 && minTapeDiff < 0.0045) {
+    const gcd = (x, y) => (y === 0 ? x : gcd(y, x % y));
+    const common = gcd(bestTapeNum, bestTapeDenom);
+    const redNum = bestTapeNum / common;
+    const redDen = bestTapeDenom / common;
+
+    if (improper && whole > 0) {
+      const impNum = whole * redDen + redNum;
+      return (isNeg ? '-' : '') + impNum + '/' + redDen;
+    }
+    const wStr = whole > 0 ? whole + ' ' : '';
+    return (isNeg ? '-' : '') + wStr + redNum + '/' + redDen;
+  }
+
+  // 4. Exact rational multiples (e.g. 3/8000, 7/8000, 5/12, 11/8000, 3/128)
+  let h1 = 1, h2 = 0;
+  let k1 = 0, k2 = 1;
+  let b = frac;
+  let exactMatch = null;
+
+  for (let iter = 0; iter < 20; iter++) {
+    const a = Math.floor(b);
+    const h = a * h1 + h2;
+    const k = a * k1 + k2;
+    if (k > 10000000) break;
+
+    h2 = h1; h1 = h;
+    k2 = k1; k1 = k;
+
+    const rem = b - a;
+    const diff = Math.abs(frac - h1 / k1);
+    if (rem < 1e-10 || diff < 1e-12) {
+      exactMatch = { num: h1, den: k1 };
+      break;
+    }
+
+    b = 1 / rem;
+    if (!isFinite(b)) break;
+  }
+
+  if (exactMatch) {
+    const gcd = (x, y) => (y === 0 ? x : gcd(y, x % y));
+    const g = gcd(exactMatch.num, exactMatch.den);
+    const redNum = exactMatch.num / g;
+    const redDen = exactMatch.den / g;
+
+    if (frac < 0.005 && effectiveMaxDenom <= 64) {
+      const isClean =
+        redNum <= 50 &&
+        redDen <= 10000 &&
+        (redDen <= 64 ||
+          (redDen & (redDen - 1)) === 0 ||
+          redDen % 100 === 0 ||
+          3600 % redDen === 0 ||
+          5280 % redDen === 0 ||
+          8000 % redDen === 0);
+      if (!isClean) {
+        return whole > 0 ? (isNeg ? '-' : '') + whole : '0';
+      }
+    }
+
+    if (improper && whole > 0) {
+      const impNum = whole * redDen + redNum;
+      return (isNeg ? '-' : '') + impNum + '/' + redDen;
+    }
+    const wStr = whole > 0 ? whole + ' ' : '';
+    return (isNeg ? '-' : '') + wStr + redNum + '/' + redDen;
+  }
+
+  // 5. Tape measure fallback (if bestTapeNum > 0)
+  if (bestTapeNum > 0) {
+    const gcd = (x, y) => (y === 0 ? x : gcd(y, x % y));
+    const common = gcd(bestTapeNum, bestTapeDenom);
+    const redNum = bestTapeNum / common;
+    const redDen = bestTapeDenom / common;
+
+    if (improper && whole > 0) {
+      const impNum = whole * redDen + redNum;
+      return (isNeg ? '-' : '') + impNum + '/' + redDen;
+    }
+    const wStr = whole > 0 ? whole + ' ' : '';
+    return (isNeg ? '-' : '') + wStr + redNum + '/' + redDen;
+  }
+
+  // Fallback for near-whole
+  if (frac < 0.005) {
+    return whole > 0 ? (isNeg ? '-' : '') + whole : '0';
   }
   if (frac > 0.995) {
     return (isNeg ? '-' : '') + (whole + 1).toString();
   }
 
-  // Common thirds check: 1/3 ~ 0.3333, 2/3 ~ 0.6667
-  if (Math.abs(frac - 1 / 3) < 0.015) {
-    if (improper && whole > 0) {
-      return `${isNeg ? '-' : ''}${whole * 3 + 1}/3`;
-    }
-    const wStr = whole > 0 ? `${whole} ` : '';
-    return `${isNeg ? '-' : ''}${wStr}1/3`;
+  return whole > 0 ? (isNeg ? '-' : '') + whole : '0';
+}
+
+/**
+ * Convert a decimal number to a standard imperial tape measure graduation string.
+ * Snaps to the nearest 1/32" mark on a physical tape measure.
+ * Even 32nds simplify directly to the nearest 1/16", 1/8", 1/4", 1/2", or whole inch.
+ * Odd 32nds display using the landmark 8th/whole inch mark with a +/- 1/32" offset
+ * (e.g. "3 3/8 +1/32", "3 3/8 -1/32", "1/32", "4 -1/32").
+ *
+ * @param {number|string} val
+ * @returns {string} e.g. "1/16", "3 3/8 +1/32", "1 3/8", "0"
+ */
+export function toTapeMeasureFraction(val) {
+  if (val === null || val === undefined || isNaN(val)) return '';
+  const num = Number(val);
+  if (!isFinite(num)) return num.toString();
+  if (num === 0) return '0';
+
+  const isNeg = num < 0;
+  const abs = Math.abs(num);
+  let whole = Math.floor(abs);
+  const frac = abs - whole;
+
+  const gcd = (x, y) => (y === 0 ? x : gcd(y, x % y));
+  const reduce = (n, d) => {
+    const g = gcd(n, d);
+    return `${n / g}/${d / g}`;
+  };
+
+  // Round to nearest 1/32"
+  const units32 = Math.round(frac * 32);
+
+  if (units32 === 0) {
+    return whole > 0 ? (isNeg ? '-' : '') + whole.toString() : '0';
   }
-  if (Math.abs(frac - 2 / 3) < 0.015) {
-    if (improper && whole > 0) {
-      return `${isNeg ? '-' : ''}${whole * 3 + 2}/3`;
-    }
-    const wStr = whole > 0 ? `${whole} ` : '';
-    return `${isNeg ? '-' : ''}${wStr}2/3`;
-  }
-
-  // Search standard binary denominators: 2, 4, 8, 16, 32
-  let bestNum = 0;
-  let bestDenom = 1;
-  let minDiff = Infinity;
-
-  for (let denom = 2; denom <= maxDenominator; denom *= 2) {
-    const numerator = Math.round(frac * denom);
-    if (numerator <= 0 || numerator >= denom) continue;
-    const diff = Math.abs(frac - numerator / denom);
-    if (diff < minDiff) {
-      minDiff = diff;
-      bestNum = numerator;
-      bestDenom = denom;
-      if (diff < 0.0001) break;
-    }
-  }
-
-  if (bestNum <= 0) {
-    return whole > 0 ? `${isNeg ? '-' : ''}${whole}` : '0';
-  }
-
-  // Reduce fraction by greatest common divisor
-  const gcd = (a, b) => (b === 0 ? a : gcd(b, a % b));
-  const common = gcd(bestNum, bestDenom);
-  bestNum /= common;
-  bestDenom /= common;
-
-  if (improper && whole > 0) {
-    const impNum = whole * bestDenom + bestNum;
-    return `${isNeg ? '-' : ''}${impNum}/${bestDenom}`;
+  if (units32 === 32) {
+    whole += 1;
+    return (isNeg ? '-' : '') + whole.toString();
   }
 
-  const wStr = whole > 0 ? `${whole} ` : '';
-  return `${isNeg ? '-' : ''}${wStr}${bestNum}/${bestDenom}`;
+  // Even 32nd: exact 16th (or 8th, quarter, half)
+  if (units32 % 2 === 0) {
+    const fracStr = reduce(units32, 32);
+    const wStr = whole > 0 ? whole + ' ' : '';
+    return (isNeg ? '-' : '') + wStr + fracStr;
+  }
+
+  // Odd 32nd: landmark 8th/whole mark with +/- 1/32 offset
+  // Landmark is nearest multiple of 4 on a 32nd scale (an 8th mark: 0, 4, 8, 12, 16, 20, 24, 28, 32)
+  const landmark32 = Math.round(units32 / 4) * 4;
+  const offset = units32 - landmark32;
+  const offsetSign = offset > 0 ? '+' : '-';
+
+  if (landmark32 === 0) {
+    // 1/32: first tick line on the tape
+    const wStr = whole > 0 ? whole + ' ' : '';
+    return (isNeg ? '-' : '') + wStr + '1/32';
+  }
+
+  if (landmark32 === 32) {
+    // 31/32: one tick line before the next whole inch
+    return (isNeg ? '-' : '') + (whole + 1) + ' -1/32';
+  }
+
+  const landmarkFrac = reduce(landmark32, 32);
+  const wStr = whole > 0 ? whole + ' ' : '';
+  return (isNeg ? '-' : '') + wStr + landmarkFrac + ' ' + offsetSign + '1/32';
 }
 
 export const VULGAR_FRACTIONS = {
@@ -487,6 +648,24 @@ export const FRACTION_TO_VULGAR = {
   '3/8': '⅜',
   '5/8': '⅝',
   '7/8': '⅞',
+};
+
+export const VULGAR_TO_FRACTION = {
+  '½': '1/2',
+  '⅓': '1/3',
+  '⅔': '2/3',
+  '¼': '1/4',
+  '¾': '3/4',
+  '⅕': '1/5',
+  '⅖': '2/5',
+  '⅗': '3/5',
+  '⅘': '4/5',
+  '⅙': '1/6',
+  '⅚': '5/6',
+  '⅛': '1/8',
+  '⅜': '3/8',
+  '⅝': '5/8',
+  '⅞': '7/8',
 };
 
 /**
@@ -599,26 +778,57 @@ export function parseFractionString(val) {
   let s = String(val).trim();
   if (!s) return 0;
 
-  // 1. Check for Unicode vulgar fraction characters
-  for (const [glyph, fracVal] of Object.entries(VULGAR_FRACTIONS)) {
-    if (s.includes(glyph)) {
-      const isNeg = s.startsWith('-');
-      const withoutSign = isNeg ? s.slice(1).trim() : s;
-      const remainder = withoutSign.replace(glyph, '').trim().replace(/[-+]$/, '');
-      if (!remainder || remainder === '+') return isNeg ? -fracVal : fracVal;
-      const whole = parseFloat(remainder);
-      if (!isNaN(whole)) {
-        return (isNeg ? -1 : 1) * (Math.abs(whole) + fracVal);
-      }
-      return isNeg ? -fracVal : fracVal;
-    }
-  }
-
-  // 2. Normalize fraction slashes (standard '/' and Unicode fraction slash '⁄')
+  // 1. Normalize fraction slashes (standard '/' and Unicode fraction slash '⁄')
   s = s.replace(/⁄/g, '/');
 
+  // 2. Normalize Unicode vulgar fractions to ascii fractions (e.g. '3 ⅜ +1/32' -> '3 3/8 +1/32', '1⅜' -> '1 3/8', '-½' -> '-1/2')
+  for (const [glyph, fracStr] of Object.entries(VULGAR_TO_FRACTION)) {
+    if (s.includes(glyph)) {
+      s = s.replace(new RegExp('(\\d)' + glyph, 'g'), '$1 ' + fracStr);
+      s = s.replace(new RegExp(glyph, 'g'), fracStr);
+    }
+  }
+  s = s.replace(/\s+/g, ' ').trim();
+  if (s.startsWith('- ')) {
+    s = '-' + s.slice(2).trim();
+  }
+
+  // 3. Tape Measure landmark + offset: e.g. "3 3/8 +1/32", "3 3/8 -1/32", "3 3/8 + 1/32"
+  const offsetMatch = s.match(/^([+-]?\d+)\s+(\d+)\s*\/\s*(\d+)\s*([+-])\s*(\d+)\s*\/\s*(\d+)$/);
+  if (offsetMatch) {
+    const whole = parseFloat(offsetMatch[1]);
+    const num1 = parseFloat(offsetMatch[2]);
+    const den1 = parseFloat(offsetMatch[3]);
+    const sign = offsetMatch[4] === '+' ? 1 : -1;
+    const num2 = parseFloat(offsetMatch[5]);
+    const den2 = parseFloat(offsetMatch[6]);
+    const base = (whole >= 0 ? 1 : -1) * (Math.abs(whole) + num1 / den1);
+    return base + sign * (num2 / den2);
+  }
+
+  // 4. Simple fraction + offset: e.g. "1/8 +1/32", "1/8 -1/32"
+  const simpleOffsetMatch = s.match(/^(\d+)\s*\/\s*(\d+)\s*([+-])\s*(\d+)\s*\/\s*(\d+)$/);
+  if (simpleOffsetMatch) {
+    const num1 = parseFloat(simpleOffsetMatch[1]);
+    const den1 = parseFloat(simpleOffsetMatch[2]);
+    const sign = simpleOffsetMatch[3] === '+' ? 1 : -1;
+    const num2 = parseFloat(simpleOffsetMatch[4]);
+    const den2 = parseFloat(simpleOffsetMatch[5]);
+    return num1 / den1 + sign * (num2 / den2);
+  }
+
+  // 5. Whole number + offset with space before sign: e.g. "4 -1/32", "4 - 1/32", "3 +1/32"
+  const wholeOffsetMatch = s.match(/^([+-]?\d+)\s+([+-])\s*(\d+)\s*\/\s*(\d+)$/);
+  if (wholeOffsetMatch) {
+    const whole = parseFloat(wholeOffsetMatch[1]);
+    const sign = wholeOffsetMatch[2] === '+' ? 1 : -1;
+    const num = parseFloat(wholeOffsetMatch[3]);
+    const den = parseFloat(wholeOffsetMatch[4]);
+    return whole + sign * (num / den);
+  }
+
   if (s.includes('/')) {
-    // Check for mixed fraction formats: e.g. "1 3/8", "1-3/8", "1+3/8", "-1 3/8", "-1-3/8"
+    // 6. Check for mixed fraction formats: e.g. "1 3/8", "1-3/8", "1+3/8", "-1 3/8", "-1-3/8"
     const mixedMatch = s.match(/^([+-]?\d+)\s*[-+ ]\s*(\d+)\s*\/\s*(\d+)$/);
     if (mixedMatch) {
       const whole = parseFloat(mixedMatch[1]);
@@ -629,7 +839,7 @@ export function parseFractionString(val) {
       }
     }
 
-    // Check for simple or improper fraction: e.g. "3/4", "11/8", "-5/2"
+    // 7. Check for simple or improper fraction: e.g. "3/4", "11/8", "-5/2"
     const simpleMatch = s.match(/^([+-]?\d+)\s*\/\s*(\d+)$/);
     if (simpleMatch) {
       const num = parseFloat(simpleMatch[1]);
@@ -639,7 +849,7 @@ export function parseFractionString(val) {
       }
     }
 
-    // Fallback split by whitespace
+    // 8. Fallback split by whitespace
     const parts = s.split(/\s+/);
     if (parts.length === 2) {
       const whole = parseFloat(parts[0]);
@@ -650,7 +860,7 @@ export function parseFractionString(val) {
     }
   }
 
-  // 3. Fallback to standard float
+  // 9. Fallback to standard float
   const parsed = parseFloat(s);
   return isNaN(parsed) ? 0 : parsed;
 }
@@ -746,16 +956,25 @@ export function formatNumber(val, decimals = 'auto', categoryId = null) {
   // Handle exact zero
   if (num === 0) return '0';
 
-  // 1. Fractions (Mixed) mode (e.g. 1 3/8, 1/2)
+  // 1. Fractions (Mixed) mode (e.g. 1 3/8, 1/2, 1/8000)
   if (decimals === 'fraction') {
-    const maxDenom = categoryId === 'cooking' ? 16 : 32;
-    return toFraction(num, maxDenom, false);
+    return toFraction(num, 32, false);
   }
 
-  // 2. Fractions (Improper) mode (e.g. 11/8, 3/2)
+  // 2. Fractions (Improper) mode (e.g. 11/8, 3/2, 1/8000)
   if (decimals === 'fraction_improper') {
-    const maxDenom = categoryId === 'cooking' ? 16 : 32;
-    return toFraction(num, maxDenom, true);
+    return toFraction(num, 32, true);
+  }
+
+  // 3. Tape Measure mode (1/16" landmark ± 1/32")
+  if (
+    decimals === 'fraction_tape' ||
+    decimals === 'tape' ||
+    decimals === 'fraction_16' ||
+    decimals === 'fraction_32' ||
+    decimals === 'fraction_64'
+  ) {
+    return toTapeMeasureFraction(num);
   }
 
   // 3. Exact (Full Precision) mode: unrounded calculation with clean IEEE 754 precision
@@ -1023,6 +1242,282 @@ export function getCookingCompoundMeasure(value, toUnitId, categoryId = 'cooking
 
   return null;
 }
+
+/**
+ * Break down any kitchen volume quantity into physical kitchen measuring tools
+ * (measuring cups, measuring spoons, and large vessels) found in standard home drawers.
+ *
+ * @param {number|string} amount
+ * @param {string} unitId
+ * @returns {object|null} { primary, tools, equivalents }
+ */
+export function getKitchenDrawerBreakdown(amount, unitId = 'cup_us') {
+  if (amount === null || amount === undefined || amount === '') {
+    return null;
+  }
+
+  const num = typeof amount === 'string' && isFractionLike(amount)
+    ? parseFractionString(amount)
+    : Number(amount);
+
+  if (isNaN(num) || num < 0) {
+    return null;
+  }
+
+  if (num === 0) {
+    return {
+      primary: '0',
+      tools: ['0'],
+      ml: '0 mL',
+      cups: '0 cups',
+      tbsp: '0 tbsp',
+      tsp: '0 tsp',
+      flOz: '0 fl oz',
+    };
+  }
+
+  const unit = getUnit('cooking', unitId) || getUnit('volume', unitId);
+  const factor = unit ? (typeof unit.factor === 'number' ? unit.factor : 1) : 1;
+  const ml = num * factor;
+
+  const totalTbsp = ml / 14.78676478125;
+  const totalTsp = totalTbsp * 3;
+  const totalCups = totalTbsp / 16;
+  const totalFlOz = ml / 29.5735295625;
+
+  let remainingTbsp = totalTbsp;
+  const tools = [];
+
+  // 1. Gallons (16 cups / 256 tbsp)
+  if (remainingTbsp >= 255.5) {
+    const gal = Math.floor((remainingTbsp + 0.5) / 256);
+    if (gal > 0) {
+      tools.push(gal === 1 ? '1 gallon' : `${gal} gallons`);
+      remainingTbsp -= gal * 256;
+    }
+  }
+
+  // 2. Quarts (4 cups / 64 tbsp)
+  if (remainingTbsp >= 63.5) {
+    const qt = Math.floor((remainingTbsp + 0.5) / 64);
+    if (qt > 0) {
+      tools.push(qt === 1 ? '1 quart' : `${qt} quarts`);
+      remainingTbsp -= qt * 64;
+    }
+  }
+
+  // 3. Whole cups (1, 2, 3 cups)
+  if (remainingTbsp >= 15.8) {
+    const cups = Math.floor((remainingTbsp + 0.2) / 16);
+    if (cups > 0) {
+      tools.push(cups === 1 ? '1 cup' : `${cups} cups`);
+      remainingTbsp -= cups * 16;
+    }
+  }
+
+  // 4. Standard measuring cups (3/4, 2/3, 1/2, 1/3, 1/4 cup)
+  const cupOptions = [
+    { name: '¾ cup', tbsp: 12 },
+    { name: '⅔ cup', tbsp: 16 * 2 / 3 },
+    { name: '½ cup', tbsp: 8 },
+    { name: '⅓ cup', tbsp: 16 / 3 },
+    { name: '¼ cup', tbsp: 4 },
+  ];
+
+  for (const c of cupOptions) {
+    if (remainingTbsp >= c.tbsp - 0.25) {
+      tools.push(c.name);
+      remainingTbsp -= c.tbsp;
+      break;
+    }
+  }
+
+  // 5. Tablespoons (1, 2, 3 tbsp)
+  if (remainingTbsp >= 0.85) {
+    const tbsp = Math.floor(remainingTbsp + 0.15);
+    if (tbsp > 0) {
+      tools.push(tbsp === 1 ? '1 tbsp' : `${tbsp} tbsp`);
+      remainingTbsp -= tbsp;
+    }
+  }
+
+  // 6. Teaspoons (1/4, 1/2, 3/4, 1, 1 1/2, 2 tsp)
+  const remainingTsp = Math.max(0, remainingTbsp * 3);
+  if (remainingTsp >= 0.2) {
+    const roundedTsp = Math.round(remainingTsp * 4) / 4;
+    if (roundedTsp === 1) tools.push('1 tsp');
+    else if (roundedTsp === 2) tools.push('2 tsp');
+    else if (roundedTsp === 0.5) tools.push('½ tsp');
+    else if (roundedTsp === 0.25) tools.push('¼ tsp');
+    else if (roundedTsp === 0.75) tools.push('¾ tsp');
+    else if (roundedTsp === 1.5) tools.push('1 ½ tsp');
+    else if (roundedTsp > 0) tools.push(`${roundedTsp} tsp`);
+  } else if (remainingTbsp > 0.05 && tools.length === 0) {
+    tools.push('1 pinch');
+  }
+
+  const primary = tools.length > 0 ? tools.join(' + ') : '0';
+
+  return {
+    primary,
+    tools,
+    ml: (ml >= 10 ? ml.toFixed(0) : ml.toFixed(1)) + ' mL',
+    cups: (totalCups >= 10 ? totalCups.toFixed(1) : totalCups.toFixed(2)) + ' cups',
+    tbsp: (totalTbsp >= 10 ? totalTbsp.toFixed(0) : totalTbsp.toFixed(1)) + ' tbsp',
+    tsp: (totalTsp >= 10 ? totalTsp.toFixed(0) : totalTsp.toFixed(1)) + ' tsp',
+    flOz: totalFlOz.toFixed(1) + ' fl oz',
+  };
+}
+
+/**
+ * Compute smart contextual readout for the bottom equation pill in Auto mode.
+ * Replaces the raw decimal in the green pill with practical, human-friendly units:
+ * - Length (inches): Tape measure landmark ± 1/32" (e.g. 1/32 in, 3 3/8 +1/32 in)
+ * - Length (feet): Architectural foot-inch (e.g. 5 ft 3 3/8 in)
+ * - Time: Practical clock breakdown (e.g. 1h 23m 20s)
+ * - Mass: Pounds & Ounces (e.g. 165 lb 5.5 oz)
+ * - Digital/Data Rate: Theoretical exact ratio (e.g. 1/8000 GB/s)
+ * - Metric/Default: Clean decimal without awkward fractions (e.g. 0.000004 km)
+ *
+ * @param {string} categoryId
+ * @param {object} fromUnit
+ * @param {object} toUnit
+ * @param {number|string} fromValue
+ * @param {number|string} targetValue
+ * @param {string} defaultFormattedValue
+ * @returns {object} { value, unit, subtext, isSmart }
+ */
+export function getSmartEquationDisplay(categoryId, fromUnit, toUnit, fromValue, targetValue, defaultFormattedValue) {
+  const fallback = {
+    value: defaultFormattedValue || '0',
+    unit: toUnit ? toUnit.symbol : '',
+    subtext: null,
+    isSmart: false,
+  };
+
+  if (fromValue === null || fromValue === undefined || fromValue === '' || !toUnit || !fromUnit) {
+    return fallback;
+  }
+
+  const rawFromNum = typeof fromValue === 'string' && isFractionLike(fromValue)
+    ? parseFractionString(fromValue)
+    : Number(fromValue);
+  const rawTargetNum = typeof targetValue === 'string' && isFractionLike(targetValue)
+    ? parseFractionString(targetValue)
+    : Number(targetValue);
+
+  if (isNaN(rawFromNum) || isNaN(rawTargetNum) || rawTargetNum === 0) {
+    return fallback;
+  }
+
+  // 1. Length (Inches & Feet) -> Tape Measure landmark ± 1/32"
+  if (categoryId === 'length') {
+    if (toUnit.id === 'in') {
+      const tapeStr = toTapeMeasureFraction(rawTargetNum);
+      if (tapeStr && tapeStr !== '0') {
+        const tapeNum = parseFractionString(tapeStr);
+        const hasDiff = Math.abs(tapeNum - rawTargetNum) > 1e-4;
+        return {
+          value: tapeStr,
+          unit: 'in',
+          subtext: hasDiff ? `≈ ${defaultFormattedValue} in` : (tapeStr !== defaultFormattedValue ? `= ${defaultFormattedValue} in` : null),
+          isSmart: tapeStr !== defaultFormattedValue,
+        };
+      }
+    } else if (toUnit.id === 'ft') {
+      const absTarget = Math.abs(rawTargetNum);
+      const wholeFeet = Math.floor(absTarget);
+      const remInches = (absTarget - wholeFeet) * 12;
+      if (remInches >= 0.02) {
+        const tapeRem = toTapeMeasureFraction(remInches);
+        if (tapeRem && tapeRem !== '0') {
+          const sign = rawTargetNum < 0 ? '-' : '';
+          const archStr = `${sign}${wholeFeet > 0 ? `${formatDisplayNumber(wholeFeet)} ft ` : ''}${tapeRem} in`;
+          return {
+            value: archStr,
+            unit: '',
+            subtext: `≈ ${defaultFormattedValue} ft`,
+            isSmart: true,
+          };
+        }
+      }
+    }
+  }
+
+  // 2. Time -> Practical Clock Breakdown (Days, Hours, Minutes, Seconds)
+  if (categoryId === 'time') {
+    const sec = convertUnits(rawFromNum, 'time', fromUnit.id, 's');
+    const isTargetInteger = Math.abs(rawTargetNum - Math.round(rawTargetNum)) < 1e-4;
+    if (sec !== null && Math.abs(sec) >= 60 && !isTargetInteger) {
+      const absSec = Math.abs(sec);
+      const d = Math.floor(absSec / 86400);
+      const h = Math.floor((absSec % 86400) / 3600);
+      const m = Math.floor((absSec % 3600) / 60);
+      const s = Math.round(absSec % 60);
+      const parts = [];
+      if (d > 0) parts.push(`${formatDisplayNumber(d)}d`);
+      if (h > 0) parts.push(`${h}h`);
+      if (m > 0) parts.push(`${m}m`);
+      if (s > 0 && d === 0) parts.push(`${s}s`);
+      if (parts.length > 0) {
+        const sign = sec < 0 ? '-' : '';
+        const durStr = sign + parts.join(' ');
+        const isDifferent = durStr !== `${defaultFormattedValue}${toUnit.symbol}` && durStr !== `${defaultFormattedValue} ${toUnit.symbol}`;
+        if (isDifferent) {
+          return {
+            value: durStr,
+            unit: '',
+            subtext: `≈ ${defaultFormattedValue} ${toUnit.symbol}`,
+            isSmart: true,
+          };
+        }
+      }
+    }
+  }
+
+  // 3. Mass & Weight -> Pounds & Ounces
+  if (categoryId === 'mass') {
+    const totalLb = convertUnits(rawFromNum, 'mass', fromUnit.id, 'lb');
+    if (totalLb !== null && Math.abs(totalLb) >= 1 && toUnit.id === 'lb') {
+      const absLb = Math.abs(totalLb);
+      const wholeLb = Math.floor(absLb);
+      const remOz = (absLb - wholeLb) * 16;
+      if (remOz >= 0.05 && remOz <= 15.95) {
+        const ozStr = parseFloat(remOz.toFixed(1)).toString();
+        const sign = totalLb < 0 ? '-' : '';
+        const massStr = `${sign}${wholeLb > 0 ? `${formatDisplayNumber(wholeLb)} lb ` : ''}${ozStr} oz`;
+        return {
+          value: massStr,
+          unit: '',
+          subtext: `≈ ${defaultFormattedValue} lb`,
+          isSmart: true,
+        };
+      }
+    }
+  }
+
+  // 4. Digital Storage & Data Transfer Rate -> Exact Rational Ratio
+  if (categoryId === 'digital' || categoryId === 'data_rate') {
+    const fracStr = toFraction(rawTargetNum, 8192, false);
+    if (fracStr && fracStr.includes('/')) {
+      const isCleanDenom = /\/(?:8|16|32|64|128|256|512|1000|1024|2048|4096|8000|8192)\b/.test(fracStr);
+      if (isCleanDenom) {
+        const fracVal = parseFractionString(fracStr);
+        const isExact = Math.abs(fracVal - rawTargetNum) < 1e-9;
+        const op = isExact ? '=' : '≈';
+        return {
+          value: fracStr,
+          unit: toUnit.symbol,
+          subtext: `${op} ${defaultFormattedValue} ${toUnit.symbol}`,
+          isSmart: true,
+        };
+      }
+    }
+  }
+
+  return fallback;
+}
+
 
 /**
  * Format a number for human-readable display with thousands separators (commas).

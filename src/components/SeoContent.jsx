@@ -416,7 +416,7 @@ export function SeoContent({ categoryId, fromUnitId, toUnitId, onSelectPair }) {
   }, [categoryId, info]);
 
   return (
-    <article className="ct-seo-section">
+    <article className={`ct-seo-section ct-cat-${categoryId}`}>
       <header className="ct-seo-header">
         <h2 className="ct-seo-title">{info.title}</h2>
         <p className="ct-seo-lead">{info.description}</p>

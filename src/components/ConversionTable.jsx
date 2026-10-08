@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Fraction } from './Fraction';
 import {
   getUnit,
   getUnitsForCategory,
@@ -29,7 +30,7 @@ export function ConversionTable({ categoryId, fromUnitId, toUnitId, fromValue, o
   });
 
   return (
-    <section className="ct-table-card" aria-label="Reference Charts">
+    <section className={`ct-table-card ct-cat-${categoryId}`} aria-label="Reference Charts">
       <div className="ct-table-header">
         <div className="ct-table-tabs" role="tablist">
           <button
@@ -87,10 +88,10 @@ export function ConversionTable({ categoryId, fromUnitId, toUnitId, fromValue, o
                   return (
                     <tr key={row.fromValue} className={isCurrent ? 'ct-row-current' : ''}>
                       <td className="ct-td-from">
-                        <strong>{formatDisplayNumber(row.fromValue)}</strong> <span className="ct-cell-unit">{fromUnit.symbol}</span>
+                        <strong><Fraction value={formatDisplayNumber(row.fromValue)} /></strong> <span className="ct-cell-unit">{fromUnit.symbol}</span>
                       </td>
                       <td className="ct-td-to">
-                        <strong>{formatDisplayNumber(row.toValue)}</strong> <span className="ct-cell-unit">{toUnit.symbol}</span>
+                        <strong><Fraction value={formatDisplayNumber(row.toValue)} /></strong> <span className="ct-cell-unit">{toUnit.symbol}</span>
                       </td>
                     </tr>
                   );
@@ -139,7 +140,9 @@ export function ConversionTable({ categoryId, fromUnitId, toUnitId, fromValue, o
                     <span className="ct-stat-name">{item.unit.plural || item.unit.name}</span>
                     <span className="ct-stat-symbol">{item.unit.symbol}</span>
                   </div>
-                  <div className="ct-stat-value">{formatDisplayNumber(item.value)}</div>
+                  <div className="ct-stat-value">
+                    <Fraction value={formatDisplayNumber(item.value)} />
+                  </div>
                 </a>
               );
             })}
