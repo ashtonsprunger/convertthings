@@ -72,10 +72,9 @@
      - Replaces artificial hairline divider rules with natural, generous vertical whitespace (`0.2rem`–`0.35rem`).
      - The hero equation (`[ 0.03937 in ] ≈ [ 1 mm 📋 ]`) floats freely on the card canvas.
      - The educational formula and instructions sit below as a quiet, borderless typographic caption strip with soft subtle hover capsules.
-   - **Dual-Mode Architectural Hierarchy (Auto vs. Manual)**:
-     - **Docked Header**: Sits flush at `top: 0` with edge-to-edge frosted glass (`backdrop-filter: blur(20px)`), allowing the Omnibox below to stand out as the **sole hero floating pill** on the page.
-     - **Animated Omnibox**: Displays rotating double-quoted examples (`"100 km to miles"`, `"72°F in °C"`, `"1 cup to ml"`) with smooth vertical slide-and-fade transitions every 3.2s when unfocused.
-     - **Mode Bridge Divider**: A clean, balanced hairline divider (`────────── or select units manually ──────────`) clearly distinguishing the fast Auto search above from the Manual interactive workbench below.
+   - **Smart Responsive Navigation with Smart Headroom**:
+     - **Responsive Hybrid**: Floats as an ambient Material 3 capsule pill on desktop (`border-radius: var(--radius-full)`, `box-shadow: var(--shadow-google-md), var(--shadow-specular)`) and docks flush edge-to-edge on mobile to maximize touch targets and Omnibox input width.
+     - **Smart Headroom Dynamics**: Gracefully glides up out of view on scroll down (`translateY(-135%)`), granting 100% immersive reading space for tables and guides, and immediately glides back down on scroll up (`translateY(0)`). Always stays visible at top of page or when search has keyboard focus.
    - **Zero Auto-Focus Stealing**: Focus is strictly user-initiated (tapping an input, pressing `/`, or clicking Clear). Programmatic focus is never called on category switches, unit changes, or swaps, ensuring mobile virtual keyboards never pop up unprompted.
    - **Developer Modal (`src/components/DeveloperModal.jsx`)**: Live interactive API tester and 1-click Claude Desktop configs.
    - Starred favorites bar, recent history drawer, and searchable unit dropdowns.
@@ -218,7 +217,7 @@ convertThings/
 4. **Adhere to Google Material 3 Design Tokens:**
    - Always preserve the unified corner radius scale (`--radius-card: 28px`, `--radius-surface: 20px`, `--radius-chip: 14px`, `--radius-pill: 9999px`).
    - Use multi-tier ambient shadows (`--shadow-google-sm`, `--shadow-google-md`, `--shadow-google-lg`) and kinetic spring easing (`--ease-spring`).
-   - Maintain the dual-mode hierarchy: docked flush header, hero floating Omnibox with animated placeholder, and clean mode divider.
+   - Maintain the smart navigation hierarchy: ambient floating capsule on desktop, edge-to-edge docked on mobile, and smart headroom scroll dynamics.
 5. **Zero-Border & Surface-Driven Architecture (App-Wide)**:
    - Avoid reintroducing harsh wireframe outlines, boxed sub-containers, or horizontal divider lines across any card or component. Always rely on natural surface contrast (`--bg-card` vs `--bg-card-subtle`), dual-layer ambient shadows (`--shadow-google-sm`, `--shadow-google-md`, `--shadow-google-lg`), and calibrated whitespace.
    - Applies universally across:
