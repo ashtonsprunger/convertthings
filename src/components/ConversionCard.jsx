@@ -11,6 +11,8 @@ import {
   formatDisplayNumber,
   parseFractionString,
   isFractionLike,
+  isCompoundLike,
+  parseCompoundValue,
   getKitchenDrawerBreakdown,
   getSmartEquationDisplay,
 } from '../engine/conversions';
@@ -511,9 +513,13 @@ export function ConversionCard({
 
   const rawTargetValue = (() => {
     if (!fromValue) return null;
-    const num = typeof fromValue === 'string' && isFractionLike(fromValue)
+    let num = typeof fromValue === 'string' && isFractionLike(fromValue)
       ? parseFractionString(fromValue)
       : parseFloat(fromValue);
+    if (isNaN(num) && typeof fromValue === 'string' && isCompoundLike(fromValue)) {
+      const comp = parseCompoundValue(fromValue, categoryId, fromUnit.id);
+      if (comp !== null && !isNaN(comp)) num = comp;
+    }
     if (isNaN(num)) return null;
     return convertUnits(num, categoryId, fromUnit.id, toUnit.id);
   })();
@@ -583,7 +589,10 @@ export function ConversionCard({
   // Formatted equation strings for copy footer and formula
   const formulaEquation = formulaDetails.equation || formula || 'Direct calculation';
   const formulaInstruction = formulaDetails.instruction || '';
-  const symbolText = `${displayFromValue} ${fromUnit.symbol} ${relOperator} ${smartEquation.value}${smartEquation.unit ? ' ' + smartEquation.unit : ''}`;
+  const fromDisplayEquation = isCompoundLike(fromValue)
+    ? displayFromValue
+    : `${displayFromValue} ${fromUnit.symbol}`;
+  const symbolText = `${fromDisplayEquation} ${relOperator} ${smartEquation.value}${smartEquation.unit ? ' ' + smartEquation.unit : ''}`;
 
   // Helper to colorize formula equation components cleanly
   const renderFormulaContent = (text, fromSym) => {
@@ -997,7 +1006,7 @@ export function ConversionCard({
             <div className="ct-input-inner">
               <input
                 id="fromInput"
-                type={isFractionMode ? 'text' : 'number'}
+                type={isFractionMode || isCompoundLike(fromValue) ? 'text' : 'number'}
                 step="any"
                 inputMode="decimal"
                 className={`ct-number-input ${getNumberFontSizeClass(fromValue)} ${isFractionLike(fromValue) ? 'ct-fraction-input' : ''}`}
@@ -1190,7 +1199,7 @@ export function ConversionCard({
               <div className="ct-input-inner">
                 <input
                   id="toInput"
-                  type={isFractionMode ? 'text' : 'number'}
+                  type={isFractionMode || isCompoundLike(toValue) ? 'text' : 'number'}
                   step="any"
                   inputMode="decimal"
                   className={`ct-number-input ${getNumberFontSizeClass(toValue)} ${isFractionLike(toValue) ? 'ct-fraction-input' : ''}`}
@@ -1331,7 +1340,7 @@ export function ConversionCard({
                 <span className="ct-fn-num">
                   <Fraction value={displayFromValue} />
                 </span>{' '}
-                <span className="ct-fn-sym">{fromUnit.symbol}</span>
+                {!isCompoundLike(fromValue) && <span className="ct-fn-sym">{fromUnit.symbol}</span>}
               </span>
               <span className="ct-fn-operator"> {relOperator} </span>
               <button

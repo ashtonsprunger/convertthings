@@ -274,10 +274,17 @@ export async function executeTool(toolName, args = {}) {
         }
 
         const formula = getFormulaString(parsed.categoryId, parsed.fromUnit.id, parsed.toUnit.id);
-        const readout = `${parsed.value} ${parsed.fromUnit.symbol} = ${parsed.formattedResult} ${parsed.toUnit.symbol}`;
+        const fromDisplay = parsed.isCompound
+          ? parsed.compoundDisplay
+          : `${parsed.value} ${parsed.fromUnit.symbol}`;
+        const readout = `${fromDisplay} = ${parsed.formattedResult} ${parsed.toUnit.symbol}`;
+
+        const headerLine = parsed.isCompound
+          ? `**${parsed.compoundDisplay} = ${parsed.formattedResult} ${parsed.toUnit.plural} (${parsed.toUnit.symbol})**`
+          : `**${parsed.value} ${parsed.fromUnit.plural} (${parsed.fromUnit.symbol}) = ${parsed.formattedResult} ${parsed.toUnit.plural} (${parsed.toUnit.symbol})**`;
 
         const textOutput = [
-          `**${parsed.value} ${parsed.fromUnit.plural} (${parsed.fromUnit.symbol}) = ${parsed.formattedResult} ${parsed.toUnit.plural} (${parsed.toUnit.symbol})**`,
+          headerLine,
           `Category: ${parsed.categoryId}`,
           formula ? `Formula: ${formula}` : '',
           `Canonical URL: https://www.convertthings.com/convert/${parsed.value}-${parsed.fromUnit.id}-to-${parsed.toUnit.id}`,
@@ -295,6 +302,9 @@ export async function executeTool(toolName, args = {}) {
             category: parsed.categoryId,
             from: parsed.fromUnit,
             to: parsed.toUnit,
+            isCompound: !!parsed.isCompound,
+            compoundDisplay: parsed.compoundDisplay || undefined,
+            compoundParts: parsed.compoundParts || undefined,
             formula,
             query: parsed.query,
             url: `https://www.convertthings.com/convert/${parsed.value}-${parsed.fromUnit.id}-to-${parsed.toUnit.id}`,

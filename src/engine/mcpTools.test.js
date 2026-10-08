@@ -63,6 +63,32 @@ describe('MCP Tools Engine', () => {
     expect(Math.round(res.structuredData.result)).toBe(68);
   });
 
+  test('parse_and_convert: handles compound unit queries with mixed units', async () => {
+    // 5 ft 10 in to cm
+    const resHeight = await executeTool('parse_and_convert', {
+      query: '5 ft 10 in to cm',
+    });
+
+    expect(resHeight.isError).toBe(false);
+    expect(resHeight.structuredData.isCompound).toBe(true);
+    expect(resHeight.structuredData.compoundDisplay).toBe('5 ft 10 in');
+    expect(resHeight.structuredData.to.id).toBe('cm');
+    expect(parseFloat(resHeight.structuredData.formattedResult)).toBeCloseTo(177.8, 1);
+    expect(resHeight.content[0].text).toContain('5 ft 10 in = 177.8 Centimeters (cm)');
+
+    // 2 lbs 4 oz to g
+    const resMass = await executeTool('parse_and_convert', {
+      query: '2 lbs 4 oz to g',
+    });
+
+    expect(resMass.isError).toBe(false);
+    expect(resMass.structuredData.isCompound).toBe(true);
+    expect(resMass.structuredData.compoundDisplay).toBe('2 lb 4 oz');
+    expect(resMass.structuredData.to.id).toBe('g');
+    expect(parseFloat(resMass.structuredData.formattedResult)).toBeCloseTo(1020.58, 2);
+    expect(resMass.content[0].text).toContain('2 lb 4 oz = 1020.58 Grams (g)');
+  });
+
   test('list_units: returns all categories when unconstrained', async () => {
     const res = await executeTool('list_units', {});
     expect(res.isError).toBe(false);

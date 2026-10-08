@@ -8,6 +8,8 @@ import {
   parseFractionString,
   formatFractionForDisplay,
   isFractionLike,
+  isCompoundLike,
+  parseCompoundValue,
   getCookingCompoundMeasure,
   formatCulinaryFraction,
   convertUnits,
@@ -358,6 +360,48 @@ describe('isFractionLike', () => {
     expect(isFractionLike('0')).toBe(false);
     expect(isFractionLike('')).toBe(false);
     expect(isFractionLike(null)).toBe(false);
+  });
+});
+
+describe('isCompoundLike and parseCompoundValue', () => {
+  test('correctly identifies compound-like input strings', () => {
+    expect(isCompoundLike("5'10\"")).toBe(true);
+    expect(isCompoundLike('5 ft 10 in')).toBe(true);
+    expect(isCompoundLike('2 lbs 4 oz')).toBe(true);
+    expect(isCompoundLike('1 hr 30 min')).toBe(true);
+    expect(isCompoundLike('1 gal 2 qt')).toBe(true);
+    expect(isCompoundLike('1 cup 2 tbsp')).toBe(true);
+    expect(isCompoundLike('100')).toBe(false);
+    expect(isCompoundLike('2.5')).toBe(false);
+    expect(isCompoundLike('')).toBe(false);
+    expect(isCompoundLike(null)).toBe(false);
+  });
+
+  test('parses compound values accurately to target units', () => {
+    // Length: 5 ft 10 in -> 70 in
+    expect(parseCompoundValue('5 ft 10 in', 'length', 'in')).toBe(70);
+    expect(parseCompoundValue("5'10\"", 'length', 'in')).toBe(70);
+    expect(parseCompoundValue("5' 10 1/2\"", 'length', 'in')).toBe(70.5);
+    expect(parseCompoundValue('5 ft 10 in', 'length', 'cm')).toBe(177.8);
+
+    // Mass: 2 lbs 4 oz -> 36 oz or 2.25 lb
+    expect(parseCompoundValue('2 lbs 4 oz', 'mass', 'oz')).toBe(36);
+    expect(parseCompoundValue('2 lbs 4 oz', 'mass', 'lb')).toBe(2.25);
+    expect(parseCompoundValue('2 pounds and 4 ounces', 'mass', 'oz')).toBe(36);
+
+    // Time: 1 hr 30 min 15 sec -> 5415 s
+    expect(parseCompoundValue('1 hr 30 min', 'time', 'min')).toBe(90);
+    expect(parseCompoundValue('1 hr 30 min 15 sec', 'time', 's')).toBe(5415);
+
+    // Volume: 1 gal 2 qt -> 1.5 gal
+    expect(parseCompoundValue('1 gal 2 qt', 'volume', 'gal_us')).toBe(1.5);
+
+    // Cooking: 1 cup 2 tbsp -> 18 tbsp
+    expect(parseCompoundValue('1 cup 2 tbsp', 'cooking', 'tbsp_us')).toBe(18);
+
+    // Invalid / Cross-category
+    expect(parseCompoundValue('5 ft 10 sec', 'length', 'in')).toBeNull();
+    expect(parseCompoundValue('not a value', 'length', 'in')).toBeNull();
   });
 });
 

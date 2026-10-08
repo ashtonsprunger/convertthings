@@ -153,6 +153,100 @@ describe('Smart Convert Search Parser Engine', () => {
       expect(res.value).toBe(88);
       expect(res.toUnit.id).toBe('kg');
       expect(parseFloat(res.result)).toBeCloseTo(2.4948, 2);
+
+      // 2 lbs 4 oz to g (idea one from ideas.md)
+      const res2 = parseCompoundConversion('2 lbs 4 oz to g');
+      expect(res2).not.toBeNull();
+      expect(res2.isCompound).toBe(true);
+      expect(res2.value).toBe(36);
+      expect(res2.toUnit.id).toBe('g');
+      expect(parseFloat(res2.result)).toBeCloseTo(1020.58, 2);
+      expect(res2.compoundDisplay).toBe('2 lb 4 oz');
+    });
+
+    test('parses mixed inputs with conjunctions and commas', () => {
+      // "5 feet and 10 inches to cm"
+      const res1 = parseCompoundConversion('5 feet and 10 inches to cm');
+      expect(res1).not.toBeNull();
+      expect(res1.value).toBe(70);
+      expect(res1.toUnit.id).toBe('cm');
+      expect(parseFloat(res1.result)).toBeCloseTo(177.8, 1);
+
+      // "2 pounds and 4 ounces to g"
+      const res2 = parseCompoundConversion('2 pounds and 4 ounces to g');
+      expect(res2).not.toBeNull();
+      expect(res2.value).toBe(36);
+      expect(res2.toUnit.id).toBe('g');
+      expect(parseFloat(res2.result)).toBeCloseTo(1020.58, 2);
+
+      // "5 ft, 10 in to cm"
+      const res3 = parseCompoundConversion('5 ft, 10 in to cm');
+      expect(res3).not.toBeNull();
+      expect(res3.value).toBe(70);
+    });
+
+    test('parses mixed inputs with fractions and decimals', () => {
+      // "5 ft 10 1/2 in to cm"
+      const res1 = parseCompoundConversion('5 ft 10 1/2 in to cm');
+      expect(res1).not.toBeNull();
+      expect(res1.value).toBe(70.5);
+      expect(parseFloat(res1.result)).toBeCloseTo(179.07, 2);
+
+      // "2 lbs 4.5 oz to g"
+      const res2 = parseCompoundConversion('2 lbs 4.5 oz to g');
+      expect(res2).not.toBeNull();
+      expect(res2.value).toBe(36.5);
+      expect(parseFloat(res2.result)).toBeCloseTo(1034.76, 2);
+    });
+
+    test('parses 3-part compound time expressions', () => {
+      // "1 hr 30 min 15 sec to s" -> 5415 s
+      const res = parseCompoundConversion('1 hr 30 min 15 sec to s');
+      expect(res).not.toBeNull();
+      expect(res.value).toBe(5415);
+      expect(res.toUnit.id).toBe('s');
+      expect(res.result).toBe(5415);
+      expect(res.compoundDisplay).toBe('1 h 30 min 15 s');
+    });
+
+    test('parses yard, stone, volume, and kitchen compound units', () => {
+      // 2 yd 1 ft to in -> 7 ft = 84 in
+      const resYd = parseCompoundConversion('2 yd 1 ft to in');
+      expect(resYd).not.toBeNull();
+      expect(resYd.value).toBe(7);
+      expect(resYd.fromUnit.id).toBe('ft');
+      expect(resYd.result).toBe(84);
+      expect(resYd.toUnit.id).toBe('in');
+
+      // 11 st 4 lb to kg -> 71.6676 kg
+      const resSt = parseCompoundConversion('11 st 4 lb to kg');
+      expect(resSt).not.toBeNull();
+      expect(resSt.toUnit.id).toBe('kg');
+      expect(parseFloat(resSt.result)).toBeCloseTo(71.6676, 2);
+
+      // 1 gal 2 qt to l -> 5.6781 L
+      const resVol = parseCompoundConversion('1 gal 2 qt to l');
+      expect(resVol).not.toBeNull();
+      expect(resVol.toUnit.id).toBe('l');
+      expect(parseFloat(resVol.result)).toBeCloseTo(5.6781, 2);
+
+      // 1 cup 2 tbsp to ml -> 266.16 mL
+      const resCook = parseCompoundConversion('1 cup 2 tbsp to ml');
+      expect(resCook).not.toBeNull();
+      expect(resCook.toUnit.id).toBe('ml');
+      expect(parseFloat(resCook.result)).toBeCloseTo(266.16, 2);
+    });
+
+    test('parses natural questions with compound units', () => {
+      const res1 = parseCompoundConversion('how many cm in 5 ft 10 in');
+      expect(res1).not.toBeNull();
+      expect(res1.toUnit.id).toBe('cm');
+      expect(parseFloat(res1.result)).toBeCloseTo(177.8, 1);
+
+      const res2 = parseCompoundConversion('how many grams in 2 lbs 4 oz');
+      expect(res2).not.toBeNull();
+      expect(res2.toUnit.id).toBe('g');
+      expect(parseFloat(res2.result)).toBeCloseTo(1020.58, 2);
     });
   });
 

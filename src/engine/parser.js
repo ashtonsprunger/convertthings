@@ -438,154 +438,200 @@ export function sanitizeQuery(rawQuery) {
 }
 
 /**
- * Parses compound physical units such as:
- * - Imperial Height: "5'11 to cm", "5 ft 11 in to cm", "6 feet 2 inches in meters"
- * - Compound Time: "1 hr 30 min in seconds", "2 hours 15 minutes to minutes"
- * - Compound Mass: "5 lbs 8 oz to kg", "5 lb 6 oz in grams"
+ * Parses compound physical and culinary units such as:
+ * - Imperial Height: "5'11 to cm", "5 ft 11 in to cm", "6 feet 2 inches in meters", "5 ft 10 1/2 in to cm"
+ * - Compound Time: "1 hr 30 min in seconds", "1 hr 30 min 15 sec to s", "1 hour and 30 minutes to minutes", "1h 30m 15s"
+ * - Compound Mass: "5 lbs 8 oz to kg", "2 lbs 4 1/2 oz to g", "11 st 4 lb to kg", "1 ton 500 lbs to kg"
+ * - Length Domains: "2 yd 1 ft to in", "1 yd 2 ft 6 in to cm", "1 mi 500 ft to km"
+ * - Volume & Kitchen: "1 gal 2 qt to l", "1 cup 2 tbsp to ml", "2 tbsp 1 tsp to ml"
+ * - Natural Questions: "how many cm in 5 ft 10 in", "what is 2 lbs 4 oz in g"
+ *
+ * @param {string} rawQuery
+ * @returns {object|null}
  */
 export function parseCompoundConversion(rawQuery) {
-  if (!rawQuery) return null;
-  const query = sanitizeQuery(rawQuery);
+  if (!rawQuery || typeof rawQuery !== 'string') return null;
+  const q = sanitizeQuery(rawQuery);
+  if (!q) return null;
 
-  // 1. Imperial Height: feet & inches (e.g. 5'11", 5' 11", 5ft 11in, 5 ft 11 in to cm)
-  const heightRegex = /^(?:(\d+)\s*(?:feet|foot|ft|')\s*(\d*(?:\.\d+)?)\s*(?:inches|inch|in|"|'')?|(\d+)\s*'\s*(\d*(?:\.\d+)?)(?:"|'')?)(?:\s*(?:to|in|into|as|=|convert to)\s*([a-z0-9_°'"/²³µ\s]+))?$/i;
-  const matchH = query.match(heightRegex);
-  if (matchH) {
-    const feet = parseInt(matchH[1] || matchH[3], 10);
-    const inchesRaw = matchH[2] || matchH[4];
-    const inches = inchesRaw ? parseFloat(inchesRaw) : 0;
-    const targetToken = matchH[5]?.trim();
+  const FRACTION_GLYPHS = '½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞';
+  const VALUE_REGEX_LOCAL = `(?:[+-]?\\d+\\s*[-+ ]\\s*\\d+\\/\\d+|[+-]?\\d+\\s*[${FRACTION_GLYPHS}]|[+-]?[${FRACTION_GLYPHS}]|[+-]?\\d+\\/\\d+|[+-]?[0-9]*\\.?[0-9]+(?:e[+-]?[0-9]+)?)`;
 
-    // Must be compound: either explicit inches (> 0) or quote notation ("5'11")
-    // Single unit queries like "1 feet to m" or "1 feet to se" are NOT compound queries!
-    const isExplicitCompound = inches > 0 || query.includes("'");
-    if (!isNaN(feet) && !isNaN(inches) && isExplicitCompound) {
-      const totalInches = feet * 12 + inches;
-      let targetUnit = null;
-      if (targetToken) {
-        const found = findUnit(targetToken, 'length');
-        if (found && found.categoryId === 'length') {
-          targetUnit = found.unit;
-        } else {
-          return null;
-        }
-      } else {
-        targetUnit = getUnit('length', 'cm');
-      }
+  // 1. Check natural question format: "how many [toUnit] in [compound]" or "what is [compound] in [toUnit]"
+  let targetToken = null;
+  let compoundStr = q;
 
-      if (targetUnit) {
-        const converted = convertUnits(totalInches, 'length', 'in', targetUnit.id);
-        if (converted !== null && !isNaN(converted) && isFinite(converted)) {
-          const fromUnit = getUnit('length', 'in');
-          const displayLabel = `${feet} ft ${inches > 0 ? `${inches} in` : ''}`.trim();
-          return {
-            success: true,
-            categoryId: 'length',
-            fromUnit,
-            toUnit: targetUnit,
-            value: totalInches,
-            result: converted,
-            formattedResult: formatNumber(converted, 'auto', 'length'),
-            query: rawQuery,
-            isCompound: true,
-            compoundDisplay: displayLabel,
-            hasExplicitValue: true,
-            hasExplicitTo: !!targetToken,
-          };
-        }
-      }
+  const howManyMatch = q.match(/^(?:how many|how much)\s+([a-z0-9_°'"/²³µ\s]+?)\s+(?:in|are in|are there in)\s+(.+)$/i);
+  if (howManyMatch) {
+    targetToken = howManyMatch[1].trim();
+    compoundStr = howManyMatch[2].trim();
+  } else {
+    // Check trailing target: "... (to|in|into|as|=|convert to) [targetUnit]"
+    const toMatch = q.match(/^(.*?)\s+(?:to|in|into|as|=|convert to)\s+([a-z0-9_°'"/²³µ]+)$/i);
+    if (toMatch) {
+      targetToken = toMatch[2].trim();
+      compoundStr = toMatch[1].trim();
     }
   }
 
-  // 2. Compound Time: hours & minutes (e.g. 1 hr 30 min in seconds, 2 hours 15 mins to minutes)
-  const timeRegex = /^(\d+)\s*(?:hours|hour|hrs|hr|h)\s*(\d+(?:\.\d+)?)\s*(?:minutes|minute|mins|min|m)(?:\s*(?:to|in|into|as|=|convert to)\s*([a-z0-9_°'"/²³µ\s]+))?$/i;
-  const matchT = query.match(timeRegex);
-  if (matchT) {
-    const hours = parseInt(matchT[1], 10);
-    const minutes = parseFloat(matchT[2]);
-    const targetToken = matchT[3]?.trim();
-    if (!isNaN(hours) && !isNaN(minutes)) {
-      const totalMinutes = hours * 60 + minutes;
-      let targetUnit = null;
-      if (targetToken) {
-        const found = findUnit(targetToken, 'time');
-        if (found && found.categoryId === 'time') {
-          targetUnit = found.unit;
-        } else {
-          return null;
-        }
-      } else {
-        targetUnit = getUnit('time', 's');
-      }
-      if (targetUnit) {
-        const converted = convertUnits(totalMinutes, 'time', 'min', targetUnit.id);
-        if (converted !== null && !isNaN(converted) && isFinite(converted)) {
-          const fromUnit = getUnit('time', 'min');
-          const displayLabel = `${hours} hr ${minutes} min`;
-          return {
-            success: true,
-            categoryId: 'time',
-            fromUnit,
-            toUnit: targetUnit,
-            value: totalMinutes,
-            result: converted,
-            formattedResult: formatNumber(converted, 'auto', 'time'),
-            query: rawQuery,
-            isCompound: true,
-            compoundDisplay: displayLabel,
-            hasExplicitValue: true,
-            hasExplicitTo: !!targetToken,
-          };
-        }
-      }
+  // Pre-normalize commas and 'and'
+  compoundStr = compoundStr
+    .replace(/,/g, ' ')
+    .replace(/\band\b/gi, ' ');
+
+  // 5'11" -> 5 ft 11 in, 5' 10 1/2" -> 5 ft 10 1/2 in, 5'10 -> 5 ft 10 in
+  compoundStr = compoundStr.replace(
+    new RegExp(`(\\d+)\\s*'\\s*(${VALUE_REGEX_LOCAL})?\\s*(?:\\"|''|in|inches|inch)?`, 'gi'),
+    (m, feet, inches) => `${feet} ft ${inches ? `${inches} in` : ''} `
+  );
+
+  // 5 ft 10 (without unit on inches) when followed by end or to/in/into
+  compoundStr = compoundStr.replace(
+    new RegExp(`(\\d+)\\s*(?:feet|foot|ft)\\s+(${VALUE_REGEX_LOCAL})(?![\\d.])(?=\\s*(?:$|to\\b|into\\b))`, 'gi'),
+    '$1 ft $2 in '
+  );
+
+  // Compact letters stuck to digits: 5ft10in -> 5 ft 10 in, 2lbs4oz -> 2 lbs 4 oz, 1h30m15s -> 1 h 30 m 15 s
+  compoundStr = compoundStr.replace(/(\d)([a-zµ°])/gi, '$1 $2');
+  compoundStr = compoundStr.replace(/\s+/g, ' ').trim();
+
+  // Extract parts: sequence of [value] [unit]
+  const partRegex = new RegExp(`(${VALUE_REGEX_LOCAL})\\s*([a-z°'"/²³µ]+)`, 'gi');
+  const parts = [];
+  let match;
+  while ((match = partRegex.exec(compoundStr)) !== null) {
+    const rawVal = match[1].trim();
+    const val = parseFractionString(rawVal);
+    const uToken = match[2].trim();
+    if (!isNaN(val)) {
+      parts.push({ rawVal, val, uToken });
     }
   }
 
-  // 3. Compound Mass: pounds & ounces (e.g. 5 lbs 8 oz to kg)
-  const massRegex = /^(\d+)\s*(?:pounds|pound|lbs|lb)\s*(\d+(?:\.\d+)?)\s*(?:ounces|ounce|oz)(?:\s*(?:to|in|into|as|=|convert to)\s*([a-z0-9_°'"/²³µ\s]+))?$/i;
-  const matchM = query.match(massRegex);
-  if (matchM) {
-    const pounds = parseInt(matchM[1], 10);
-    const ounces = parseFloat(matchM[2]);
-    const targetToken = matchM[3]?.trim();
-    if (!isNaN(pounds) && !isNaN(ounces)) {
-      const totalOunces = pounds * 16 + ounces;
-      let targetUnit = null;
-      if (targetToken) {
-        const found = findUnit(targetToken, 'mass');
-        if (found && found.categoryId === 'mass') {
-          targetUnit = found.unit;
-        } else {
-          return null;
-        }
+  // Must have at least 2 distinct parts to be a compound conversion
+  if (parts.length < 2) {
+    return null;
+  }
+
+  // Resolve units across parts
+  const resolved = [];
+  let catId = null;
+
+  for (const p of parts) {
+    const found = findUnit(p.uToken, catId);
+    if (!found) return null;
+    if (catId && found.categoryId !== catId) {
+      // Check cooking <-> volume domain overlap
+      if (
+        (catId === 'cooking' && found.categoryId === 'volume') ||
+        (catId === 'volume' && found.categoryId === 'cooking')
+      ) {
+        // permitted domain overlap
       } else {
-        targetUnit = getUnit('mass', 'kg');
+        return null; // Cross-category mismatch
       }
-      if (targetUnit) {
-        const converted = convertUnits(totalOunces, 'mass', 'oz', targetUnit.id);
-        if (converted !== null && !isNaN(converted) && isFinite(converted)) {
-          const fromUnit = getUnit('mass', 'oz');
-          const displayLabel = `${pounds} lb ${ounces} oz`;
-          return {
-            success: true,
-            categoryId: 'mass',
-            fromUnit,
-            toUnit: targetUnit,
-            value: totalOunces,
-            result: converted,
-            formattedResult: formatNumber(converted, 'auto', 'mass'),
-            query: rawQuery,
-            isCompound: true,
-            compoundDisplay: displayLabel,
-            hasExplicitValue: true,
-            hasExplicitTo: !!targetToken,
-          };
-        }
-      }
+    }
+    catId = catId || found.categoryId;
+    resolved.push({
+      value: p.val,
+      unit: found.unit,
+      categoryId: found.categoryId,
+    });
+  }
+
+  if (!catId || resolved.length < 2) return null;
+
+  // Domain prioritization: culinary units belong in cooking
+  if (catId === 'volume' || catId === 'cooking') {
+    const allCulinary = resolved.every((r) => getUnit('cooking', r.unit.id));
+    if (allCulinary) catId = 'cooking';
+  }
+
+  // Convert each part to base unit and calculate total
+  let totalBase = 0;
+  for (const r of resolved) {
+    const uDef = getUnit(catId, r.unit.id) || r.unit;
+    let baseVal = 0;
+    if (typeof uDef.toBase === 'function') {
+      baseVal = uDef.toBase(r.value);
+    } else {
+      baseVal = r.value * uDef.factor;
+    }
+    totalBase += baseVal;
+  }
+
+  // Determine reference unit (the smallest unit in the compound expression)
+  const smallestPart = resolved[resolved.length - 1];
+  const refUnit = getUnit(catId, smallestPart.unit.id) || smallestPart.unit;
+  let totalInRef = 0;
+  if (typeof refUnit.fromBase === 'function') {
+    totalInRef = refUnit.fromBase(totalBase);
+  } else {
+    totalInRef = totalBase / refUnit.factor;
+  }
+  totalInRef = Math.round(totalInRef * 1e10) / 1e10;
+
+  // Determine target unit
+  let targetUnit = null;
+  if (targetToken) {
+    const foundTarget = findUnit(targetToken, catId);
+    if (
+      foundTarget &&
+      (foundTarget.categoryId === catId ||
+        (catId === 'cooking' && foundTarget.categoryId === 'volume') ||
+        (catId === 'volume' && foundTarget.categoryId === 'cooking'))
+    ) {
+      targetUnit = foundTarget.unit;
+    } else {
+      return null;
+    }
+  } else {
+    // Smart defaults per category
+    if (catId === 'length') {
+      targetUnit = getUnit('length', 'cm');
+    } else if (catId === 'mass') {
+      targetUnit = totalInRef < 16 && refUnit.id === 'oz' ? getUnit('mass', 'g') : getUnit('mass', 'kg');
+    } else if (catId === 'time') {
+      targetUnit = resolved.some((r) => r.unit.id === 's') ? getUnit('time', 's') : getUnit('time', 'min');
+    } else if (catId === 'volume') {
+      targetUnit = getUnit('volume', 'l');
+    } else if (catId === 'cooking') {
+      targetUnit = getUnit('cooking', 'ml');
+    } else {
+      targetUnit = getUnit(catId, refUnit.id);
     }
   }
 
-  return null;
+  if (!targetUnit) return null;
+
+  // Convert total to target unit
+  let converted = 0;
+  if (typeof targetUnit.fromBase === 'function') {
+    converted = targetUnit.fromBase(totalBase);
+  } else {
+    converted = totalBase / targetUnit.factor;
+  }
+  converted = Math.round(converted * 1e10) / 1e10;
+
+  // Format compound display: e.g. "5 ft 10 in", "2 lb 4 oz", "1 hr 30 min 15 s"
+  const displayParts = resolved.map((r) => `${r.value} ${r.unit.symbol}`);
+  const compoundDisplay = displayParts.join(' ');
+
+  return {
+    success: true,
+    categoryId: catId,
+    fromUnit: refUnit,
+    toUnit: targetUnit,
+    value: totalInRef,
+    result: converted,
+    formattedResult: formatNumber(converted, 'auto', catId),
+    query: rawQuery,
+    isCompound: true,
+    compoundDisplay,
+    compoundParts: resolved.map((r) => ({ value: r.value, unit: r.unit })),
+    hasExplicitValue: true,
+    hasExplicitTo: !!targetToken,
+  };
 }
 
 /**
@@ -986,7 +1032,7 @@ export function getSearchSuggestions(rawQuery, options = {}) {
       categoryId: parsed.categoryId,
       title: mainTitle,
       subtitle: `${catName} · ${parsed.fromUnit.symbol} → ${parsed.toUnit.symbol}`,
-      badge: isCompound ? 'Height Match' : 'Instant Match',
+      badge: isCompound ? (parsed.categoryId === 'length' ? 'Height Match' : 'Compound Match') : 'Instant Match',
       icon: catIcon,
       equation: {
         fromVal: isCompound ? parsed.compoundDisplay : fromValFormatted,
@@ -1002,6 +1048,7 @@ export function getSearchSuggestions(rawQuery, options = {}) {
         fromUnitId: parsed.fromUnit.id,
         toUnitId: parsed.toUnit.id,
         value: parsed.value,
+        displayValue: isCompound ? parsed.compoundDisplay : undefined,
         formattedResult: parsed.formattedResult,
         hasExplicitValue: isCompound || !!parsed.hasExplicitValue,
         hasExplicitTo: parsed.hasExplicitTo !== false,

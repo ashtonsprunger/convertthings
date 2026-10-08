@@ -162,6 +162,7 @@ export function Omnibox({ onSelectConversion, onSelectCategory, history = [], fa
           fromUnitId: item.payload.fromUnitId,
           toUnitId: item.payload.toUnitId,
           value: item.payload.value !== undefined ? item.payload.value : 1,
+          displayValue: item.payload.displayValue,
           hasExplicitValue: !!item.payload.hasExplicitValue,
           hasExplicitTo: item.payload.hasExplicitTo !== false,
         });

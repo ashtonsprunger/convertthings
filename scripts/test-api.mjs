@@ -67,6 +67,27 @@ async function runTests() {
     assert(Math.round(responseData.result) === 62, `Converted 100 km to ~62 miles (got ${responseData.result})`);
   }
 
+  // 1b. Test /api/convert with compound mixed inputs (5 ft 10 in to cm, 2 lbs 4 oz to g)
+  {
+    const { req, res } = createMockReqRes({ query: { q: '5 ft 10 in to cm' } });
+    await convertHandler(req, res);
+    const { statusCode, responseData } = res._getData();
+    assert(statusCode === 200, '/api/convert?q=5 ft 10 in to cm returns 200');
+    assert(responseData.isCompound === true, 'Response isCompound is true');
+    assert(responseData.compoundDisplay === '5 ft 10 in', 'Compound display is "5 ft 10 in"');
+    assert(Math.round(responseData.result * 10) / 10 === 177.8, `5 ft 10 in = ~177.8 cm (got ${responseData.result})`);
+  }
+
+  {
+    const { req, res } = createMockReqRes({ query: { q: '2 lbs 4 oz to g' } });
+    await convertHandler(req, res);
+    const { statusCode, responseData } = res._getData();
+    assert(statusCode === 200, '/api/convert?q=2 lbs 4 oz to g returns 200');
+    assert(responseData.isCompound === true, 'Response isCompound is true for mass');
+    assert(responseData.compoundDisplay === '2 lb 4 oz', 'Compound display is "2 lb 4 oz"');
+    assert(Math.round(responseData.result) === 1021, `2 lbs 4 oz = ~1021 g (got ${responseData.result})`);
+  }
+
   // 2. Test /api/convert with structured params
   {
     const { req, res } = createMockReqRes({ query: { from: 'c', to: 'f', val: '100' } });

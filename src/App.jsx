@@ -6,6 +6,8 @@ import {
   formatNumber,
   parseFractionString,
   isFractionLike,
+  isCompoundLike,
+  parseCompoundValue,
 } from './engine/conversions';
 import { parseRoute, formatRoutePath, VALID_PRECISIONS } from './engine/urlRouter';
 import { getSeoMetadata } from './engine/seo';
@@ -196,9 +198,16 @@ function App() {
         setToValue('');
         return;
       }
-      const numVal = typeof val === 'string' && isFractionLike(val)
+      let numVal = typeof val === 'string' && isFractionLike(val)
         ? parseFractionString(val)
         : Number(val);
+
+      if (isNaN(numVal) && typeof val === 'string' && isCompoundLike(val)) {
+        const compVal = parseCompoundValue(val, catId, fUnitId);
+        if (compVal !== null && !isNaN(compVal)) {
+          numVal = compVal;
+        }
+      }
 
       if (isNaN(numVal)) {
         setToValue('');
@@ -529,9 +538,15 @@ function App() {
     // Queue history recording
     if (historyTimeoutRef.current) clearTimeout(historyTimeoutRef.current);
     historyTimeoutRef.current = setTimeout(() => {
-      const numVal = typeof newVal === 'string' && isFractionLike(newVal)
+      let numVal = typeof newVal === 'string' && isFractionLike(newVal)
         ? parseFractionString(newVal)
         : Number(newVal);
+      if (isNaN(numVal) && typeof newVal === 'string' && isCompoundLike(newVal)) {
+        const compVal = parseCompoundValue(newVal, categoryId, fromUnitId);
+        if (compVal !== null && !isNaN(compVal)) {
+          numVal = compVal;
+        }
+      }
       if (!isNaN(numVal)) {
         const res = convertUnits(numVal, categoryId, fromUnitId, toUnitId);
         if (res !== null) {
@@ -757,7 +772,7 @@ function App() {
   };
 
   // Handle Natural Language / Omnibox selection
-  const handleSelectConversion = ({ categoryId: cId, fromUnitId: fId, toUnitId: tId, value: val, hasExplicitValue, hasExplicitTo }) => {
+  const handleSelectConversion = ({ categoryId: cId, fromUnitId: fId, toUnitId: tId, value: val, displayValue, hasExplicitValue, hasExplicitTo }) => {
     setIsRoot(false);
     setIsCategoryPage(false);
     setLastEdited('from');
@@ -768,7 +783,7 @@ function App() {
       // Automatic rule: Searches with an explicit "to" navigate with kitchen mode OFF
       setKitchenMode(hasExplicitTo === false ? true : false);
     }
-    const strVal = val !== undefined ? val.toString() : '1';
+    const strVal = displayValue || (val !== undefined ? val.toString() : '1');
     setFromValue(strVal);
     saveCategoryUnits(cId, fId, tId);
     if (sessionStateRef.current) {
@@ -779,7 +794,10 @@ function App() {
       };
     }
     performCalculation(strVal, cId, fId, tId, precision);
-    showToast(`Converted ${strVal} ${fId} to ${tId}`);
+    const toastMsg = displayValue
+      ? `Converted ${displayValue} to ${tId}`
+      : `Converted ${strVal} ${fId} to ${tId}`;
+    showToast(toastMsg);
   };
 
   // Check if current pair is favorite (order-agnostic pair)

@@ -683,6 +683,19 @@ export function isFractionLike(val) {
 }
 
 /**
+ * Check if a string represents a compound measurement (e.g. "5 ft 10 in", "5'11\"", "2 lbs 4 oz", "1 hr 30 min").
+ */
+export function isCompoundLike(val) {
+  if (val === null || val === undefined || val === '') return false;
+  const s = String(val).trim();
+  return (
+    /'|"/.test(s) ||
+    /\b(?:ft|feet|foot|in|inch|inches|yd|yard|yards|mi|mile|miles|lb|lbs|pound|pounds|oz|ounce|ounces|st|stone|stones|ton|tons|hr|hrs|hour|hours|min|mins|minute|minutes|sec|secs|second|seconds|gal|gallon|gallons|qt|quart|quarts|pt|pint|pints|cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons)\b/i.test(s) ||
+    /\d+[hmsd]\s*\d+[hmsd]/i.test(s)
+  );
+}
+
+/**
  * Format a fraction string or compound measurement for clean, unambiguous human display.
  * - Transforms mixed fractions like "1 3/8" into "1 ⅜" and "3/4" into "¾".
  * - For 16ths/32nds without single Unicode glyphs, formats as "1-13/16" to eliminate
@@ -863,6 +876,133 @@ export function parseFractionString(val) {
   // 9. Fallback to standard float
   const parsed = parseFloat(s);
   return isNaN(parsed) ? 0 : parsed;
+}
+
+/**
+ * Finds a unit within a category by token (id, symbol, name, plural, or alias).
+ * Handles plural s stripping and volume <-> cooking domain overlap.
+ */
+function findUnitInCategory(token, catId) {
+  if (!token || !catId || !UNIT_DEFINITIONS[catId]) return null;
+  const clean = String(token).trim().toLowerCase().replace(/^°/, '');
+  if (!clean) return null;
+
+  const catUnits = UNIT_DEFINITIONS[catId].units;
+  for (const u of catUnits) {
+    if (
+      u.id.toLowerCase() === clean ||
+      u.symbol.toLowerCase().replace(/^°/, '') === clean ||
+      u.name.toLowerCase() === clean ||
+      u.plural.toLowerCase() === clean ||
+      (u.aliases && u.aliases.some((a) => a.toLowerCase().replace(/^°/, '') === clean))
+    ) {
+      return u;
+    }
+  }
+
+  if (clean.length > 2 && clean.endsWith('s')) {
+    const singular = clean.slice(0, -1);
+    for (const u of catUnits) {
+      if (
+        u.id.toLowerCase() === singular ||
+        u.name.toLowerCase() === singular ||
+        (u.aliases && u.aliases.some((a) => a.toLowerCase().replace(/^°/, '') === singular))
+      ) {
+        return u;
+      }
+    }
+  }
+
+  const altCat = catId === 'cooking' ? 'volume' : catId === 'volume' ? 'cooking' : null;
+  if (altCat && UNIT_DEFINITIONS[altCat]) {
+    for (const u of UNIT_DEFINITIONS[altCat].units) {
+      if (
+        u.id.toLowerCase() === clean ||
+        u.symbol.toLowerCase().replace(/^°/, '') === clean ||
+        u.name.toLowerCase() === clean ||
+        u.plural.toLowerCase() === clean ||
+        (u.aliases && u.aliases.some((a) => a.toLowerCase().replace(/^°/, '') === clean))
+      ) {
+        return u;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Parses a compound measurement string into its numeric value for a given target unit.
+ * Supports feet & inches ("5 ft 10 in", "5'10\"", "5 ft 10"), pounds & ounces ("2 lbs 4 oz"),
+ * hours, minutes & seconds ("1 hr 30 min 15 sec", "1h 30m"), gallons & quarts ("1 gal 2 qt"),
+ * and culinary units ("1 cup 2 tbsp", "2 tbsp 1 tsp").
+ *
+ * @param {string} str
+ * @param {string} categoryId
+ * @param {string} [targetUnitId]
+ * @returns {number|null}
+ */
+export function parseCompoundValue(str, categoryId, targetUnitId) {
+  if (!str || typeof str !== 'string' || !categoryId) return null;
+  let s = str.trim().toLowerCase();
+  if (!s) return null;
+
+  s = s.replace(/,/g, ' ').replace(/\band\b/gi, ' ');
+
+  const FRACTION_GLYPHS = '½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞';
+  const VALUE_REGEX_STR = `(?:[+-]?\\d+\\s*[-+ ]\\s*\\d+\\/\\d+|[+-]?\\d+\\s*[${FRACTION_GLYPHS}]|[+-]?[${FRACTION_GLYPHS}]|[+-]?\\d+\\/\\d+|[+-]?[0-9]*\\.?[0-9]+(?:e[+-]?[0-9]+)?)`;
+
+  // 5'11", 5' 11", 5' 10 1/2", 5'10
+  s = s.replace(
+    new RegExp(`(\\d+)\\s*'\\s*(${VALUE_REGEX_STR})?\\s*(?:\\"|''|in|inches|inch)?`, 'gi'),
+    (m, feet, inches) => `${feet} ft ${inches ? `${inches} in` : ''} `
+  );
+
+  // 5 ft 10 (without unit on inches)
+  s = s.replace(
+    new RegExp(`(\\d+)\\s*(?:feet|foot|ft)\\s+(${VALUE_REGEX_STR})(?![\\d.])(?=\\s*(?:$|to\\b|into\\b))`, 'gi'),
+    '$1 ft $2 in '
+  );
+
+  // Compact letters stuck to digits: 5ft10in -> 5 ft 10 in
+  s = s.replace(/(\d)([a-zµ°])/gi, '$1 $2');
+  s = s.replace(/\s+/g, ' ').trim();
+
+  const partRegex = new RegExp(`(${VALUE_REGEX_STR})\\s*([a-z°'"/²³µ]+)`, 'gi');
+  const parts = [];
+  let match;
+  while ((match = partRegex.exec(s)) !== null) {
+    const rawVal = match[1].trim();
+    const val = parseFractionString(rawVal);
+    const uToken = match[2].trim();
+    if (!isNaN(val)) {
+      parts.push({ val, uToken });
+    }
+  }
+
+  if (parts.length < 2) return null;
+
+  let totalBase = 0;
+  for (const p of parts) {
+    const u = findUnitInCategory(p.uToken, categoryId);
+    if (!u) return null;
+    let baseVal = 0;
+    if (typeof u.toBase === 'function') {
+      baseVal = u.toBase(p.val);
+    } else {
+      baseVal = p.val * u.factor;
+    }
+    totalBase += baseVal;
+  }
+
+  const targetId = targetUnitId || UNIT_DEFINITIONS[categoryId]?.baseUnit;
+  const targetDef = getUnit(categoryId, targetId) || (categoryId === 'cooking' ? getUnit('volume', targetId) : null);
+  if (!targetDef) return null;
+
+  if (typeof targetDef.fromBase === 'function') {
+    return Math.round(targetDef.fromBase(totalBase) * 1e10) / 1e10;
+  }
+  return Math.round((totalBase / targetDef.factor) * 1e10) / 1e10;
 }
 
 /**
@@ -1400,9 +1540,15 @@ export function getSmartEquationDisplay(categoryId, fromUnit, toUnit, fromValue,
     return fallback;
   }
 
-  const rawFromNum = typeof fromValue === 'string' && isFractionLike(fromValue)
+  let rawFromNum = typeof fromValue === 'string' && isFractionLike(fromValue)
     ? parseFractionString(fromValue)
     : Number(fromValue);
+  if (isNaN(rawFromNum) && typeof fromValue === 'string' && isCompoundLike(fromValue)) {
+    const compVal = parseCompoundValue(fromValue, categoryId, fromUnit.id);
+    if (compVal !== null && !isNaN(compVal)) {
+      rawFromNum = compVal;
+    }
+  }
   const rawTargetNum = typeof targetValue === 'string' && isFractionLike(targetValue)
     ? parseFractionString(targetValue)
     : Number(targetValue);
