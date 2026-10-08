@@ -97,10 +97,9 @@ export function CategoryNav({ activeCategoryId, onSelectCategory }) {
   }, [isExpanded]);
 
   const toggleExpand = useCallback((targetState) => {
+    prevSnapshotRef.current = takeSnapshot();
     setIsExpanded((prev) => {
       const next = targetState !== undefined ? targetState : !prev;
-      if (next === prev) return prev;
-      prevSnapshotRef.current = takeSnapshot();
       return next;
     });
   }, [takeSnapshot]);
@@ -156,9 +155,11 @@ export function CategoryNav({ activeCategoryId, onSelectCategory }) {
     // Temporarily suppress scrollbars and gradient mask clipping during the FLIP transition
     if (scrollRef.current) {
       scrollRef.current.classList.add('is-animating');
+      navInnerRef.current?.classList.add('is-animating');
       setTimeout(() => {
         if (scrollRef.current) {
           scrollRef.current.classList.remove('is-animating');
+          navInnerRef.current?.classList.remove('is-animating');
           updateScrollOverflow();
         }
       }, duration + 30);
@@ -307,6 +308,12 @@ export function CategoryNav({ activeCategoryId, onSelectCategory }) {
     };
 
     const handleClickOutside = (e) => {
+      // Ignore clicks on disconnected elements (e.g. unmounted during render)
+      if (e.target && !e.target.isConnected) return;
+
+      const path = typeof e.composedPath === 'function' ? e.composedPath() : [];
+      if (path.includes(navRef.current)) return;
+
       if (navRef.current && !navRef.current.contains(e.target)) {
         toggleExpand(false);
       }

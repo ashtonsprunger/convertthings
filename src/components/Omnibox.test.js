@@ -256,5 +256,35 @@ describe('Omnibox Component', () => {
       fireEvent.click(unsupportedItem);
     }
   });
+
+  test('focuses text input when clicking anywhere on search box wrapper or icon or shortcut', () => {
+    const { container } = render(
+      <Omnibox onSelectConversion={jest.fn()} onSelectCategory={jest.fn()} />
+    );
+
+    const input = screen.getByRole('combobox');
+    expect(document.activeElement).not.toBe(input);
+
+    // Clicking the wrapper focuses the input
+    const wrapper = container.querySelector('.ct-omnibox-wrapper');
+    fireEvent.click(wrapper);
+    expect(document.activeElement).toBe(input);
+
+    input.blur();
+    expect(document.activeElement).not.toBe(input);
+
+    // Clicking the search icon focuses the input
+    const icon = container.querySelector('.ct-omnibox-icon');
+    fireEvent.click(icon);
+    expect(document.activeElement).toBe(input);
+
+    input.blur();
+    expect(document.activeElement).not.toBe(input);
+
+    // Clicking the shortcut badge focuses the input
+    const shortcut = container.querySelector('.ct-omnibox-shortcut');
+    fireEvent.click(shortcut);
+    expect(document.activeElement).toBe(input);
+  });
 });
 

@@ -217,7 +217,16 @@ export function Omnibox({ onSelectConversion, onSelectCategory, history = [], fa
 
   return (
     <section className="ct-omnibox-section" ref={containerRef} aria-label="Smart conversion and category search">
-      <div className={`ct-omnibox-wrapper ${isOpen ? 'focused' : ''}`}>
+      <div
+        className={`ct-omnibox-wrapper ${isOpen ? 'focused' : ''}`}
+        onClick={(e) => {
+          if (e.target.closest('.ct-omnibox-clear') || e.target.closest('.ct-omnibox-dropdown')) {
+            return;
+          }
+          inputRef.current?.focus();
+          setIsOpen(true);
+        }}
+      >
         <div className="ct-omnibox-icon" title="Search conversions">
           <Icon name="Search" size={16} />
         </div>

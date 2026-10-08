@@ -11,8 +11,8 @@
   --bg-card: #ffffff;
   --bg-card-subtle: #f1f5f9;
   --bg-input: #ffffff;
-  --bg-hover: #f1f5f9;
-  --bg-active: #e2e8f0;
+  --bg-hover: #e8edf4;
+  --bg-active: #dce4ee;
   --bg-dropdown: #ffffff;
 
   --text-main: #0f172a;
@@ -160,7 +160,7 @@
   --bg-card: #0f172a;
   --bg-card-subtle: #1e293b;
   --bg-input: #131d31;
-  --bg-hover: #1e293b;
+  --bg-hover: #27364d;
   --bg-active: #334155;
   --bg-dropdown: #0f172a;
 

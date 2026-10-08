@@ -50,7 +50,7 @@
 6. **Google Material 3 Rounded Design System (`src/App.css`, `src/index.css`)**:
    - **Full Pill & Floating Capsule Geometry**:
      - Main inputs (`.ct-integrated-input-box`) and Omnibox search bar use `border-radius: var(--radius-full)` (9999px) capsules.
-     - Interactive full-name unit selector chips (`.ct-unit-selector-chip`: `[ Millimeter  mm  ▾ ]`) sit inside the pod header as floating Material pill chips with subtle resting depth.
+     - Interactive full-name unit selector chips (`.ct-unit-selector-chip`: `[ Millimeter  mm  ▾ ]`) sit inside the pod header as clean Material pills with surface contrast and zero resting shadow, elevating on hover.
      - Primary cards (`.ct-card`, `.ct-table-card`, `.ct-history-section`, modals, SEO guides) use `--radius-card: 38px`.
      - Secondary nested surfaces and cards use `--radius-surface: 18px`.
      - Strict **Concentric Geometry** formula: $R_{\text{outer}} (38\text{px}) = R_{\text{inner}} (18\text{px}) + \text{Padding} (20\text{px} / 1.25\text{rem})$.
@@ -58,12 +58,11 @@
    - **Unified Unit Pod Architecture (`.ct-unit-block`)**:
      - Organizes the "From" and "To" sides into two distinct, soft surface trays (`background-color: var(--bg-card-subtle)`, `border-radius: var(--radius-card)`, `border: 1px solid transparent;`) without harsh border lines.
      - Leverages Gestalt *Law of Common Region*: enclosing both the unit selector dropdown chip and the floating numeric input inside the same physical pod boundary establishes an unmistakable, immediate visual connection between each unit and its value.
-     - The circular swap button (`.ct-swap-column`) floats vertically centered between both pods, visually bridging them.
+     - The circular swap button (`.ct-swap-btn`) rests as a flat, soft-gray dial (`background: var(--bg-card-subtle)`) bridging the pods, blooming white with elevation on hover.
    - **Borderless Floating Inputs with Multi-Tier Ambient Elevation**:
      - Zero hard outline borders (`border: 1px solid transparent`).
      - Uses dual-layer ambient drop shadows at rest (`0 4px 18px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04)`) and expanded depth on hover (`0 8px 28px -3px rgba(15, 23, 42, 0.12)`).
-     - In dark mode, uses deep ambient drop shadows with an inset specular highlight stroke (`inset 0 1px 0 rgba(255, 255, 255, 0.08)`).
-     - Crisp neutral focus state: `box-shadow: 0 0 0 2px var(--text-main), 0 8px 30px -4px rgba(15, 23, 42, 0.14)` (zero colored outline or colored focus rings).
+     - Crisp floating focus state: ambient elevation with lift (`transform: translateY(-1.5px)`), multi-tier soft blur (`0 12px 34px -4px rgba(15, 23, 42, 0.14)`), and ultra-subtle whisper edge (`0 0 0 1px rgba(15, 23, 42, 0.08)`) with zero harsh wireframe rings or black borders.
    - **Single Hero Accent in Workbenches**:
      - The converted result pill (`.ct-num-copy-btn`) is the **sole vibrant, category-colored hero element inside the conversion card** (`background: var(--cat-current-light); color: var(--cat-current)`).
      - All surrounding controls—unit selector chips, center swap button, input borders, carets, precision dropdown, kitchen toggle, and educational formulas—are calm, refined monochrome.
@@ -226,20 +225,39 @@ convertThings/
    - Lock interactive card text & icon vertical baselines (`min-height: 48px; line-height: 1`).
    - Use multi-tier ambient shadows (`--shadow-google-sm`, `--shadow-google-md`, `--shadow-google-lg`) and kinetic spring easing (`--ease-spring`).
    - Maintain the smart navigation hierarchy: ambient floating capsule on desktop, edge-to-edge docked on mobile, and smart headroom scroll dynamics.
-5. **Zero-Border & Surface-Driven Architecture (App-Wide)**:
-   - Avoid reintroducing harsh wireframe outlines, boxed sub-containers, or horizontal divider lines across any card or component. Always rely on natural surface contrast (`--bg-card` vs `--bg-card-subtle`), dual-layer ambient shadows (`--shadow-google-sm`, `--shadow-google-md`, `--shadow-google-lg`), and calibrated whitespace.
+5. **Zero-Border, Surface-Driven Architecture & Strict Binary Elevation Model (App-Wide)**:
+   - Enforce a strict binary elevation model: elements are either **Clearly Raised** with generous multi-tier ambient shadows (primary cards, floating inputs, modal dialogs, and popover menus) or **Completely Flat** at rest and in interaction (zero micro-shadows, glow halos, or 1px–3px drop shadows on category chips, the search `"/"` shortcut key badge, favorite pills, precision toggles, unit chips, dropdown search boxes, badges, or secondary action buttons). Surface contrast, geometry, and crisp typography carry visual separation.
+   - Avoid reintroducing harsh wireframe outlines, boxed sub-containers, or horizontal divider lines across any card or component. Always rely on natural surface contrast (`--bg-card` vs `--bg-card-subtle`), dual-layer ambient shadows (`--shadow-google-sm`, `--shadow-google-md`, `--shadow-google-lg`) for raised containers, and calibrated whitespace.
    - Applies universally across:
-     - **Main Workbench**: borderless pods (`.ct-unit-block`), floating inputs, dissolved zero-divider footer.
-     - **Reference Table & All Units Grid**: borderless `.ct-table-card`, header, floating tab pill container, and floating `.ct-unit-stat-card` cards.
-     - **Recent Conversions Drawer**: borderless `.ct-history-section`, floating `.ct-history-item` cards, and pill buttons.
+     - **Main Workbench**: borderless pods (`.ct-unit-block`), floating inputs, flat unit selector chips, flat swap dial, dissolved zero-divider footer.
+     - **Navigation & Category Bar**: flat category tabs (`.ct-category-tab`, `.ct-category-tab.active`), flat `"/"` search shortcut badge (`.ct-omnibox-shortcut`), flat favorite pills (`.ct-favorite-pill`), and flat expand button.
+     - **Reference Table & All Units Grid**: borderless `.ct-table-card`, header, flat tab pill container, and flat `.ct-unit-stat-card` cards.
+     - **Recent Conversions Drawer**: borderless `.ct-history-section`, flat `.ct-history-item` cards, and pill buttons.
      - **Universal Omnibox**: borderless floating `.ct-omnibox-wrapper`, `.ct-omnibox-dropdown`, `.ct-omnibox-preview`, and badges with neutral focus ring.
-     - **SEO Guides & FAQs**: borderless primary dossier `.ct-seo-guide` and `.ct-faq-card`, interactive `.ct-pair-card`, and soft floating accordion `.ct-faq-item` cards with active category accent.
-     - **Kitchen View Drawer**: borderless `.ct-kitchen-drawer-card`, floating `.ct-kitchen-tool-chip` pills, and `.ct-kitchen-equiv-pill` cards.
-     - **Developer & Legal Modals**: borderless `.ct-modal-dialog`, `.ct-dev-card`, `.ct-tester-input`, and action buttons.
-6. **Preserve the Single Hero Accent Rule**:
+     - **SEO Guides & FAQs**: borderless primary dossier `.ct-seo-guide` and `.ct-faq-card`, interactive `.ct-pair-card`, and soft flat accordion `.ct-faq-item` cards with active category accent.
+     - **Kitchen View Drawer**: borderless `.ct-kitchen-drawer-card`, flat `.ct-kitchen-tool-chip` pills, and `.ct-kitchen-equiv-pill` cards.
+     - **Developer & Legal Modals**: borderless `.ct-modal-dialog`, `.ct-dev-card`, `.ct-tester-input`, flat tabs, and flat action buttons.
+6. **Unified Kinetic Hover & Active Click Framework (Pure Surface Stability & Tactile Precision)**:
+   - All interactive controls adhere to a 4-tier kinetic interaction hierarchy with **zero background color flashing and zero border outline popping** on standalone buttons, pills, chips, dials, and cards:
+     - **Tier 1 & 2 (Pills, Chips, Dial Buttons, Action Buttons)**:
+       - Resting: flat surface background (`var(--bg-card)` or `var(--bg-card-subtle)`), `box-shadow: none; border-color: transparent;`
+       - Hover: **Pure Surface Stability** — background color **never changes**, borders remain **completely transparent** (`border-color: transparent;`), and zero drop shadows are added. Responsiveness is communicated strictly through kinetic lift (`transform: translateY(-1.5px)` or radial `scale(1.08)` for the swap dial) and text/icon color deepening (`color: var(--text-main)`).
+       - Active (`:active`): mechanical snap (`transform: translateY(0) scale(0.96)` or `scale(0.94)` for dial; `transition: transform 0.06s ease;`) with constant background (zero background flash).
+     - **Tier 3 (Surface Cards & Interactive Items)**:
+       - Resting: flat surface background (`var(--bg-card-subtle)`), `box-shadow: none; border-color: transparent;`
+       - Hover: background color remains constant (`var(--bg-card-subtle)`), borders remain transparent (`border-color: transparent;`); `transform: translateY(-1.5px)` (or `-2px`), text deepens to `var(--text-main)`.
+       - Active (`:active`): `transform: translateY(0) scale(0.985); transition: transform 0.06s ease;` with constant background.
+     - **Dropdown & Menu Rows (Row Highlight Exception)**:
+       - Because borderless list rows and menu items lack container borders at rest, they communicate mouse targeting through row highlight:
+       - Hover: zero vertical translation (`translateY(0)`) to eliminate list-scrubbing jitter + `background-color: var(--bg-hover);`.
+       - Active (`:active`): `transform: scale(0.985); background-color: var(--bg-active); transition: transform 0.06s ease;`.
+     - **Tier 4 (Inline / Typographic Links)**:
+       - Hover: typographic color shift and contrast without vertical translation.
+       - Active (`:active`): `transform: scale(0.96);` or `opacity: 0.75; transition: transform 0.06s ease;`.
+7. **Preserve the Single Hero Accent Rule**:
    - Within interactive conversion cards, maintain strict monochrome calm across secondary controls, unit chips, swap buttons, and formula captions. The converted result pill (`.ct-num-copy-btn`) must remain the sole colorful hero focal point on the card.
-7. **Respect Intentional Focus (No Auto-Focus Stealing):**
+8. **Respect Intentional Focus (No Auto-Focus Stealing):**
    - Never call `.focus()` or `autoFocus` programmatically on category switches, unit changes, favorite loading, or swap operations.
    - Preserving passive focus prevents mobile virtual keyboards from jumping into view and obscuring results, and prevents desktop scroll hijacking.
-8. **Test Everything:**
-   - Always run `$env:CI="true"; npm test` and `npm run test:api` before concluding turns.
+9. **Test Everything:**
+   - Always run `$env:CI="true"; npm test -- --runInBand` and `npm run test:api` before concluding turns.
