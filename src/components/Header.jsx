@@ -19,72 +19,33 @@ export function Header({
 
   // Smart Headroom: hide on scroll down, reveal on scroll up
   useEffect(() => {
-    let lastScrollY = Math.max(window.pageYOffset || 0, document.documentElement.scrollTop || 0, document.body.scrollTop || 0);
-    let accumulatedDelta = 0;
-    let ticking = false;
+    let lastScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
 
-    const updateScrollDirection = () => {
-      const currentScrollY = Math.max(window.pageYOffset || 0, document.documentElement.scrollTop || 0, document.body.scrollTop || 0);
+    const handleScroll = () => {
+      const currentScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
 
-      // Always show at top of page (within 40px)
+      // Always stay visible at the top of the page
       if (currentScrollY <= 40) {
         setIsNavHidden(false);
-        accumulatedDelta = 0;
         lastScrollY = currentScrollY;
-        ticking = false;
         return;
       }
 
       const diff = currentScrollY - lastScrollY;
 
-      // Reset accumulator immediately whenever scroll direction reverses
-      if ((diff > 0 && accumulatedDelta < 0) || (diff < 0 && accumulatedDelta > 0)) {
-        accumulatedDelta = 0;
+      // Scrolling UP: ANY upward movement immediately reveals the navbar!
+      if (diff < 0) {
+        setIsNavHidden(false);
       }
-
-      accumulatedDelta += diff;
-
-      // Prevent hiding if focus is currently inside the header (e.g. typing in Omnibox)
-      const isHeaderFocused = headerRef.current && headerRef.current.contains(document.activeElement);
-
-      if (!isHeaderFocused) {
-        // Scrolled DOWN by more than 20px cumulative -> hide
-        if (accumulatedDelta > 20) {
+      // Scrolling DOWN: hide if scrolled down by more than 6px and not focused
+      else if (diff > 6) {
+        const isHeaderFocused = headerRef.current && headerRef.current.contains(document.activeElement);
+        if (!isHeaderFocused) {
           setIsNavHidden(true);
         }
-        // Scrolled UP by more than 6px cumulative -> reveal immediately
-        else if (accumulatedDelta < -6) {
-          setIsNavHidden(false);
-        }
-      } else {
-        setIsNavHidden(false);
       }
 
       lastScrollY = currentScrollY;
-      ticking = false;
-    };
-
-    const handleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(updateScrollDirection);
-        ticking = true;
-      }
-    };
-
-    // Instant wheel listener for desktop mousewheel/trackpad
-    const handleWheel = (e) => {
-      if (e.deltaY < -4) {
-        // User rolling wheel UP -> reveal immediately
-        setIsNavHidden(false);
-      } else if (e.deltaY > 15) {
-        const currentScrollY = Math.max(window.pageYOffset || 0, document.documentElement.scrollTop || 0, document.body.scrollTop || 0);
-        if (currentScrollY > 60) {
-          const isHeaderFocused = headerRef.current && headerRef.current.contains(document.activeElement);
-          if (!isHeaderFocused) {
-            setIsNavHidden(true);
-          }
-        }
-      }
     };
 
     const handleKeyDown = (e) => {
@@ -94,12 +55,10 @@ export function Header({
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('wheel', handleWheel, { passive: true });
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('wheel', handleWheel);
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
