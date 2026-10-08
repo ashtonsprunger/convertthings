@@ -62,7 +62,7 @@
    - **Borderless Floating Inputs with Multi-Tier Ambient Elevation**:
      - Zero hard outline borders (`border: 1px solid transparent`).
      - Uses dual-layer ambient drop shadows at rest (`0 4px 18px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04)`) and expanded depth on hover (`0 8px 28px -3px rgba(15, 23, 42, 0.12)`).
-     - Crisp floating focus state: ambient elevation with lift (`transform: translateY(-1.5px)`), multi-tier soft blur (`0 12px 34px -4px rgba(15, 23, 42, 0.14)`), and ultra-subtle whisper edge (`0 0 0 1px rgba(15, 23, 42, 0.08)`) with zero harsh wireframe rings or black borders.
+     - Crisp floating focus state: ambient elevation with lift (`transform: translateY(-1.5px)`), multi-tier soft blur (`0 12px 34px -4px rgba(15, 23, 42, 0.14), 0 4px 10px -2px rgba(15, 23, 42, 0.06)`) with zero border rings, zero outline strokes, or harsh wireframe edges.
    - **Single Hero Accent in Workbenches**:
      - The converted result pill (`.ct-num-copy-btn`) is the **sole vibrant, category-colored hero element inside the conversion card** (`background: var(--cat-current-light); color: var(--cat-current)`).
      - All surrounding controls—unit selector chips, center swap button, input borders, carets, precision dropdown, kitchen toggle, and educational formulas—are calm, refined monochrome.

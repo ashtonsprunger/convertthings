@@ -931,12 +931,12 @@ button:focus:not(:focus-visible) {
 .ct-omnibox-wrapper.focused {
   border-color: transparent;
   transform: translateY(-1.5px);
-  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.08), 0 12px 34px -4px rgba(15, 23, 42, 0.14), 0 4px 10px -2px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 12px 34px -4px rgba(15, 23, 42, 0.14), 0 4px 10px -2px rgba(15, 23, 42, 0.06);
 }
 
 [data-theme="dark"] .ct-omnibox-wrapper.focused {
   transform: translateY(-1.5px);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 14px 38px -4px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  box-shadow: 0 14px 38px -4px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 
 .ct-omnibox-wrapper:active:not(.focused) {
@@ -3096,14 +3096,14 @@ button:focus:not(:focus-visible) {
 .ct-integrated-input-box.dropdown-active {
   border-color: transparent;
   transform: translateY(-1.5px);
-  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.08), 0 12px 34px -4px rgba(15, 23, 42, 0.14), 0 4px 10px -2px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 12px 34px -4px rgba(15, 23, 42, 0.14), 0 4px 10px -2px rgba(15, 23, 42, 0.06);
 }
 
 [data-theme="dark"] .ct-integrated-input-box:focus-within,
 [data-theme="dark"] .ct-integrated-input-box.dropdown-active {
   border-color: transparent;
   transform: translateY(-1.5px);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 14px 38px -4px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  box-shadow: 0 14px 38px -4px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 
 #fromInput,
@@ -6294,11 +6294,11 @@ button:focus:not(:focus-visible) {
 
 .ct-tester-input:focus {
   outline: none;
-  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.1), 0 6px 18px -2px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 6px 18px -2px rgba(15, 23, 42, 0.12);
 }
 
 [data-theme="dark"] .ct-tester-input:focus {
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14), 0 8px 24px -2px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 8px 24px -2px rgba(0, 0, 0, 0.55);
 }
 
 .ct-btn-primary,
