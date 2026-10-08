@@ -3391,20 +3391,21 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--readout-to-text);
-  opacity: 0.7;
+  color: currentColor;
+  opacity: 0.9;
   transition: opacity var(--transition-fast), transform var(--transition-fast), color var(--transition-fast);
 }
 
 .ct-num-copy-btn:hover .ct-num-copy-icon,
 .ct-num-copy-btn:focus-visible .ct-num-copy-icon {
   opacity: 1;
+  color: #ffffff;
   transform: scale(1.15);
 }
 
 .ct-num-copy-btn.copied .ct-num-copy-icon {
   opacity: 1;
-  color: var(--success);
+  color: #ffffff;
 }
 
 /* Micro-Tooltip floating above the number */
