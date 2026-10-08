@@ -21,8 +21,10 @@
   background-color: transparent;
   border-bottom: none;
   box-shadow: none;
+  transform: translateY(0);
+  opacity: 1;
   transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.24s ease;
-  will-change: transform;
+  will-change: transform, opacity;
 }
 
 .ct-header.ct-header-hidden {

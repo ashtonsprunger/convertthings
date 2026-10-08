@@ -14,43 +14,76 @@ export function Header({
   const [isTurbineSpinning, setIsTurbineSpinning] = useState(false);
   const [isNavHidden, setIsNavHidden] = useState(false);
   const headerRef = useRef(null);
-  const lastScrollYRef = useRef(0);
   const clickCountRef = useRef(0);
   const clickTimerRef = useRef(null);
 
   // Smart Headroom: hide on scroll down, reveal on scroll up
   useEffect(() => {
+    let lastScrollY = Math.max(window.pageYOffset || 0, document.documentElement.scrollTop || 0, document.body.scrollTop || 0);
+    let accumulatedDelta = 0;
     let ticking = false;
+
+    const updateScrollDirection = () => {
+      const currentScrollY = Math.max(window.pageYOffset || 0, document.documentElement.scrollTop || 0, document.body.scrollTop || 0);
+
+      // Always show at top of page (within 40px)
+      if (currentScrollY <= 40) {
+        setIsNavHidden(false);
+        accumulatedDelta = 0;
+        lastScrollY = currentScrollY;
+        ticking = false;
+        return;
+      }
+
+      const diff = currentScrollY - lastScrollY;
+
+      // Reset accumulator immediately whenever scroll direction reverses
+      if ((diff > 0 && accumulatedDelta < 0) || (diff < 0 && accumulatedDelta > 0)) {
+        accumulatedDelta = 0;
+      }
+
+      accumulatedDelta += diff;
+
+      // Prevent hiding if focus is currently inside the header (e.g. typing in Omnibox)
+      const isHeaderFocused = headerRef.current && headerRef.current.contains(document.activeElement);
+
+      if (!isHeaderFocused) {
+        // Scrolled DOWN by more than 20px cumulative -> hide
+        if (accumulatedDelta > 20) {
+          setIsNavHidden(true);
+        }
+        // Scrolled UP by more than 6px cumulative -> reveal immediately
+        else if (accumulatedDelta < -6) {
+          setIsNavHidden(false);
+        }
+      } else {
+        setIsNavHidden(false);
+      }
+
+      lastScrollY = currentScrollY;
+      ticking = false;
+    };
 
     const handleScroll = () => {
       if (!ticking) {
-        window.requestAnimationFrame(() => {
-          const currentScrollY = window.scrollY;
-
-          // Always show at top of page (within 40px)
-          if (currentScrollY <= 40) {
-            setIsNavHidden(false);
-          } else {
-            const diff = currentScrollY - lastScrollYRef.current;
-            // Prevent hiding if focus is currently inside the header (e.g. searching in Omnibox)
-            const isHeaderFocused = headerRef.current && headerRef.current.contains(document.activeElement);
-
-            if (!isHeaderFocused) {
-              // Scrolling down by more than 12px -> slide up out of view
-              if (diff > 12) {
-                setIsNavHidden(true);
-              }
-              // Scrolling up by more than 8px -> glide back into view
-              else if (diff < -8) {
-                setIsNavHidden(false);
-              }
-            }
-          }
-
-          lastScrollYRef.current = currentScrollY;
-          ticking = false;
-        });
+        window.requestAnimationFrame(updateScrollDirection);
         ticking = true;
+      }
+    };
+
+    // Instant wheel listener for desktop mousewheel/trackpad
+    const handleWheel = (e) => {
+      if (e.deltaY < -4) {
+        // User rolling wheel UP -> reveal immediately
+        setIsNavHidden(false);
+      } else if (e.deltaY > 15) {
+        const currentScrollY = Math.max(window.pageYOffset || 0, document.documentElement.scrollTop || 0, document.body.scrollTop || 0);
+        if (currentScrollY > 60) {
+          const isHeaderFocused = headerRef.current && headerRef.current.contains(document.activeElement);
+          if (!isHeaderFocused) {
+            setIsNavHidden(true);
+          }
+        }
       }
     };
 
@@ -61,10 +94,12 @@ export function Header({
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('wheel', handleWheel, { passive: true });
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('wheel', handleWheel);
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
