@@ -2099,7 +2099,8 @@ button:focus:not(:focus-visible) {
 .ct-omnibox-item.ct-cat-length.active .ct-omnibox-item-icon svg,
 .ct-history-item.ct-cat-length:hover .ct-history-cat svg,
 .ct-history-item.ct-cat-length:focus-visible .ct-history-cat svg,
-.ct-history-item.ct-cat-length:active .ct-history-cat svg {
+.ct-history-item.ct-cat-length:active .ct-history-cat svg,
+.ct-footer-cat-link.ct-cat-length:hover .ct-footer-cat-icon svg {
   animation: ct-gesture-length 0.35s var(--ease-spring);
 }
 .ct-category-tab.ct-cat-mass:hover .ct-tab-icon svg,
@@ -2108,7 +2109,8 @@ button:focus:not(:focus-visible) {
 .ct-omnibox-item.ct-cat-mass.active .ct-omnibox-item-icon svg,
 .ct-history-item.ct-cat-mass:hover .ct-history-cat svg,
 .ct-history-item.ct-cat-mass:focus-visible .ct-history-cat svg,
-.ct-history-item.ct-cat-mass:active .ct-history-cat svg {
+.ct-history-item.ct-cat-mass:active .ct-history-cat svg,
+.ct-footer-cat-link.ct-cat-mass:hover .ct-footer-cat-icon svg {
   animation: ct-gesture-mass 0.35s var(--ease-spring);
 }
 .ct-category-tab.ct-cat-temperature:hover .ct-tab-icon svg,
@@ -2117,7 +2119,8 @@ button:focus:not(:focus-visible) {
 .ct-omnibox-item.ct-cat-temperature.active .ct-omnibox-item-icon svg,
 .ct-history-item.ct-cat-temperature:hover .ct-history-cat svg,
 .ct-history-item.ct-cat-temperature:focus-visible .ct-history-cat svg,
-.ct-history-item.ct-cat-temperature:active .ct-history-cat svg {
+.ct-history-item.ct-cat-temperature:active .ct-history-cat svg,
+.ct-footer-cat-link.ct-cat-temperature:hover .ct-footer-cat-icon svg {
   animation: ct-gesture-temperature 0.35s var(--ease-spring);
 }
 .ct-category-tab.ct-cat-area:hover .ct-tab-icon svg,
@@ -2126,7 +2129,8 @@ button:focus:not(:focus-visible) {
 .ct-omnibox-item.ct-cat-area.active .ct-omnibox-item-icon svg,
 .ct-history-item.ct-cat-area:hover .ct-history-cat svg,
 .ct-history-item.ct-cat-area:focus-visible .ct-history-cat svg,
-.ct-history-item.ct-cat-area:active .ct-history-cat svg {
+.ct-history-item.ct-cat-area:active .ct-history-cat svg,
+.ct-footer-cat-link.ct-cat-area:hover .ct-footer-cat-icon svg {
   animation: ct-gesture-area 0.35s var(--ease-spring);
 }
 .ct-category-tab.ct-cat-volume:hover .ct-tab-icon svg,
@@ -2135,7 +2139,8 @@ button:focus:not(:focus-visible) {
 .ct-omnibox-item.ct-cat-volume.active .ct-omnibox-item-icon svg,
 .ct-history-item.ct-cat-volume:hover .ct-history-cat svg,
 .ct-history-item.ct-cat-volume:focus-visible .ct-history-cat svg,
-.ct-history-item.ct-cat-volume:active .ct-history-cat svg {
+.ct-history-item.ct-cat-volume:active .ct-history-cat svg,
+.ct-footer-cat-link.ct-cat-volume:hover .ct-footer-cat-icon svg {
   animation: ct-gesture-volume 0.35s var(--ease-spring);
 }
 .ct-category-tab.ct-cat-speed:hover .ct-tab-icon svg,
@@ -2144,7 +2149,8 @@ button:focus:not(:focus-visible) {
 .ct-omnibox-item.ct-cat-speed.active .ct-omnibox-item-icon svg,
 .ct-history-item.ct-cat-speed:hover .ct-history-cat svg,
 .ct-history-item.ct-cat-speed:focus-visible .ct-history-cat svg,
-.ct-history-item.ct-cat-speed:active .ct-history-cat svg {
+.ct-history-item.ct-cat-speed:active .ct-history-cat svg,
+.ct-footer-cat-link.ct-cat-speed:hover .ct-footer-cat-icon svg {
   animation: ct-gesture-speed 0.35s var(--ease-spring);
 }
 .ct-category-tab.ct-cat-time:hover .ct-tab-icon svg,
@@ -2153,7 +2159,8 @@ button:focus:not(:focus-visible) {
 .ct-omnibox-item.ct-cat-time.active .ct-omnibox-item-icon svg,
 .ct-history-item.ct-cat-time:hover .ct-history-cat svg,
 .ct-history-item.ct-cat-time:focus-visible .ct-history-cat svg,
-.ct-history-item.ct-cat-time:active .ct-history-cat svg {
+.ct-history-item.ct-cat-time:active .ct-history-cat svg,
+.ct-footer-cat-link.ct-cat-time:hover .ct-footer-cat-icon svg {
   animation: ct-gesture-time 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .ct-category-tab.ct-cat-digital:hover .ct-tab-icon svg,
@@ -2162,7 +2169,8 @@ button:focus:not(:focus-visible) {
 .ct-omnibox-item.ct-cat-digital.active .ct-omnibox-item-icon svg,
 .ct-history-item.ct-cat-digital:hover .ct-history-cat svg,
 .ct-history-item.ct-cat-digital:focus-visible .ct-history-cat svg,
-.ct-history-item.ct-cat-digital:active .ct-history-cat svg {
+.ct-history-item.ct-cat-digital:active .ct-history-cat svg,
+.ct-footer-cat-link.ct-cat-digital:hover .ct-footer-cat-icon svg {
   animation: ct-gesture-digital 0.3s ease-in-out;
 }
 .ct-category-tab.ct-cat-data_rate:hover .ct-tab-icon svg,
@@ -2171,7 +2179,8 @@ button:focus:not(:focus-visible) {
 .ct-omnibox-item.ct-cat-data_rate.active .ct-omnibox-item-icon svg,
 .ct-history-item.ct-cat-data_rate:hover .ct-history-cat svg,
 .ct-history-item.ct-cat-data_rate:focus-visible .ct-history-cat svg,
-.ct-history-item.ct-cat-data_rate:active .ct-history-cat svg {
+.ct-history-item.ct-cat-data_rate:active .ct-history-cat svg,
+.ct-footer-cat-link.ct-cat-data_rate:hover .ct-footer-cat-icon svg {
   animation: ct-gesture-data_rate 0.35s var(--ease-spring);
 }
 .ct-category-tab.ct-cat-pressure:hover .ct-tab-icon svg,
@@ -2180,7 +2189,8 @@ button:focus:not(:focus-visible) {
 .ct-omnibox-item.ct-cat-pressure.active .ct-omnibox-item-icon svg,
 .ct-history-item.ct-cat-pressure:hover .ct-history-cat svg,
 .ct-history-item.ct-cat-pressure:focus-visible .ct-history-cat svg,
-.ct-history-item.ct-cat-pressure:active .ct-history-cat svg {
+.ct-history-item.ct-cat-pressure:active .ct-history-cat svg,
+.ct-footer-cat-link.ct-cat-pressure:hover .ct-footer-cat-icon svg {
   animation: ct-gesture-pressure 0.35s var(--ease-spring);
 }
 .ct-category-tab.ct-cat-energy:hover .ct-tab-icon svg,
@@ -2189,7 +2199,8 @@ button:focus:not(:focus-visible) {
 .ct-omnibox-item.ct-cat-energy.active .ct-omnibox-item-icon svg,
 .ct-history-item.ct-cat-energy:hover .ct-history-cat svg,
 .ct-history-item.ct-cat-energy:focus-visible .ct-history-cat svg,
-.ct-history-item.ct-cat-energy:active .ct-history-cat svg {
+.ct-history-item.ct-cat-energy:active .ct-history-cat svg,
+.ct-footer-cat-link.ct-cat-energy:hover .ct-footer-cat-icon svg {
   animation: ct-gesture-energy 0.35s var(--ease-spring);
 }
 .ct-category-tab.ct-cat-power:hover .ct-tab-icon svg,
@@ -2198,7 +2209,8 @@ button:focus:not(:focus-visible) {
 .ct-omnibox-item.ct-cat-power.active .ct-omnibox-item-icon svg,
 .ct-history-item.ct-cat-power:hover .ct-history-cat svg,
 .ct-history-item.ct-cat-power:focus-visible .ct-history-cat svg,
-.ct-history-item.ct-cat-power:active .ct-history-cat svg {
+.ct-history-item.ct-cat-power:active .ct-history-cat svg,
+.ct-footer-cat-link.ct-cat-power:hover .ct-footer-cat-icon svg {
   animation: ct-gesture-power 0.35s var(--ease-spring);
 }
 .ct-category-tab.ct-cat-angle:hover .ct-tab-icon svg,
@@ -2207,7 +2219,8 @@ button:focus:not(:focus-visible) {
 .ct-omnibox-item.ct-cat-angle.active .ct-omnibox-item-icon svg,
 .ct-history-item.ct-cat-angle:hover .ct-history-cat svg,
 .ct-history-item.ct-cat-angle:focus-visible .ct-history-cat svg,
-.ct-history-item.ct-cat-angle:active .ct-history-cat svg {
+.ct-history-item.ct-cat-angle:active .ct-history-cat svg,
+.ct-footer-cat-link.ct-cat-angle:hover .ct-footer-cat-icon svg {
   animation: ct-gesture-angle 0.35s var(--ease-spring);
 }
 .ct-category-tab.ct-cat-fuel:hover .ct-tab-icon svg,
@@ -2216,7 +2229,8 @@ button:focus:not(:focus-visible) {
 .ct-omnibox-item.ct-cat-fuel.active .ct-omnibox-item-icon svg,
 .ct-history-item.ct-cat-fuel:hover .ct-history-cat svg,
 .ct-history-item.ct-cat-fuel:focus-visible .ct-history-cat svg,
-.ct-history-item.ct-cat-fuel:active .ct-history-cat svg {
+.ct-history-item.ct-cat-fuel:active .ct-history-cat svg,
+.ct-footer-cat-link.ct-cat-fuel:hover .ct-footer-cat-icon svg {
   animation: ct-gesture-fuel 0.35s var(--ease-spring);
 }
 .ct-category-tab.ct-cat-cooking:hover .ct-tab-icon svg,
@@ -2225,7 +2239,8 @@ button:focus:not(:focus-visible) {
 .ct-omnibox-item.ct-cat-cooking.active .ct-omnibox-item-icon svg,
 .ct-history-item.ct-cat-cooking:hover .ct-history-cat svg,
 .ct-history-item.ct-cat-cooking:focus-visible .ct-history-cat svg,
-.ct-history-item.ct-cat-cooking:active .ct-history-cat svg {
+.ct-history-item.ct-cat-cooking:active .ct-history-cat svg,
+.ct-footer-cat-link.ct-cat-cooking:hover .ct-footer-cat-icon svg {
   animation: ct-gesture-cooking 0.35s var(--ease-spring);
 }
 
@@ -5764,12 +5779,19 @@ button:focus:not(:focus-visible) {
 
 .ct-footer-cat-icon {
   flex-shrink: 0;
+  color: var(--text-muted);
   opacity: 0.75;
-  transition: opacity var(--transition-fast);
+  transition: opacity var(--transition-fast), color var(--transition-fast);
 }
 
 .ct-footer-cat-link:hover .ct-footer-cat-icon {
+  color: var(--cat-current, var(--text-main));
   opacity: 1;
+}
+
+[data-theme="dark"] .ct-footer-cat-link.ct-cat-data_rate:hover .ct-footer-cat-icon,
+[data-theme="dark"] .ct-footer-cat-link.ct-cat-power:hover .ct-footer-cat-icon {
+  color: #facc15;
 }
 
 /* Bottom Bar - Zero-divider whitespace + pill links on canvas */
@@ -6499,8 +6521,15 @@ button:focus:not(:focus-visible) {
   .ct-pair-card:hover:not(:active) .ct-pair-arrow,
   .ct-history-item:hover:not(:active) .ct-history-cat,
   .ct-omnibox-item:hover:not(:active) .ct-omnibox-item-icon,
-  .ct-omnibox-item:hover:not(:active) .ct-omnibox-enter-hint {
+  .ct-omnibox-item:hover:not(:active) .ct-omnibox-enter-hint,
+  .ct-footer-cat-link:hover:not(:active) .ct-footer-cat-icon svg {
     transform: none !important;
+    animation: none !important;
+  }
+
+  .ct-footer-cat-link:hover:not(:active) .ct-footer-cat-icon {
+    color: var(--text-muted) !important;
+    opacity: 0.75 !important;
   }
 
   /* Reset elevated hover shadows on touch devices */

@@ -45,7 +45,7 @@ export function Footer({ onSelectCategory, onOpenLegal, onOpenDevModal, onGoHome
                 <a
                   key={cat.id}
                   href={`/${cat.id}`}
-                  className="ct-footer-cat-link"
+                  className={`ct-footer-cat-link ct-cat-${cat.id}`}
                   onClick={(e) => {
                     e.preventDefault();
                     onSelectCategory(cat.id);
