@@ -53,7 +53,7 @@ export function Footer({ onSelectCategory, onOpenLegal, onOpenDevModal, onGoHome
                   }}
                 >
                   <span className="ct-footer-cat-icon" aria-hidden="true">
-                    <Icon name={cat.icon} size={15} />
+                    <Icon name={cat.icon} size={16} />
                   </span>
                   <span>{cat.name}</span>
                 </a>

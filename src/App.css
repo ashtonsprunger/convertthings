@@ -2003,8 +2003,6 @@ button:focus:not(:focus-visible) {
 .ct-footer-cat-icon svg {
   display: block;
   transform-origin: center center;
-  will-change: transform;
-  backface-visibility: hidden;
 }
 
 @keyframes ct-gesture-length {
@@ -2449,6 +2447,10 @@ button:focus:not(:focus-visible) {
 }
 
 @media (max-width: 380px) {
+  .ct-main {
+    padding-left: 0.65rem;
+    padding-right: 0.65rem;
+  }
   .ct-header-inner {
     padding: 0.5rem 0.6rem;
     gap: 0.5rem;
@@ -2590,8 +2592,8 @@ button:focus:not(:focus-visible) {
    Main Conversion Card
    ========================================== */
 .ct-card {
-  --card-radius: calc(18px + var(--card-pad));
   --card-pad: 1.25rem;
+  --card-radius: var(--radius-card);
   --pod-pad: 0.625rem;
   --pod-radius: calc(17px + var(--pod-pad));
 
@@ -3718,33 +3720,60 @@ button:focus:not(:focus-visible) {
 
 @media (max-width: 680px) {
   :root {
-    --radius-card: 28px;
+    --card-pad: 1rem;
+    --radius-card: calc(var(--radius-surface) + var(--card-pad));
   }
 
   .ct-card {
     --card-pad: 1rem;
-    --card-radius: calc(18px + var(--card-pad));
+    --card-radius: var(--radius-card);
     --pod-pad: 0.55rem;
     --pod-radius: calc(16px + var(--pod-pad));
     border-radius: var(--card-radius);
     padding: var(--card-pad);
   }
 
-  .ct-table-card,
+  /* Primary cards share unified concentric corner radius & uniform padding */
   .ct-history-section,
   .ct-seo-guide,
-  .ct-faq-card,
-  .ct-kitchen-drawer-card {
+  .ct-faq-card {
     border-radius: var(--radius-card);
-    padding: 1rem;
+    padding: var(--card-pad);
+  }
+
+  /* Reference Table card: edge-to-edge container, zero outer padding */
+  .ct-table-card {
+    border-radius: var(--radius-card);
+    padding: 0;
   }
 
   .ct-table-header {
-    padding: 1rem;
+    padding: 0.85rem 1rem;
+  }
+
+  .ct-table-tabs {
+    max-width: 100%;
+    box-sizing: border-box;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .ct-table-tab {
+    padding: 0.4rem 0.85rem;
+    font-size: 0.8rem;
   }
 
   .ct-table-content {
-    padding: 1rem 1rem 1.25rem;
+    padding: 1rem;
+  }
+
+  .ct-all-units-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.65rem;
+  }
+
+  .ct-unit-stat-card {
+    padding: 0.75rem 0.85rem;
+    border-radius: var(--radius-chip);
   }
 
   .ct-conversion-grid {
@@ -3773,37 +3802,119 @@ button:focus:not(:focus-visible) {
     min-height: 60px;
     margin: 0;
   }
+
+  .ct-history-list {
+    grid-template-columns: 1fr;
+    gap: 0.45rem;
+  }
+
+  .ct-history-item {
+    padding: 0.7rem 0.9rem;
+    border-radius: var(--radius-surface);
+  }
+
+  .ct-guide-spotlight {
+    padding: 0.95rem 1rem;
+    border-radius: var(--radius-surface);
+  }
+
+  .ct-popular-pairs-grid {
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
+  }
+
+  .ct-pair-card {
+    padding: 0.85rem 1rem;
+    border-radius: var(--radius-surface);
+  }
+
+  .ct-faq-list {
+    gap: 0.55rem;
+  }
+
+  .ct-faq-item {
+    border-radius: var(--radius-surface);
+  }
+
+  .ct-faq-question-btn {
+    padding: 0.85rem 1rem;
+    font-size: 0.92rem;
+  }
+
+  .ct-faq-answer {
+    padding: 0 1rem 0.95rem;
+    font-size: 0.88rem;
+  }
+
+  .ct-kitchen-drawer-card {
+    border-radius: var(--radius-surface);
+    padding: 1rem;
+  }
 }
 
 @media (max-width: 480px) {
   :root {
-    --radius-card: 26px;
+    --card-pad: 0.75rem;
+    --radius-card: calc(var(--radius-surface) + var(--card-pad));
   }
 
   .ct-card {
     --card-pad: 0.75rem;
-    --card-radius: calc(18px + var(--card-pad));
+    --card-radius: var(--radius-card);
     --pod-pad: 0.5rem;
     --pod-radius: calc(16px + var(--pod-pad));
     border-radius: var(--card-radius);
     padding: var(--card-pad);
   }
 
-  .ct-table-card,
   .ct-history-section,
   .ct-seo-guide,
-  .ct-faq-card,
-  .ct-kitchen-drawer-card {
+  .ct-faq-card {
     border-radius: var(--radius-card);
-    padding: 0.75rem;
+    padding: var(--card-pad);
+  }
+
+  .ct-table-card {
+    border-radius: var(--radius-card);
+    padding: 0;
   }
 
   .ct-table-header {
-    padding: 0.75rem;
+    padding: 0.75rem 0.75rem;
+  }
+
+  .ct-table-tabs {
+    max-width: 100%;
+    padding: 0.2rem;
+  }
+
+  .ct-table-tab {
+    padding: 0.38rem 0.75rem;
+    font-size: 0.78rem;
   }
 
   .ct-table-content {
     padding: 0.75rem 0.75rem 1rem;
+  }
+
+  .ct-data-table th {
+    padding: 0.55rem 0.65rem;
+    font-size: 0.82rem;
+  }
+
+  .ct-data-table td {
+    padding: 0.55rem 0.65rem;
+    font-size: 0.85rem;
+  }
+
+  .ct-all-units-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 0.5rem;
+  }
+
+  .ct-unit-stat-card {
+    padding: 0.65rem 0.75rem;
+    border-radius: 12px;
   }
 
   .ct-unit-block {
@@ -3862,6 +3973,71 @@ button:focus:not(:focus-visible) {
   }
 
   .ct-integrated-unit-symbol {
+    font-size: 0.9rem;
+  }
+
+  .ct-history-list {
+    grid-template-columns: 1fr;
+    gap: 0.45rem;
+  }
+
+  .ct-history-item {
+    padding: 0.65rem 0.85rem;
+    border-radius: var(--radius-surface);
+  }
+
+  .ct-guide-spotlight {
+    padding: 0.8rem 0.85rem;
+    border-radius: var(--radius-surface);
+  }
+
+  .ct-spotlight-quickfacts {
+    gap: 0.4rem;
+    margin-top: 0.35rem;
+  }
+
+  .ct-spotlight-fact {
+    padding: 0.28rem 0.65rem;
+    font-size: 0.8rem;
+  }
+
+  .ct-popular-pairs-grid {
+    grid-template-columns: 1fr;
+    gap: 0.45rem;
+  }
+
+  .ct-pair-card {
+    padding: 0.75rem 0.85rem;
+    border-radius: var(--radius-surface);
+  }
+
+  .ct-faq-list {
+    gap: 0.45rem;
+    margin-top: 0.45rem;
+  }
+
+  .ct-faq-item {
+    border-radius: var(--radius-surface);
+  }
+
+  .ct-faq-question-btn {
+    padding: 0.75rem 0.85rem;
+    font-size: 0.88rem;
+  }
+
+  .ct-faq-answer {
+    padding: 0 0.85rem 0.85rem;
+    font-size: 0.825rem;
+  }
+
+  .ct-kitchen-drawer-card {
+    border-radius: var(--radius-surface);
+    padding: 0.75rem 0.85rem;
+    gap: 0.85rem;
+  }
+
+  .ct-kitchen-tool-chip {
+    padding: 0.35rem 0.75rem;
     font-size: 0.9rem;
   }
 }
@@ -4394,7 +4570,7 @@ button:focus:not(:focus-visible) {
   padding: 1.25rem;
   background-color: var(--bg-card);
   border: 1px solid transparent;
-  border-radius: var(--radius-card);
+  border-radius: var(--radius-surface);
   box-shadow: var(--shadow-google-lg), var(--shadow-specular);
   display: flex;
   flex-direction: column;
@@ -5892,7 +6068,6 @@ button:focus:not(:focus-visible) {
   justify-content: center;
   flex-shrink: 0;
   color: var(--text-muted);
-  transition: color var(--transition-fast);
 }
 
 .ct-footer-cat-link:hover .ct-footer-cat-icon {
@@ -6608,7 +6783,6 @@ button:focus:not(:focus-visible) {
 
   .ct-footer-cat-link:hover:not(:active) .ct-footer-cat-icon {
     color: var(--text-muted) !important;
-    opacity: 0.75 !important;
   }
 
   /* Reset elevated hover shadows on touch devices */
