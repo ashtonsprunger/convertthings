@@ -334,8 +334,18 @@ export function ConversionCard({
     setIsSwapping(true);
 
     const isMobile = Math.abs(dy) > Math.abs(dx);
-    const arcX = isMobile ? 12 : 0;
-    const arcY = isMobile ? 0 : -8;
+    const arcX = isMobile ? 10 : 0;
+    const arcY = 0; // Maintain level horizontal flight with zero vertical dip or shrink
+
+    const cardEl = fromEl.closest('.ct-card') || document.getElementById('conversion-panel');
+    let lockedHeight = null;
+    if (cardEl && typeof cardEl.getBoundingClientRect === 'function') {
+      const rect = cardEl.getBoundingClientRect();
+      if (rect && rect.height > 0) {
+        lockedHeight = rect.height;
+        cardEl.style.minHeight = `${lockedHeight}px`;
+      }
+    }
 
     // From element (Left / Top slot): starts at previous To position (dx, dy), glides to resting (0, 0)
     const fromAnim = fromEl.animate(
@@ -345,7 +355,7 @@ export function ConversionCard({
           zIndex: 12,
         },
         {
-          transform: `translate3d(${dx * 0.5 + arcX}px, ${dy * 0.5 + arcY}px, 0) scale(1.025)`,
+          transform: `translate3d(${dx * 0.5 + arcX}px, ${dy * 0.5 + arcY}px, 0) scale(1)`,
           zIndex: 12,
           offset: 0.5,
         },
@@ -370,9 +380,9 @@ export function ConversionCard({
           opacity: 0.95,
         },
         {
-          transform: `translate3d(${-dx * 0.5 - arcX}px, ${-dy * 0.5 - arcY}px, 0) scale(0.975)`,
+          transform: `translate3d(${-dx * 0.5 - arcX}px, ${-dy * 0.5 - arcY}px, 0) scale(1)`,
           zIndex: 6,
-          opacity: 0.9,
+          opacity: 0.95,
           offset: 0.5,
         },
         {
@@ -410,6 +420,9 @@ export function ConversionCard({
     const handleAnimDone = () => {
       setIsSwapping(false);
       activeAnimationsRef.current = [];
+      if (cardEl) {
+        cardEl.style.minHeight = '';
+      }
     };
 
     fromAnim.onfinish = handleAnimDone;
@@ -418,6 +431,9 @@ export function ConversionCard({
     // Safety timeout in case window backgrounded or tab hidden
     setTimeout(() => {
       setIsSwapping(false);
+      if (cardEl) {
+        cardEl.style.minHeight = '';
+      }
     }, 360);
   };
 
@@ -1056,7 +1072,7 @@ export function ConversionCard({
             <button
               ref={swapBtnRef}
               type="button"
-              className={`ct-swap-btn ${isSwapping ? 'ct-swap-active' : ''} ${isHyperspace ? 'ct-swap-hyperspace' : ''} ${isFasterThanLight ? 'ct-swap-ftl' : ''}`}
+              className={`ct-swap-btn ${isHyperspace ? 'ct-swap-hyperspace' : ''} ${isFasterThanLight ? 'ct-swap-ftl' : ''}`}
               onClick={handleSwapClick}
               title={
                 isFasterThanLight

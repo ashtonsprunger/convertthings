@@ -3122,7 +3122,7 @@ button:focus:not(:focus-visible) {
   border-radius: var(--radius-full);
   box-shadow: 0 4px 18px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
-  min-height: 60px;
+  min-height: 64px;
   padding: 0.2rem 0.35rem 0.2rem 0.65rem;
 }
 
@@ -3177,6 +3177,7 @@ button:focus:not(:focus-visible) {
   outline: none;
   padding: 0.75rem 0.5rem 0.75rem 0.85rem;
   font-size: 1.6rem;
+  line-height: 1.2;
   font-weight: 800;
   font-family: var(--font-sans);
   letter-spacing: -0.025em;
@@ -3766,6 +3767,7 @@ button:focus:not(:focus-visible) {
   .ct-integrated-input-box {
     width: 100%;
     min-width: 0;
+    min-height: 60px;
     margin: 0;
   }
 }
@@ -3820,6 +3822,7 @@ button:focus:not(:focus-visible) {
 
   .ct-number-input {
     padding: 0.75rem 0.35rem 0.75rem 0.65rem;
+    line-height: 1.2;
   }
 
   .ct-number-input.ct-font-large {
@@ -5087,8 +5090,42 @@ button:focus:not(:focus-visible) {
 }
 
 /* ==========================================
-   Conversion History
+   Conversion History Animated Container
    ========================================== */
+.ct-history-wrapper {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transform: translateY(0);
+  margin-bottom: 0;
+  transition: grid-template-rows 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.28s ease,
+              transform 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+              margin 0.36s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ct-history-wrapper.entering {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: translateY(-8px);
+  margin-bottom: -1rem;
+}
+
+.ct-history-wrapper.exiting {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: translateY(-8px);
+  margin-bottom: -1rem;
+  pointer-events: none;
+}
+
+.ct-history-wrapper-inner {
+  overflow: hidden;
+  min-height: 0;
+  padding: 4px 6px 12px;
+  margin: -4px -6px -12px;
+}
+
 .ct-history-section {
   background-color: var(--bg-card);
   border: 1px solid transparent;
@@ -5139,6 +5176,16 @@ button:focus:not(:focus-visible) {
   transition: transform 0.06s ease;
 }
 
+.ct-history-chevron {
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  color: var(--text-muted);
+}
+
+.ct-history-chevron.rotated {
+  transform: rotate(180deg);
+  color: var(--text-main);
+}
+
 .ct-history-clear-btn {
   display: flex;
   align-items: center;
@@ -5154,7 +5201,16 @@ button:focus:not(:focus-visible) {
   padding: 0 0.85rem;
   cursor: pointer;
   box-shadow: none;
-  transition: all var(--transition-fast);
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.92);
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.ct-history-clear-btn.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
 }
 
 .ct-history-clear-btn:hover {
@@ -5171,11 +5227,29 @@ button:focus:not(:focus-visible) {
   transition: transform 0.06s ease, background-color 0.06s ease;
 }
 
+/* History List Expanding Accordion */
+.ct-history-list-wrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+}
+
+.ct-history-list-wrapper.open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.ct-history-list-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
 .ct-history-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 0.5rem;
-  animation: fadeIn 0.2s ease-out;
+  padding-top: 0.25rem;
 }
 
 .ct-history-item {
@@ -5631,6 +5705,34 @@ button:focus:not(:focus-visible) {
 
 .ct-faq-question-btn:active {
   transform: none;
+}
+
+.ct-faq-chevron {
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.ct-faq-chevron.rotated {
+  transform: rotate(180deg);
+  color: var(--text-main);
+}
+
+.ct-faq-answer-wrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+}
+
+.ct-faq-answer-wrapper.open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.ct-faq-answer-inner {
+  overflow: hidden;
+  min-height: 0;
 }
 
 .ct-faq-answer {

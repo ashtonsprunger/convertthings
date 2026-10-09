@@ -516,13 +516,22 @@ export function SeoContent({ categoryId, fromUnitId, toUnitId, onSelectPair }) {
                   aria-expanded={isOpen}
                 >
                   <span className="ct-faq-question-text">{faq.q}</span>
-                  <Icon name={isOpen ? 'ChevronUp' : 'ChevronDown'} size={16} />
+                  <Icon
+                    name="ChevronDown"
+                    size={16}
+                    className={`ct-faq-chevron ${isOpen ? 'rotated' : ''}`}
+                  />
                 </button>
-                {isOpen && (
-                  <div className="ct-faq-answer">
-                    <p>{faq.a}</p>
+                <div
+                  className={`ct-faq-answer-wrapper ${isOpen ? 'open' : ''}`}
+                  aria-hidden={!isOpen}
+                >
+                  <div className="ct-faq-answer-inner">
+                    <div className="ct-faq-answer">
+                      <p>{faq.a}</p>
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
             );
           })}
