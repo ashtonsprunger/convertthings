@@ -52,7 +52,9 @@ export function Footer({ onSelectCategory, onOpenLegal, onOpenDevModal, onGoHome
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                 >
-                  <Icon name={cat.icon} size={14} className="ct-footer-cat-icon" aria-hidden="true" />
+                  <span className="ct-footer-cat-icon" aria-hidden="true">
+                    <Icon name={cat.icon} size={14} />
+                  </span>
                   <span>{cat.name}</span>
                 </a>
               ))}

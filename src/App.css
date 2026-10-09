@@ -5778,10 +5778,22 @@ button:focus:not(:focus-visible) {
 }
 
 .ct-footer-cat-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  width: 14px;
+  height: 14px;
   color: var(--text-muted);
   opacity: 0.75;
   transition: opacity var(--transition-fast), color var(--transition-fast);
+}
+
+.ct-footer-cat-icon svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+  transform-origin: center center;
 }
 
 .ct-footer-cat-link:hover .ct-footer-cat-icon {
