@@ -259,5 +259,9 @@ convertThings/
 8. **Respect Intentional Focus (No Auto-Focus Stealing):**
    - Never call `.focus()` or `autoFocus` programmatically on category switches, unit changes, favorite loading, or swap operations.
    - Preserving passive focus prevents mobile virtual keyboards from jumping into view and obscuring results, and prevents desktop scroll hijacking.
-9. **Test Everything:**
-   - Always run `$env:CI="true"; npm test -- --runInBand` and `npm run test:api` before concluding turns.
+9. **Touchscreen Native Tactile Fidelity & Sticky Hover Elimination**:
+   - **Zero Tap Highlight Overlays**: `-webkit-tap-highlight-color: transparent;` and `-webkit-touch-callout: none;` are applied globally across all interactive elements (`*, button, a, input, select, textarea, [role="button"]`) so mobile browsers never draw default semi-transparent blue or grey tap bounding rectangles.
+   - **Zero Sticky Hover on Mobile**: Touchscreens simulate mouse events upon tap without firing `mouseleave` on lift. All kinetic hover lifts (`translateY(-1.5px)`, `scale(1.08)`) and hover shadows are strictly suppressed on touch devices (`@media (hover: none), (pointer: coarse)`) via `:hover:not(:active) { transform: none !important; }`. Mobile taps trigger instantaneous tactile active compression (`:active` with `scale(0.96)`) and immediately settle back flat with zero lingering hovering.
+10. **Test Everything:**
+    - Always run `$env:CI="true"; npm test -- --runInBand` and `npm run test:api` before concluding turns.
+

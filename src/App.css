@@ -375,15 +375,51 @@
 
 
 /* Touch-optimized tactile responsiveness across mobile devices */
+button,
+a,
+input,
+select,
+textarea,
+[role="button"],
 .ct-brand,
 .ct-btn-icon,
 .ct-swap-btn,
 .ct-category-tab,
+.ct-category-expand-btn,
+.ct-favorite-pill,
+.ct-fav-select-btn,
+.ct-fav-remove-btn,
+.ct-precision-btn,
+.ct-precision-item,
+.ct-kitchen-mode-toggle,
+.ct-unit-selector-chip,
+.ct-integrated-input-box,
+.ct-input-clear-btn,
+.ct-integrated-unit-btn,
 .ct-num-copy-btn,
 .ct-formula-item,
 .ct-kitchen-tool-chip,
 .ct-kitchen-equiv-pill,
-.ct-omnibox-item {
+.ct-omnibox-item,
+.ct-omnibox-wrapper,
+.ct-omnibox-clear,
+.ct-history-item,
+.ct-history-toggle-btn,
+.ct-history-clear-btn,
+.ct-pair-card,
+.ct-faq-item,
+.ct-faq-question,
+.ct-footer-cat-link,
+.ct-footer-legal-link,
+.ct-footer-api-link,
+.ct-modal-tab,
+.ct-modal-close,
+.ct-modal-done-btn,
+.ct-btn-pill-api,
+.ct-btn-copy-code,
+.ct-btn-primary,
+.ct-tester-btn,
+.ct-pill-btn {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
@@ -4213,15 +4249,6 @@ button:focus:not(:focus-visible) {
   }
 }
 
-@media (hover: none) {
-  /* On touchscreens, copy tooltips only show upon tap/copied, preventing lingering tooltips */
-  .ct-num-copy-btn:hover:not(.copied) .ct-num-tooltip,
-  .ct-formula-item:hover:not(.copied) .ct-formula-tooltip {
-    opacity: 0 !important;
-    visibility: hidden !important;
-  }
-}
-
 
 /* ==========================================
    Typographic Fraction Component (.ct-frac)
@@ -6406,3 +6433,102 @@ button:focus:not(:focus-visible) {
   border-radius: var(--radius-full);
   margin-top: 0.5rem;
 }
+
+/* ==========================================================================
+   Mobile Touchscreen Sticky Hover Elimination & Native Tactile Fidelity
+   On touch devices (smartphones, tablets), tapping an element triggers :hover
+   which persists indefinitely because no mouseout event is fired.
+   This media query strictly suppresses lingering hover transforms, elevated
+   hover shadows, and hover tooltips whenever an element is not actively
+   being pressed (:hover:not(:active)), ensuring buttons immediately snap
+   back flat without sticking or floating in mid-air.
+   ========================================================================== */
+@media (hover: none), (pointer: coarse) {
+  .ct-footer-logo:hover:not(:active),
+  .ct-brand:hover:not(:active) .ct-logo-arrow-top,
+  .ct-brand:hover:not(:active) .ct-logo-arrow-bottom,
+  .ct-brand:hover:not(:active) .ct-brand-text,
+  .ct-btn-icon:hover:not(:active),
+  .ct-category-tab:hover:not(:active),
+  .ct-category-expand-btn:hover:not(:active),
+  .ct-category-expand-btn.is-expanded:hover:not(:active),
+  .ct-favorite-pill:hover:not(:active),
+  .ct-fav-select-btn:hover:not(:active),
+  .ct-fav-remove-btn:hover:not(:active),
+  .ct-precision-btn:hover:not(:active),
+  .ct-precision-item:hover:not(:active),
+  .ct-kitchen-mode-toggle:hover:not(:active),
+  .ct-unit-selector-chip:hover:not(:active),
+  .ct-integrated-input-box:hover:not(:active):not(:focus-within),
+  .ct-input-clear-btn:hover:not(:active),
+  .ct-integrated-unit-btn:hover:not(:active),
+  .ct-integrated-unit-symbol:hover:not(:active),
+  .ct-swap-btn:hover:not(:active),
+  .ct-num-copy-btn:hover:not(:active):not(:focus-visible),
+  .ct-kitchen-tool-chip:hover:not(:active),
+  .ct-kitchen-equiv-pill:hover:not(:active),
+  .ct-formula-item:hover:not(:active):not(:focus-visible),
+  .ct-table-tab:hover:not(:active),
+  .ct-unit-stat-card:hover:not(:active),
+  .ct-history-toggle-btn:hover:not(:active),
+  .ct-history-clear-btn:hover:not(:active),
+  .ct-history-item:hover:not(:active),
+  .ct-pair-card:hover:not(:active),
+  .ct-faq-item:hover:not(:active),
+  .ct-footer-cat-link:hover:not(:active),
+  .ct-footer-legal-link:hover:not(:active),
+  .ct-footer-api-link:hover:not(:active),
+  .ct-modal-tab:hover:not(:active),
+  .ct-modal-close:hover:not(:active),
+  .ct-modal-done-btn:hover:not(:active),
+  .ct-btn-pill-api:hover:not(:active),
+  .ct-btn-copy-code:hover:not(:active),
+  .ct-btn-primary:hover:not(:active),
+  .ct-tester-btn:hover:not(:active),
+  .ct-pill-btn:hover:not(:active),
+  .ct-omnibox-wrapper:hover:not(:active):not(.focused),
+  .ct-omnibox-preview:hover:not(:active),
+  .ct-omnibox-clear:hover:not(:active),
+  .ct-header-search .ct-omnibox-wrapper:hover:not(:active):not(.focused) {
+    transform: none !important;
+  }
+
+  /* Reset inner icon and badge transforms that might linger */
+  .ct-num-copy-btn:hover:not(:active) .ct-num-copy-icon,
+  .ct-formula-item:hover:not(:active) .ct-formula-copy-icon,
+  .ct-pair-card:hover:not(:active) .ct-pair-arrow,
+  .ct-history-item:hover:not(:active) .ct-history-cat,
+  .ct-omnibox-item:hover:not(:active) .ct-omnibox-item-icon,
+  .ct-omnibox-item:hover:not(:active) .ct-omnibox-enter-hint {
+    transform: none !important;
+  }
+
+  /* Reset elevated hover shadows on touch devices */
+  .ct-integrated-input-box:hover:not(:active):not(:focus-within) {
+    box-shadow: 0 4px 18px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04) !important;
+  }
+
+  [data-theme="dark"] .ct-integrated-input-box:hover:not(:active):not(:focus-within) {
+    box-shadow: 0 6px 22px -2px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  }
+
+  .ct-header-search .ct-omnibox-wrapper:hover:not(:active):not(.focused) {
+    box-shadow: none !important;
+  }
+
+  .ct-omnibox-wrapper:hover:not(:active):not(.focused) {
+    box-shadow: none !important;
+  }
+
+  .ct-omnibox-preview:hover:not(:active) {
+    box-shadow: var(--shadow-google-lg) !important;
+  }
+
+  /* Copy tooltips only show upon tap/copied, preventing lingering tooltips on touch */
+  .ct-num-copy-btn:hover:not(.copied) .ct-num-tooltip,
+  .ct-formula-item:hover:not(.copied) .ct-formula-tooltip {
+    opacity: 0 !important;
+    visibility: hidden !important;
+  }
+}
+
