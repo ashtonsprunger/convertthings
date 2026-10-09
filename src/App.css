@@ -411,7 +411,6 @@ textarea,
 .ct-faq-question,
 .ct-footer-cat-link,
 .ct-footer-legal-link,
-.ct-footer-api-link,
 .ct-modal-tab,
 .ct-modal-close,
 .ct-modal-done-btn,
@@ -6269,36 +6268,6 @@ button:focus:not(:focus-visible) {
   font-size: 0.85rem;
 }
 
-.ct-footer-api-link {
-  color: var(--text-main) !important;
-  font-weight: 600;
-  padding: 0.3rem 0.8rem;
-  border-radius: var(--radius-full);
-  background-color: var(--bg-card);
-  border: 1px solid transparent;
-  box-shadow: none;
-  transition: all var(--transition-fast);
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-[data-theme="dark"] .ct-footer-api-link {
-  box-shadow: none;
-}
-
-.ct-footer-api-link:hover {
-  background-color: var(--text-main);
-  color: var(--text-inverse) !important;
-  box-shadow: none;
-  transform: translateY(-1.5px);
-  text-decoration: none !important;
-}
-
-.ct-footer-api-link:active {
-  transform: translateY(0) scale(0.96);
-  transition: transform 0.06s ease;
-}
 
 .ct-dev-modal {
   max-width: 680px;
@@ -6607,7 +6576,6 @@ button:focus:not(:focus-visible) {
   .ct-faq-item:hover:not(:active),
   .ct-footer-cat-link:hover:not(:active),
   .ct-footer-legal-link:hover:not(:active),
-  .ct-footer-api-link:hover:not(:active),
   .ct-modal-tab:hover:not(:active),
   .ct-modal-close:hover:not(:active),
   .ct-modal-done-btn:hover:not(:active),

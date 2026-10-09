@@ -70,7 +70,7 @@ export function Footer({ onSelectCategory, onOpenLegal, onOpenDevModal, onGoHome
           <div className="ct-footer-legal-links">
             <a
               href="/api/mcp"
-              className="ct-footer-legal-link ct-footer-api-link"
+              className="ct-footer-legal-link"
               onClick={(e) => {
                 if (onOpenDevModal) {
                   e.preventDefault();
@@ -78,8 +78,7 @@ export function Footer({ onSelectCategory, onOpenLegal, onOpenDevModal, onGoHome
                 }
               }}
             >
-              <Icon name="Zap" size={13} aria-hidden="true" className="ct-footer-api-icon" />
-              <span>AI &amp; Developer API</span>
+              AI &amp; Developer API
             </a>
             <a
               href="/privacy.html"
