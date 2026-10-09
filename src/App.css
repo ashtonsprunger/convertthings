@@ -5999,13 +5999,25 @@ button:focus:not(:focus-visible) {
   }
 
   /* Move All 4 Titles Down and Right on Mobile to Align with Action Buttons */
-  .ct-card-header-left,
-  .ct-table-header-left {
+  .ct-table-header .ct-card-header-left,
+  .ct-table-header-left,
+  .ct-history-header .ct-card-header-left,
+  .ct-guide-header .ct-card-header-left,
+  .ct-faq-header .ct-card-header-left {
     min-height: 36px;
     display: flex;
     align-items: center;
     padding-left: 0.85rem;
     gap: 0;
+  }
+
+  /* Conversion Workbench Controls: Keep concentric with top-left card corner */
+  .ct-card .ct-card-header-left {
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    padding-left: 0;
+    gap: 0.5rem;
   }
 
   .ct-card-title-group,
