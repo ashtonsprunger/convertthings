@@ -5891,7 +5891,7 @@ button:focus:not(:focus-visible) {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: var(--cat-current, var(--text-muted));
+  color: var(--text-muted);
   transition: color var(--transition-fast);
 }
 
@@ -5899,8 +5899,8 @@ button:focus:not(:focus-visible) {
   color: var(--cat-current, var(--text-main));
 }
 
-[data-theme="dark"] .ct-footer-cat-link.ct-cat-data_rate .ct-footer-cat-icon,
-[data-theme="dark"] .ct-footer-cat-link.ct-cat-power .ct-footer-cat-icon {
+[data-theme="dark"] .ct-footer-cat-link.ct-cat-data_rate:hover .ct-footer-cat-icon,
+[data-theme="dark"] .ct-footer-cat-link.ct-cat-power:hover .ct-footer-cat-icon {
   color: #facc15;
 }
 
