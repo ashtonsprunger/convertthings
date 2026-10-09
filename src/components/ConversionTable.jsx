@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Icon } from './Icons';
 import { Fraction } from './Fraction';
 import {
   getUnit,
@@ -31,18 +32,32 @@ export function ConversionTable({ categoryId, fromUnitId, toUnitId, fromValue, o
 
   return (
     <section className={`ct-table-card ct-cat-${categoryId}`} aria-label="Reference Charts">
-      <div className="ct-table-header">
-        <div className="ct-table-tabs" role="tablist">
+      <div className="ct-table-card-header ct-table-header">
+        <div className="ct-card-header-left ct-table-header-left">
+          <div className="ct-card-header-badge ct-table-header-badge" aria-hidden="true">
+            <Icon name="Table" size={20} />
+          </div>
+          <div className="ct-card-title-group ct-table-title-group">
+            <h3 className="ct-card-heading ct-table-heading">Reference & Equivalence</h3>
+            <p className="ct-card-subtitle ct-table-subtitle">
+              Quick conversion benchmarks and all-unit breakdown for {fromUnit.plural || fromUnit.name}
+            </p>
+          </div>
+        </div>
+
+        <div className="ct-table-tabs" role="tablist" aria-label="Reference view mode">
           <button
             type="button"
             role="tab"
             id="tab-chart"
             aria-controls="panel-chart"
             aria-selected={activeTab === 'chart'}
+            aria-label={`${fromUnit.symbol} to ${toUnit.symbol} Reference Table`}
             className={`ct-table-tab ${activeTab === 'chart' ? 'active' : ''}`}
             onClick={() => setActiveTab('chart')}
           >
-            {fromUnit.symbol} to {toUnit.symbol} Reference Table
+            <span className="ct-table-tab-text">Reference Table</span>
+            <span className="ct-tab-pill-badge">{fromUnit.symbol} ⇄ {toUnit.symbol}</span>
           </button>
           <button
             type="button"
@@ -50,10 +65,12 @@ export function ConversionTable({ categoryId, fromUnitId, toUnitId, fromValue, o
             id="tab-all"
             aria-controls="panel-all"
             aria-selected={activeTab === 'all'}
+            aria-label={`All ${fromUnit.name} Conversions (${formatDisplayNumber(numericVal)} ${fromUnit.symbol})`}
             className={`ct-table-tab ${activeTab === 'all' ? 'active' : ''}`}
             onClick={() => setActiveTab('all')}
           >
-            All {fromUnit.name} Conversions ({formatDisplayNumber(numericVal)} {fromUnit.symbol})
+            <span className="ct-table-tab-text">All Units</span>
+            <span className="ct-tab-pill-badge">{units.length}</span>
           </button>
         </div>
       </div>
@@ -88,10 +105,19 @@ export function ConversionTable({ categoryId, fromUnitId, toUnitId, fromValue, o
                   return (
                     <tr key={row.fromValue} className={isCurrent ? 'ct-row-current' : ''}>
                       <td className="ct-td-from">
-                        <strong><Fraction value={formatDisplayNumber(row.fromValue)} /></strong> <span className="ct-cell-unit">{fromUnit.symbol}</span>
+                        <span className="ct-cell-val">
+                          <strong><Fraction value={formatDisplayNumber(row.fromValue)} /></strong>
+                          <span className="ct-cell-unit">{fromUnit.symbol}</span>
+                        </span>
+                        {isCurrent && (
+                          <span className="ct-current-badge">Current</span>
+                        )}
                       </td>
                       <td className="ct-td-to">
-                        <strong><Fraction value={formatDisplayNumber(row.toValue)} /></strong> <span className="ct-cell-unit">{toUnit.symbol}</span>
+                        <span className="ct-cell-val">
+                          <strong><Fraction value={formatDisplayNumber(row.toValue)} /></strong>
+                          <span className="ct-cell-unit">{toUnit.symbol}</span>
+                        </span>
                       </td>
                     </tr>
                   );
@@ -138,10 +164,21 @@ export function ConversionTable({ categoryId, fromUnitId, toUnitId, fromValue, o
                 >
                   <div className="ct-stat-header">
                     <span className="ct-stat-name">{item.unit.plural || item.unit.name}</span>
-                    <span className="ct-stat-symbol">{item.unit.symbol}</span>
+                    <div className="ct-stat-tags">
+                      {isSource ? (
+                        <span className="ct-stat-badge ct-badge-base">Base</span>
+                      ) : isSelected ? (
+                        <span className="ct-stat-badge ct-badge-selected">Selected</span>
+                      ) : (
+                        <span className="ct-stat-arrow" aria-hidden="true">→</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="ct-stat-value">
-                    <Fraction value={formatDisplayNumber(item.value)} />
+                  <div className="ct-stat-value-wrap">
+                    <span className="ct-stat-value">
+                      <Fraction value={formatDisplayNumber(item.value)} />
+                    </span>
+                    <span className="ct-stat-unit-tag">{item.unit.symbol}</span>
                   </div>
                 </a>
               );

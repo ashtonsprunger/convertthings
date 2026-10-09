@@ -89,30 +89,53 @@ export function ConversionHistory({ history, onSelectHistory, onClearHistory }) 
           <div className="ct-history-header">
             <button
               type="button"
-              className="ct-history-toggle-btn"
+              className="ct-history-title-btn"
               onClick={() => setIsOpen(!isOpen)}
               aria-expanded={isOpen}
+              aria-label={`Recent Conversions (${displayHistory.length})`}
             >
-              <Icon name="History" size={16} />
-              <span>Recent Conversions ({displayHistory.length})</span>
-              <Icon
-                name="ChevronDown"
-                size={14}
-                className={`ct-history-chevron ${isOpen ? 'rotated' : ''}`}
-              />
+              <div className="ct-card-header-left">
+                <div className="ct-card-header-badge ct-history-header-badge" aria-hidden="true">
+                  <Icon name="History" size={20} />
+                </div>
+                <div className="ct-card-title-group">
+                  <h3 className="ct-card-heading ct-history-heading">Recent Conversions</h3>
+                  <p className="ct-card-subtitle ct-history-subtitle">
+                    {displayHistory.length} saved conversion{displayHistory.length === 1 ? '' : 's'} from this session
+                  </p>
+                </div>
+              </div>
             </button>
 
-            {isOpen && (
+            <div className="ct-history-header-actions">
+              {isOpen && (
+                <button
+                  type="button"
+                  className="ct-history-clear-btn"
+                  onClick={handleClear}
+                  title="Clear conversion history"
+                  aria-label="Clear conversion history"
+                >
+                  <Icon name="Trash" size={14} />
+                  <span>Clear</span>
+                </button>
+              )}
+
               <button
                 type="button"
-                className="ct-history-clear-btn"
-                onClick={handleClear}
-                title="Clear conversion history"
+                className="ct-history-toggle-pill"
+                onClick={() => setIsOpen(!isOpen)}
+                aria-expanded={isOpen}
+                aria-label={isOpen ? 'Hide recent conversions' : 'Show recent conversions'}
               >
-                <Icon name="Trash" size={14} />
-                <span>Clear</span>
+                <span className="ct-history-pill-text">{isOpen ? 'Hide' : 'Show'}</span>
+                <Icon
+                  name="ChevronDown"
+                  size={14}
+                  className={`ct-history-chevron ${isOpen ? 'rotated' : ''}`}
+                />
               </button>
-            )}
+            </div>
           </div>
 
           <div

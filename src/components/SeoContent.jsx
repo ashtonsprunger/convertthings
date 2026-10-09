@@ -420,8 +420,15 @@ export function SeoContent({ categoryId, fromUnitId, toUnitId, onSelectPair }) {
       {/* Primary Guide & Reference Dossier Card */}
       <section className="ct-seo-guide" aria-label={`${activeCategory.name} Conversion Guide`}>
         <header className="ct-guide-header">
-          <h2 className="ct-seo-title">{info.title}</h2>
-          <p className="ct-seo-lead">{info.description}</p>
+          <div className="ct-card-header-left">
+            <div className="ct-card-header-badge ct-guide-header-badge" aria-hidden="true">
+              <Icon name={activeCategory.icon || 'BookOpen'} size={20} />
+            </div>
+            <div className="ct-card-title-group">
+              <h2 className="ct-seo-title ct-card-heading">{info.title}</h2>
+              <p className="ct-seo-lead ct-card-subtitle">{info.description}</p>
+            </div>
+          </div>
         </header>
 
         <div className="ct-guide-content">
@@ -498,10 +505,17 @@ export function SeoContent({ categoryId, fromUnitId, toUnitId, onSelectPair }) {
       {/* Frequently Asked Questions Card */}
       <section className="ct-faq-card" aria-label="Frequently Asked Questions">
         <header className="ct-faq-header">
-          <h3 className="ct-faq-heading">Frequently Asked Questions</h3>
-          <p className="ct-faq-lead">
-            Common questions and verified calculations for {activeCategory.name.toLowerCase()} units.
-          </p>
+          <div className="ct-card-header-left">
+            <div className="ct-card-header-badge ct-faq-header-badge" aria-hidden="true">
+              <Icon name="HelpCircle" size={20} />
+            </div>
+            <div className="ct-card-title-group">
+              <h3 className="ct-faq-heading ct-card-heading">Frequently Asked Questions</h3>
+              <p className="ct-faq-lead ct-card-subtitle">
+                Common questions and verified calculations for {activeCategory.name.toLowerCase()} units.
+              </p>
+            </div>
+          </div>
         </header>
 
         <div className="ct-faq-list">
