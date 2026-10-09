@@ -7,6 +7,7 @@ export function ConversionHistory({ history, onSelectHistory, onClearHistory }) 
   const [displayHistory, setDisplayHistory] = useState(history || []);
   const [isExiting, setIsExiting] = useState(false);
   const [isEntering, setIsEntering] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const isInitialMount = useRef(true);
   const prevHistoryLenRef = useRef(history?.length || 0);
 
@@ -26,16 +27,25 @@ export function ConversionHistory({ history, onSelectHistory, onClearHistory }) 
       setDisplayHistory(history);
       setIsExiting(false);
       setIsEntering(true);
+      setIsTransitioning(true);
       const raf = requestAnimationFrame(() => {
         setIsEntering(false);
       });
-      return () => cancelAnimationFrame(raf);
+      const timer = setTimeout(() => {
+        setIsTransitioning(false);
+      }, 380);
+      return () => {
+        cancelAnimationFrame(raf);
+        clearTimeout(timer);
+      };
     } else if (curLen === 0 && prevLen > 0) {
       // Cleared: smoothly animate exit and slide the rest of the page up
       setIsExiting(true);
+      setIsTransitioning(true);
       const timer = setTimeout(() => {
         setDisplayHistory([]);
         setIsExiting(false);
+        setIsTransitioning(false);
       }, 340);
       return () => clearTimeout(timer);
     } else if (curLen > 0) {
@@ -50,12 +60,14 @@ export function ConversionHistory({ history, onSelectHistory, onClearHistory }) 
       e.preventDefault();
     }
     setIsExiting(true);
+    setIsTransitioning(true);
     if (onClearHistory) {
       onClearHistory();
     }
     setTimeout(() => {
       setDisplayHistory([]);
       setIsExiting(false);
+      setIsTransitioning(false);
     }, 340);
   };
 
@@ -63,16 +75,17 @@ export function ConversionHistory({ history, onSelectHistory, onClearHistory }) 
     return null;
   }
 
-  const wrapperClass = isExiting
-    ? 'exiting'
-    : isEntering
-    ? 'entering'
-    : 'visible';
+  const wrapperClasses = [
+    'ct-history-wrapper',
+    isExiting && 'exiting',
+    isEntering && 'entering',
+    isTransitioning ? 'transitioning' : 'resting'
+  ].filter(Boolean).join(' ');
 
   return (
-    <div className={`ct-history-wrapper ${wrapperClass}`}>
+    <div className={wrapperClasses}>
       <div className="ct-history-wrapper-inner">
-        <section className="ct-history-section" aria-label="Recent conversions">
+        <section className={`ct-history-section ${isOpen ? 'open' : ''}`} aria-label="Recent conversions">
           <div className="ct-history-header">
             <button
               type="button"
@@ -89,17 +102,17 @@ export function ConversionHistory({ history, onSelectHistory, onClearHistory }) 
               />
             </button>
 
-            <button
-              type="button"
-              className={`ct-history-clear-btn ${isOpen ? 'visible' : ''}`}
-              onClick={handleClear}
-              title="Clear conversion history"
-              aria-hidden={!isOpen}
-              tabIndex={isOpen ? 0 : -1}
-            >
-              <Icon name="Trash" size={14} />
-              <span>Clear</span>
-            </button>
+            {isOpen && (
+              <button
+                type="button"
+                className="ct-history-clear-btn"
+                onClick={handleClear}
+                title="Clear conversion history"
+              >
+                <Icon name="Trash" size={14} />
+                <span>Clear</span>
+              </button>
+            )}
           </div>
 
           <div
