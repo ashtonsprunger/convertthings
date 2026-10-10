@@ -56,13 +56,14 @@
      - Strict **Concentric Geometry** formula: $R_{\text{outer}} (38\text{px}) = R_{\text{inner}} (18\text{px}) + \text{Padding} (20\text{px} / 1.25\text{rem})$.
      - Filter tags and dropdown results use `--radius-chip: 14px`.
    - **Unified Unit Pod Architecture (`.ct-unit-block`)**:
-     - Organizes the "From" and "To" sides into two distinct, soft surface trays (`background-color: var(--bg-card-subtle)`, `border-radius: var(--radius-card)`, `border: 1px solid transparent;`) without harsh border lines.
-     - Leverages Gestalt *Law of Common Region*: enclosing both the unit selector dropdown chip and the floating numeric input inside the same physical pod boundary establishes an unmistakable, immediate visual connection between each unit and its value.
-     - The circular swap button (`.ct-swap-btn`) rests as a flat, soft-gray dial (`background: var(--bg-card-subtle)`) bridging the pods, blooming white with elevation on hover.
-   - **Borderless Floating Inputs with Multi-Tier Ambient Elevation**:
+     - Organizes the "From" and "To" sides into two distinct, soft surface workstations (`background-color: var(--bg-card-subtle)`, `border-radius: var(--radius-card)`, `border: 1px solid transparent;`) without harsh border lines.
+     - Leverages Gestalt *Law of Common Region*: enclosing both the unit selector dropdown chip and the numeric input directly inside the unified pod surface establishes an unmistakable, immediate visual connection between each unit and its value.
+     - The pod itself serves as the interactive workstation: the interactive unit selector chip (`[ Millimeter  mm  ▾ ]`) sits at the top as a clean Material pill, while the numeric input renders seamlessly onto the pod canvas without an inner floating capsule box, completely eliminating nested "Russian doll" pill-on-pill clunkiness.
+     - The circular swap button (`.ct-swap-btn`) rests as a flat, soft-gray dial (`background: var(--bg-card-subtle)`) bridging the pods, blooming with responsive lift on hover.
+   - **Seamless Interactive Inputs with Ambient Pod Elevation**:
      - Zero hard outline borders (`border: 1px solid transparent`).
-     - Uses dual-layer ambient drop shadows at rest (`0 4px 18px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04)`) and expanded depth on hover (`0 8px 28px -3px rgba(15, 23, 42, 0.12)`).
-     - Crisp floating focus state: ambient elevation with lift (`transform: translateY(-1.5px)`), multi-tier soft blur (`0 12px 34px -4px rgba(15, 23, 42, 0.14), 0 4px 10px -2px rgba(15, 23, 42, 0.06)`) with zero border rings, zero outline strokes, or harsh wireframe edges.
+     - Numeric input renders directly onto the pod canvas (`background: transparent; border: none;`).
+     - Crisp floating focus state: focusing the input gently elevates the entire pod workstation (`transform: translateY(-1.5px)` with ambient soft blur `var(--shadow-google-sm)`), giving users clear tactile focus feedback with zero border rings or jarring outline strokes.
    - **Single Hero Accent in Workbenches**:
      - The converted result pill (`.ct-num-copy-btn`) is the **sole vibrant, category-colored hero element inside the conversion card** (`background: var(--cat-current-light); color: var(--cat-current)`).
      - All surrounding controls—unit selector chips, center swap button, input borders, carets, precision dropdown, kitchen toggle, and educational formulas—are calm, refined monochrome.

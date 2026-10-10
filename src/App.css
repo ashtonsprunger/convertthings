@@ -1967,10 +1967,62 @@ button:focus:not(:focus-visible) {
   padding: 0;
   box-shadow: none;
   overflow: visible;
+  position: relative;
 }
 
 .ct-category-nav-inner.is-animating {
   overflow: hidden !important;
+}
+
+.ct-category-flight-overlay {
+  position: absolute;
+  pointer-events: none;
+  z-index: 10;
+  overflow: hidden;
+}
+
+.ct-category-flight-overlay .ct-category-tab {
+  pointer-events: none;
+  user-select: none;
+  box-shadow: none !important;
+  margin: 0 !important;
+}
+
+.ct-category-flight-overlay.ct-mask-right {
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
+  mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
+}
+
+.ct-category-flight-overlay.ct-mask-left {
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 28px);
+  mask-image: linear-gradient(to right, transparent 0%, black 28px);
+}
+
+.ct-category-flight-overlay.ct-mask-both {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 28px,
+    black calc(100% - 28px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 28px,
+    black calc(100% - 28px),
+    transparent 100%
+  );
+}
+
+.ct-category-flight-overlay.ct-mask-none {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.ct-category-scroll.is-flying .ct-category-tab {
+  opacity: 0 !important;
+  visibility: hidden !important;
 }
 
 .ct-category-controls-row {
@@ -1997,10 +2049,11 @@ button:focus:not(:focus-visible) {
   -ms-overflow-style: none;
   flex: 1;
   min-width: 0;
+  position: relative;
 }
 
 .ct-category-scroll.is-animating {
-  overflow: hidden !important;
+  scroll-snap-type: none !important;
 }
 
 .ct-category-scroll::-webkit-scrollbar {
@@ -2376,6 +2429,8 @@ button:focus:not(:focus-visible) {
   order: 2;
   align-self: flex-start;
   margin-top: 6px;
+  position: relative;
+  z-index: 25;
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -2423,6 +2478,8 @@ button:focus:not(:focus-visible) {
 
 .ct-category-expand-btn.is-expanded {
   float: right;
+  position: relative;
+  z-index: 25;
   margin-top: 0;
   margin-bottom: 0.45rem;
   margin-left: 0.5rem;
@@ -2586,9 +2643,9 @@ button:focus:not(:focus-visible) {
     display: contents;
   }
   .ct-category-scroll.is-expanded .ct-category-tab {
-    padding: 0 0.72rem;
+    padding: 0 0.75rem;
     height: 32px;
-    font-size: 0.78rem;
+    font-size: 0.8rem;
     margin-right: 0.45rem;
     margin-bottom: 0.4rem;
   }
@@ -3110,7 +3167,7 @@ button:focus:not(:focus-visible) {
   pointer-events: none;
 }
 
-/* Unified Unit Pod (Enclosing Unit Selector and Input as a Cohesive Workstation) */
+/* Unified Unit Pod (The Pod IS the Input Workstation) */
 .ct-unit-block {
   display: flex;
   flex-direction: column;
@@ -3122,12 +3179,21 @@ button:focus:not(:focus-visible) {
   border: 1px solid transparent;
   border-radius: var(--pod-radius, 16px);
   padding: var(--pod-pad, 0.875rem);
-  transition: background-color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
 }
 
 [data-theme="dark"] .ct-unit-block {
   background-color: var(--bg-card-subtle);
   border-color: transparent;
+}
+
+.ct-unit-block:focus-within {
+  transform: translateY(-1.5px);
+  box-shadow: var(--shadow-google-sm);
+}
+
+[data-theme="dark"] .ct-unit-block:focus-within {
+  box-shadow: 0 4px 18px -2px rgba(0, 0, 0, 0.45);
 }
 
 .ct-unit-label-wrap {
@@ -3278,51 +3344,55 @@ button:focus:not(:focus-visible) {
 }
 
 /* ==========================================
-   Option A: Integrated Numeric Input & Unit Selector
+   Seamless Pod Numeric Input
    ========================================== */
 .ct-integrated-input-box {
   position: relative;
   width: 100%;
   display: flex;
   align-items: center;
-  background-color: var(--bg-card);
-  border: 1px solid transparent;
-  border-radius: var(--radius-full);
-  box-shadow: 0 4px 18px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
-  min-height: 64px;
-  padding: 0.2rem 0.35rem 0.2rem 0.65rem;
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  transition: none;
+  min-height: 56px;
+  padding: 0.1rem 0;
 }
 
 [data-theme="dark"] .ct-integrated-input-box {
-  background-color: var(--bg-input);
-  box-shadow: 0 6px 22px -2px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  background-color: transparent;
+  box-shadow: none;
 }
 
 .ct-integrated-input-box:hover:not(:focus-within) {
   border-color: transparent;
-  box-shadow: 0 8px 28px -3px rgba(15, 23, 42, 0.12), 0 3px 8px -2px rgba(15, 23, 42, 0.05);
-  transform: translateY(-1px);
+  box-shadow: none;
+  transform: none;
 }
 
 [data-theme="dark"] .ct-integrated-input-box:hover:not(:focus-within) {
   border-color: transparent;
-  box-shadow: 0 8px 28px -2px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.12);
-  transform: translateY(-1px);
+  box-shadow: none;
+  transform: none;
+}
+
+.ct-integrated-input-box:active {
+  transform: none;
 }
 
 .ct-integrated-input-box:focus-within,
 .ct-integrated-input-box.dropdown-active {
   border-color: transparent;
-  transform: translateY(-1.5px);
-  box-shadow: 0 12px 34px -4px rgba(15, 23, 42, 0.14), 0 4px 10px -2px rgba(15, 23, 42, 0.06);
+  transform: none;
+  box-shadow: none;
 }
 
 [data-theme="dark"] .ct-integrated-input-box:focus-within,
 [data-theme="dark"] .ct-integrated-input-box.dropdown-active {
   border-color: transparent;
-  transform: translateY(-1.5px);
-  box-shadow: 0 14px 38px -4px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  transform: none;
+  box-shadow: none;
 }
 
 #fromInput,
@@ -3343,7 +3413,7 @@ button:focus:not(:focus-visible) {
   border: none;
   background: transparent;
   outline: none;
-  padding: 0.75rem 0.5rem 0.75rem 0.85rem;
+  padding: 0.5rem 0.5rem 0.5rem 0.85rem;
   font-size: 1.6rem;
   line-height: 1.2;
   font-weight: 800;
@@ -3397,7 +3467,8 @@ button:focus:not(:focus-visible) {
 }
 
 .ct-integrated-input-box:focus-within .ct-input-clear-btn,
-.ct-integrated-input-box:hover .ct-input-clear-btn {
+.ct-integrated-input-box:hover .ct-input-clear-btn,
+.ct-unit-block:hover .ct-input-clear-btn {
   opacity: 1;
   pointer-events: auto;
   transform: scale(1);
@@ -3919,7 +3990,7 @@ button:focus:not(:focus-visible) {
   .ct-integrated-input-box {
     width: 100%;
     min-width: 0;
-    min-height: 60px;
+    min-height: 52px;
     margin: 0;
   }
 }
@@ -3957,7 +4028,7 @@ button:focus:not(:focus-visible) {
   }
 
   .ct-number-input {
-    padding: 0.75rem 0.35rem 0.75rem 0.65rem;
+    padding: 0.4rem 0.35rem 0.4rem 0.65rem;
     line-height: 1.2;
   }
 
@@ -7341,11 +7412,11 @@ button:focus:not(:focus-visible) {
 
   /* Reset elevated hover shadows on touch devices */
   .ct-integrated-input-box:hover:not(:active):not(:focus-within) {
-    box-shadow: 0 4px 18px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04) !important;
+    box-shadow: none !important;
   }
 
   [data-theme="dark"] .ct-integrated-input-box:hover:not(:active):not(:focus-within) {
-    box-shadow: 0 6px 22px -2px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+    box-shadow: none !important;
   }
 
   .ct-header-search .ct-omnibox-wrapper:hover:not(:active):not(.focused) {

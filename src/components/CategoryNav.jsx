@@ -2,6 +2,16 @@ import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from
 import { CATEGORIES } from '../engine/conversions';
 import { Icon } from './Icons';
 
+function getCategoryTabTargetScroll(container, tab) {
+  if (!container || !tab) return 0;
+  const containerRect = container.getBoundingClientRect();
+  const tabRect = tab.getBoundingClientRect();
+  const visualDelta = (tabRect.left + tabRect.width / 2) - (containerRect.left + containerRect.width / 2);
+  const target = container.scrollLeft + visualDelta;
+  const maxScroll = Math.max(0, container.scrollWidth - container.clientWidth);
+  return Math.max(0, Math.min(Math.round(target), maxScroll));
+}
+
 export function CategoryNav({ activeCategoryId, onSelectCategory }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const navRef = useRef(null);
@@ -11,7 +21,10 @@ export function CategoryNav({ activeCategoryId, onSelectCategory }) {
   const prevSnapshotRef = useRef(null);
   const activeAnimationsRef = useRef([]);
   const isFirstMountRef = useRef(true);
+  const isCollapsingRef = useRef(false);
+  const flightTimeoutRef = useRef(null);
   const [scrollOverflow, setScrollOverflow] = useState({ left: false, right: true });
+  const [isFlying, setIsFlying] = useState(false);
 
   // Dynamically compute scroll overflow to fade carousel edges when overflowing
   const updateScrollOverflow = useCallback(() => {
@@ -49,29 +62,49 @@ export function CategoryNav({ activeCategoryId, onSelectCategory }) {
     };
   }, [updateScrollOverflow]);
 
-  // Take a bounding rect snapshot of all category chips and container (FLIP "First")
+  // Cleanup any lingering flight timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (flightTimeoutRef.current) {
+        clearTimeout(flightTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Take a bounding rect snapshot of all category chips and container (Flight Layer "First")
   const takeSnapshot = useCallback(() => {
     if (typeof window === 'undefined') return null;
+    if (typeof Element === 'undefined' || typeof Element.prototype.animate !== 'function') return null;
     const prefersReducedMotion =
       window.matchMedia &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) return null;
 
-    if (!scrollRef.current) return null;
+    if (!scrollRef.current || !navInnerRef.current) return null;
 
     const chips = scrollRef.current.querySelectorAll('.ct-category-tab');
     const chipMap = new Map();
     chips.forEach((chip) => {
       const id = chip.getAttribute('data-cat-id');
       if (id) {
-        chipMap.set(id, chip.getBoundingClientRect());
+        chipMap.set(id, {
+          rect: chip.getBoundingClientRect(),
+          clone: chip.cloneNode(true),
+        });
       }
     });
 
-    const containerRect = navInnerRef.current?.getBoundingClientRect() || null;
+    const containerRect = navInnerRef.current.getBoundingClientRect();
     const btnRect = expandBtnRef.current?.getBoundingClientRect() || null;
-    return { chips: chipMap, container: containerRect, btn: btnRect };
-  }, []);
+    const scrollRect = scrollRef.current.getBoundingClientRect();
+    return {
+      chips: chipMap,
+      container: containerRect,
+      btn: btnRect,
+      scroll: scrollRect,
+      wasExpanded: isExpanded,
+    };
+  }, [isExpanded]);
 
   // Desktop mouse wheel scroll translation (vertical wheel -> horizontal track scroll)
   useEffect(() => {
@@ -97,47 +130,68 @@ export function CategoryNav({ activeCategoryId, onSelectCategory }) {
   }, [isExpanded]);
 
   const toggleExpand = useCallback((targetState) => {
-    prevSnapshotRef.current = takeSnapshot();
+    const snapshot = takeSnapshot();
+    if (snapshot) {
+      prevSnapshotRef.current = snapshot;
+      setIsFlying(true);
+    }
     setIsExpanded((prev) => {
       const next = targetState !== undefined ? targetState : !prev;
+      if (prev && !next) {
+        isCollapsingRef.current = true;
+      }
       return next;
     });
   }, [takeSnapshot]);
 
   const handleSelect = (catId) => {
     if (isExpanded) {
-      prevSnapshotRef.current = takeSnapshot();
+      isCollapsingRef.current = true;
+      const snapshot = takeSnapshot();
+      if (snapshot) {
+        prevSnapshotRef.current = snapshot;
+        setIsFlying(true);
+      }
       setIsExpanded(false);
     }
     onSelectCategory(catId);
   };
 
-  // FLIP Animation Coordinator
+  // Flight Layer Animation Coordinator
   useLayoutEffect(() => {
     if (isFirstMountRef.current) {
       isFirstMountRef.current = false;
       return;
     }
 
-    if (!prevSnapshotRef.current) return;
-    const { chips: prevChips, container: prevContainer, btn: prevBtn } = prevSnapshotRef.current;
+    if (!prevSnapshotRef.current) {
+      setIsFlying(false);
+      return;
+    }
+    const {
+      chips: prevChips,
+      container: prevContainer,
+      btn: prevBtn,
+      scroll: prevScroll,
+    } = prevSnapshotRef.current;
     prevSnapshotRef.current = null;
 
-    if (!scrollRef.current) return;
-
-    // When collapsing, immediately position scrollLeft to the active category BEFORE measuring Last
-    // This eliminates any bounce or secondary scroll hitching on landing!
-    if (!isExpanded) {
-      const activeTab = scrollRef.current.querySelector('.ct-category-tab.active') ||
-                        scrollRef.current.querySelector(`[data-cat-id="${activeCategoryId}"]`);
-      if (activeTab) {
-        const container = scrollRef.current;
-        const target = activeTab.offsetLeft - container.offsetWidth / 2 + activeTab.offsetWidth / 2;
-        container.scrollLeft = Math.max(0, target);
-      }
+    if (!scrollRef.current || !navInnerRef.current) {
+      setIsFlying(false);
+      return;
     }
 
-    // Cancel any running animations to prevent hitching
+    // Clean up any running animations or existing flight overlays
+    if (flightTimeoutRef.current) {
+      clearTimeout(flightTimeoutRef.current);
+      flightTimeoutRef.current = null;
+    }
+    const existingOverlays = navInnerRef.current.querySelectorAll('.ct-category-flight-overlay');
+    existingOverlays.forEach((el) => el.remove());
+
+    scrollRef.current.classList.remove('is-animating');
+    navInnerRef.current.classList.remove('is-animating');
+
     activeAnimationsRef.current.forEach((anim) => {
       try {
         anim.cancel();
@@ -147,44 +201,36 @@ export function CategoryNav({ activeCategoryId, onSelectCategory }) {
     });
     activeAnimationsRef.current = [];
 
+    // When collapsing, immediately position scrollLeft to the active category BEFORE measuring Last
+    if (!isExpanded) {
+      const activeTab = scrollRef.current.querySelector(`[data-cat-id="${activeCategoryId}"]`) ||
+                        scrollRef.current.querySelector('.ct-category-tab.active');
+      if (activeTab) {
+        const container = scrollRef.current;
+        const target = getCategoryTabTargetScroll(container, activeTab);
+        container.scrollLeft = target;
+      }
+    }
+
     const duration = isExpanded ? 300 : 260;
     const easing = isExpanded
       ? 'cubic-bezier(0.16, 1, 0.3, 1)'
       : 'cubic-bezier(0.25, 1, 0.5, 1)';
 
-    // Temporarily suppress scrollbars and gradient mask clipping during the FLIP transition
-    if (scrollRef.current) {
-      scrollRef.current.classList.add('is-animating');
-      navInnerRef.current?.classList.add('is-animating');
-      setTimeout(() => {
-        if (scrollRef.current) {
-          scrollRef.current.classList.remove('is-animating');
-          navInnerRef.current?.classList.remove('is-animating');
-          updateScrollOverflow();
-        }
-      }, duration + 30);
-    }
-
     // 1. Animate container height smoothly so ConversionCard below glides seamlessly
-    if (navInnerRef.current && prevContainer && typeof navInnerRef.current.animate === 'function') {
-      const currentContainer = navInnerRef.current.getBoundingClientRect();
-      const heightDelta = prevContainer.height - currentContainer.height;
-      if (Math.abs(heightDelta) > 2) {
-        const anim = navInnerRef.current.animate(
-          [
-            { height: `${prevContainer.height}px` },
-            { height: `${currentContainer.height}px` },
-          ],
-          {
-            duration,
-            easing,
-          }
-        );
-        activeAnimationsRef.current.push(anim);
-      }
+    const currentContainer = navInnerRef.current.getBoundingClientRect();
+    if (prevContainer && Math.abs(prevContainer.height - currentContainer.height) > 2) {
+      const anim = navInnerRef.current.animate(
+        [
+          { height: `${prevContainer.height}px` },
+          { height: `${currentContainer.height}px` },
+        ],
+        { duration, easing }
+      );
+      activeAnimationsRef.current.push(anim);
     }
 
-    // 2. Animate expand/collapse button seamlessly with FLIP so it NEVER jumps
+    // 2. Animate expand/collapse button seamlessly with FLIP
     if (prevBtn && expandBtnRef.current && typeof expandBtnRef.current.animate === 'function') {
       const curBtn = expandBtnRef.current.getBoundingClientRect();
       const btnDx = prevBtn.left - curBtn.left;
@@ -192,106 +238,226 @@ export function CategoryNav({ activeCategoryId, onSelectCategory }) {
       if (Math.abs(btnDx) > 0.5 || Math.abs(btnDy) > 0.5) {
         const anim = expandBtnRef.current.animate(
           [
-            { transform: `translate(${btnDx}px, ${btnDy}px)` },
-            { transform: 'translate(0, 0)' },
+            { transform: `translate3d(${btnDx}px, ${btnDy}px, 0)` },
+            { transform: 'translate3d(0, 0, 0)' },
           ],
-          {
-            duration,
-            easing,
-          }
+          { duration, easing }
         );
         activeAnimationsRef.current.push(anim);
       }
     }
 
-    // 3. Physical FLIP translation for each category chip with true container visibility bounds
-    const contRect = (navInnerRef.current || scrollRef.current).getBoundingClientRect();
-    const curBtnRect = expandBtnRef.current?.getBoundingClientRect();
-    const visibleRightLimit = isExpanded || !curBtnRect ? contRect.right : curBtnRect.left - 4;
+    // 3. FLIGHT OVERLAYS: Animate chips outside the scroll container without triggering scroll-snap
+    scrollRef.current.classList.add('is-animating');
+    navInnerRef.current.classList.add('is-animating');
 
-    const chips = scrollRef.current.querySelectorAll('.ct-category-tab');
-    chips.forEach((chip) => {
-      if (typeof chip.animate !== 'function') return;
+    const navRect = navInnerRef.current.getBoundingClientRect();
+    const contRect = scrollRef.current.getBoundingClientRect();
 
-      const id = chip.getAttribute('data-cat-id');
-      const first = prevChips.get(id);
-      if (!first) return;
+    let trackOverlay = null;
+    let fadeOverlay = null;
+    let expandOverlay = null;
 
-      const last = chip.getBoundingClientRect();
-      const dx = first.left - last.left;
-      const dy = first.top - last.top;
+    if (!isExpanded) {
+      // COLLAPSING: Grid -> Carousel
+      // Calculate dynamic edge fade mask for destination carousel track
+      const canScrollLeft = scrollRef.current.scrollLeft > 2;
+      const canScrollRight =
+        scrollRef.current.scrollLeft + scrollRef.current.clientWidth <
+        scrollRef.current.scrollWidth - 2;
+      const targetMask =
+        canScrollLeft && canScrollRight
+          ? 'ct-mask-both'
+          : canScrollLeft
+          ? 'ct-mask-left'
+          : canScrollRight
+          ? 'ct-mask-right'
+          : 'ct-mask-none';
 
-      const wasInView = first.right > contRect.left && first.left < contRect.right;
-      // In collapsed state, is the chip comfortably inside the visible row without being chopped off on landing?
-      const isInView = isExpanded
-        ? (last.right > contRect.left && last.left < contRect.right)
-        : (last.left >= contRect.left - 4 && last.right <= visibleRightLimit + 2);
+      // Track overlay: strictly bounded to scroll track with identical edge masks, ending before expand button
+      trackOverlay = document.createElement('div');
+      trackOverlay.className = `ct-category-flight-overlay ${targetMask}`;
+      trackOverlay.style.position = 'absolute';
+      trackOverlay.style.left = `${contRect.left - navRect.left}px`;
+      trackOverlay.style.top = '0';
+      trackOverlay.style.width = `${contRect.width}px`;
+      trackOverlay.style.height = `${currentContainer.height}px`;
+      trackOverlay.style.zIndex = '10';
+      navInnerRef.current.appendChild(trackOverlay);
 
-      if (isExpanded) {
-        if (wasInView) {
-          // Smooth glide from collapsed single-row position to grid position
-          const anim = chip.animate(
-            [
-              { transform: `translate(${dx}px, ${dy}px)` },
-              { transform: 'translate(0, 0)' },
-            ],
-            { duration, easing }
-          );
-          activeAnimationsRef.current.push(anim);
-        } else {
-          // Newly revealed item in grid: cascade in smoothly from above
-          const anim = chip.animate(
-            [
-              { transform: 'translateY(-8px) scale(0.92)', opacity: 0 },
-              { transform: 'translateY(0) scale(1)', opacity: 1 },
-            ],
-            { duration: 240, easing }
-          );
-          activeAnimationsRef.current.push(anim);
+      // Fade overlay: for off-screen chips gently folding in place behind expand button
+      fadeOverlay = document.createElement('div');
+      fadeOverlay.className = 'ct-category-flight-overlay';
+      fadeOverlay.style.position = 'absolute';
+      fadeOverlay.style.inset = '0';
+      fadeOverlay.style.zIndex = '5';
+      navInnerRef.current.appendChild(fadeOverlay);
+    } else {
+      // EXPANDING: Carousel -> Grid
+      expandOverlay = document.createElement('div');
+      expandOverlay.className = 'ct-category-flight-overlay';
+      expandOverlay.style.position = 'absolute';
+      expandOverlay.style.inset = '0';
+      expandOverlay.style.zIndex = '10';
+      navInnerRef.current.appendChild(expandOverlay);
+    }
+
+    CATEGORIES.forEach((cat) => {
+      const prevData = prevChips.get(cat.id);
+      if (!prevData) return;
+      const firstRect = prevData.rect;
+
+      const realTab = scrollRef.current.querySelector(`[data-cat-id="${cat.id}"]`);
+      if (!realTab) return;
+      const lastRect = realTab.getBoundingClientRect();
+
+      if (!isExpanded) {
+        // COLLAPSING: Grid -> Carousel
+        // Does this chip land anywhere inside the visible carousel viewport?
+        const isInView = lastRect.right > contRect.left && lastRect.left < contRect.right;
+
+        if (isInView && trackOverlay) {
+          // Lands in the visible row: physically glides smoothly into resting spot
+          const flightChip = prevData.clone;
+          flightChip.className = realTab.className;
+          flightChip.style.position = 'absolute';
+          flightChip.style.left = `${lastRect.left - contRect.left}px`;
+          flightChip.style.top = `${lastRect.top - navRect.top}px`;
+          flightChip.style.width = `${lastRect.width}px`;
+          flightChip.style.height = `${lastRect.height}px`;
+          flightChip.style.margin = '0';
+          flightChip.style.pointerEvents = 'none';
+          flightChip.style.boxSizing = 'border-box';
+          trackOverlay.appendChild(flightChip);
+
+          const dx = firstRect.left - lastRect.left;
+          const dy = firstRect.top - lastRect.top;
+          if (typeof flightChip.animate === 'function') {
+            flightChip.animate(
+              [
+                { transform: `translate3d(${dx}px, ${dy}px, 0)` },
+                { transform: 'translate3d(0, 0, 0)' },
+              ],
+              { duration, easing }
+            );
+          }
+        } else if (fadeOverlay) {
+          // Off-screen in single row: gently fold upward and fade out in place
+          const flightChip = prevData.clone;
+          flightChip.style.position = 'absolute';
+          flightChip.style.left = `${firstRect.left - prevContainer.left}px`;
+          flightChip.style.top = `${firstRect.top - prevContainer.top}px`;
+          flightChip.style.width = `${firstRect.width}px`;
+          flightChip.style.height = `${firstRect.height}px`;
+          flightChip.style.margin = '0';
+          flightChip.style.pointerEvents = 'none';
+          flightChip.style.boxSizing = 'border-box';
+          fadeOverlay.appendChild(flightChip);
+
+          if (typeof flightChip.animate === 'function') {
+            flightChip.animate(
+              [
+                { opacity: 1, transform: 'translate3d(0, 0, 0) scale(1)' },
+                { opacity: 0, transform: 'translate3d(0, -8px, 0) scale(0.92)' },
+              ],
+              { duration, easing, fill: 'forwards' }
+            );
+          }
         }
       } else {
-        // Collapsing back to single row
-        if (isInView) {
-          // Lands fully inside the visible row: physically glide smoothly into resting spot
-          const anim = chip.animate(
-            [
-              { transform: `translate(${dx}px, ${dy}px)` },
-              { transform: 'translate(0, 0)' },
-            ],
-            { duration, easing }
-          );
-          activeAnimationsRef.current.push(anim);
-        } else {
-          // Off-screen or cut off in single row: gently fold upward and fade out in place
-          // ZERO horizontal shooting across screen! ZERO cut-off chips on landing!
-          const anim = chip.animate(
-            [
-              { transform: `translate(${dx}px, ${dy}px) scale(1)`, opacity: 1 },
-              { transform: `translate(${dx}px, ${dy - 10}px) scale(0.9)`, opacity: 0 },
-            ],
-            { duration: 200, easing: 'cubic-bezier(0.25, 1, 0.5, 1)' }
-          );
-          activeAnimationsRef.current.push(anim);
+        // EXPANDING: Carousel -> Grid
+        // Was this chip visible in the carousel before expanding?
+        const wasInView = prevScroll && firstRect.right > prevScroll.left && firstRect.left < prevScroll.right;
+
+        if (wasInView && expandOverlay) {
+          // Smooth glide from collapsed single-row position to grid position
+          const flightChip = prevData.clone;
+          flightChip.className = realTab.className;
+          flightChip.style.position = 'absolute';
+          flightChip.style.left = `${lastRect.left - navRect.left}px`;
+          flightChip.style.top = `${lastRect.top - navRect.top}px`;
+          flightChip.style.width = `${lastRect.width}px`;
+          flightChip.style.height = `${lastRect.height}px`;
+          flightChip.style.margin = '0';
+          flightChip.style.pointerEvents = 'none';
+          flightChip.style.boxSizing = 'border-box';
+          expandOverlay.appendChild(flightChip);
+
+          const dx = firstRect.left - lastRect.left;
+          const dy = firstRect.top - lastRect.top;
+          if (typeof flightChip.animate === 'function') {
+            flightChip.animate(
+              [
+                { transform: `translate3d(${dx}px, ${dy}px, 0)` },
+                { transform: 'translate3d(0, 0, 0)' },
+              ],
+              { duration, easing }
+            );
+          }
+        } else if (expandOverlay) {
+          // Newly revealed item in grid: cascade in smoothly from above
+          const flightChip = prevData.clone;
+          flightChip.className = realTab.className;
+          flightChip.style.position = 'absolute';
+          flightChip.style.left = `${lastRect.left - navRect.left}px`;
+          flightChip.style.top = `${lastRect.top - navRect.top}px`;
+          flightChip.style.width = `${lastRect.width}px`;
+          flightChip.style.height = `${lastRect.height}px`;
+          flightChip.style.margin = '0';
+          flightChip.style.pointerEvents = 'none';
+          flightChip.style.boxSizing = 'border-box';
+          expandOverlay.appendChild(flightChip);
+
+          if (typeof flightChip.animate === 'function') {
+            flightChip.animate(
+              [
+                { opacity: 0, transform: 'translate3d(0, -8px, 0) scale(0.92)' },
+                { opacity: 1, transform: 'translate3d(0, 0, 0) scale(1)' },
+              ],
+              { duration: 240, easing }
+            );
+          }
         }
       }
     });
+
+    flightTimeoutRef.current = setTimeout(() => {
+      if (trackOverlay) trackOverlay.remove();
+      if (fadeOverlay) fadeOverlay.remove();
+      if (expandOverlay) expandOverlay.remove();
+      setIsFlying(false);
+      if (scrollRef.current) {
+        scrollRef.current.classList.remove('is-animating');
+      }
+      navInnerRef.current?.classList.remove('is-animating');
+      updateScrollOverflow();
+    }, duration + 20);
   }, [isExpanded, activeCategoryId, updateScrollOverflow]);
 
   // Keep active category tab centered in view when activeCategoryId changes via external controls
   useEffect(() => {
     if (isExpanded) return;
 
+    // If collapsing from expanded view, useLayoutEffect already positioned and centered the carousel
+    if (isCollapsingRef.current) {
+      isCollapsingRef.current = false;
+      return;
+    }
+
     const container = scrollRef.current;
     if (!container) return;
 
-    const activeTab = container.querySelector('.ct-category-tab.active');
+    const activeTab = container.querySelector(`[data-cat-id="${activeCategoryId}"]`) ||
+                      container.querySelector('.ct-category-tab.active');
     if (!activeTab) return;
 
-    const target = activeTab.offsetLeft - container.offsetWidth / 2 + activeTab.offsetWidth / 2;
-    if (typeof container.scrollTo === 'function') {
-      container.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
-    } else {
-      container.scrollLeft = Math.max(0, target);
+    const target = getCategoryTabTargetScroll(container, activeTab);
+    if (Math.abs(container.scrollLeft - target) > 3) {
+      if (typeof container.scrollTo === 'function') {
+        container.scrollTo({ left: target, behavior: 'smooth' });
+      } else {
+        container.scrollLeft = target;
+      }
     }
     const t = setTimeout(updateScrollOverflow, 320);
     return () => clearTimeout(t);
@@ -373,7 +539,7 @@ export function CategoryNav({ activeCategoryId, onSelectCategory }) {
 
           {/* Persistent Chips Container (reused in both single-row and grid states) */}
           <div
-            className={`ct-category-scroll ${isExpanded ? 'is-expanded' : ''} ${maskClass}`}
+            className={`ct-category-scroll ${isExpanded ? 'is-expanded' : ''} ${maskClass} ${isFlying ? 'is-flying' : ''}`}
             ref={scrollRef}
             role="tablist"
           >
