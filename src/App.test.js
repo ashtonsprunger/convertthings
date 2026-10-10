@@ -1210,7 +1210,23 @@ describe('Dual-Tier Memory System (In-Session & Cross-Session Persistence)', () 
     expect(header).not.toHaveClass('ct-header-hidden');
   });
 
-  test('clicking brand logo 3 times triggers celestial orbit easter egg animation', () => {
+  test('initial site load renders brand logo in clean resting state without entrance animations', () => {
+    render(<App />);
+
+    const brandLink = document.querySelector('.ct-header .ct-brand');
+    expect(brandLink).toBeInTheDocument();
+    const logoWrap = brandLink.querySelector('.ct-logo-wrap');
+    expect(logoWrap).not.toHaveClass('ct-logo-dock');
+    expect(logoWrap).not.toHaveClass('ct-cat-switch-active');
+    expect(logoWrap).not.toHaveClass('ct-turbine-active');
+    expect(brandLink).not.toHaveClass('ct-brand-turbine-active');
+    expect(brandLink).not.toHaveClass('ct-brand-easter-egg');
+    expect(brandLink).toHaveClass('ct-cat-length');
+    window.history.replaceState({}, '', '/');
+    window.localStorage.clear();
+  });
+
+  test('clicking brand logo 3 times triggers celestial orbit easter egg animation with text haptic pulse', () => {
     jest.useFakeTimers();
     render(<App />);
 
@@ -1227,13 +1243,66 @@ describe('Dual-Tier Memory System (In-Session & Cross-Session Persistence)', () 
     });
 
     expect(logoWrap).toHaveClass('ct-turbine-active');
+    expect(brandLink).toHaveClass('ct-brand-easter-egg');
 
-    // After animation duration (1100ms), class should automatically remove
+    // After animation duration (1100ms), classes should automatically remove
     act(() => {
       jest.advanceTimersByTime(1150);
     });
 
     expect(logoWrap).not.toHaveClass('ct-turbine-active');
+    expect(brandLink).not.toHaveClass('ct-brand-easter-egg');
+    window.history.replaceState({}, '', '/');
+    window.localStorage.clear();
+    jest.useRealTimers();
+  });
+
+  test('category change triggers dual-arrow conveyor handoff animation with simultaneous visibility', () => {
+    jest.useFakeTimers();
+    render(<App />);
+
+    const brandLink = document.querySelector('.ct-header .ct-brand');
+    expect(brandLink).toBeInTheDocument();
+    const logoWrap = brandLink.querySelector('.ct-logo-wrap');
+    expect(logoWrap).not.toHaveClass('ct-cat-switch-active');
+    expect(brandLink).toHaveClass('ct-cat-length');
+    expect(logoWrap.querySelector('.ct-logo-arrow-exit')).toBeNull();
+
+    // Switch to mass category via CategoryNav tab
+    const massTab = screen.getByRole('tab', { name: /Weight & Mass/i });
+    act(() => {
+      fireEvent.click(massTab);
+    });
+
+    // Conveyor handoff triggers: exit arrow with old category (length) and enter arrow with new category (mass)
+    expect(logoWrap).toHaveClass('ct-cat-switch-active');
+    expect(brandLink).toHaveClass('ct-brand-turbine-active');
+    expect(brandLink).toHaveClass('ct-cat-mass');
+
+    const exitArrow = logoWrap.querySelector('.ct-logo-arrow-exit');
+    const enterArrow = logoWrap.querySelector('.ct-logo-arrow-enter');
+    expect(exitArrow).toBeInTheDocument();
+    expect(exitArrow).toHaveClass('ct-cat-length');
+    expect(enterArrow).toBeInTheDocument();
+
+    // Mid-flight (350ms): both arrows remain visible simultaneously
+    act(() => {
+      jest.advanceTimersByTime(350);
+    });
+    expect(logoWrap).toHaveClass('ct-cat-switch-active');
+    expect(logoWrap.querySelector('.ct-logo-arrow-exit')).toBeInTheDocument();
+    expect(logoWrap.querySelector('.ct-logo-arrow-enter')).toBeInTheDocument();
+
+    // After 720ms duration completes, animation class and exit arrow cleanly detach
+    act(() => {
+      jest.advanceTimersByTime(400);
+    });
+    expect(logoWrap).not.toHaveClass('ct-cat-switch-active');
+    expect(logoWrap.querySelector('.ct-logo-arrow-exit')).toBeNull();
+    expect(logoWrap.querySelector('.ct-logo-arrow-enter')).toBeNull();
+    expect(brandLink).toHaveClass('ct-cat-mass');
+    window.history.replaceState({}, '', '/');
+    window.localStorage.clear();
     jest.useRealTimers();
   });
 

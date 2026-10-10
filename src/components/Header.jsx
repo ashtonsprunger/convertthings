@@ -3,6 +3,7 @@ import { Icon } from './Icons';
 import { Omnibox } from './Omnibox';
 
 export function Header({
+  categoryId = 'length',
   theme,
   onToggleTheme,
   onGoHome,
@@ -11,12 +12,48 @@ export function Header({
   history,
   favorites,
 }) {
-  const [isTurbineSpinning, setIsTurbineSpinning] = useState(false);
+  const [isCategorySwitching, setIsCategorySwitching] = useState(false);
+  const [exitCategory, setExitCategory] = useState(null);
+  const [isEasterEggSpinning, setIsEasterEggSpinning] = useState(false);
+  const [spinKey, setSpinKey] = useState(0);
   const [isNavHidden, setIsNavHidden] = useState(false);
   const headerRef = useRef(null);
   const clickCountRef = useRef(0);
   const clickTimerRef = useRef(null);
-  const turbineTimerRef = useRef(null);
+  const categoryTimerRef = useRef(null);
+  const easterEggTimerRef = useRef(null);
+  const prevCategoryRef = useRef(categoryId);
+  const isInitialMount = useRef(true);
+
+  // Category switch: Conveyor Handoff (720ms, NO overshoot).
+  // Old arrow rolls out down-right into the nav pill mask, new arrow rolls in up-left. Both visible simultaneously!
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      prevCategoryRef.current = categoryId;
+      return;
+    }
+
+    if (categoryId && categoryId !== prevCategoryRef.current) {
+      const oldCat = prevCategoryRef.current;
+      const newCat = categoryId;
+      prevCategoryRef.current = newCat;
+
+      if (categoryTimerRef.current) clearTimeout(categoryTimerRef.current);
+      if (easterEggTimerRef.current) clearTimeout(easterEggTimerRef.current);
+
+      setIsEasterEggSpinning(false);
+      setExitCategory(oldCat);
+      setSpinKey((k) => k + 1);
+      setIsCategorySwitching(true);
+
+      // Controlled 720ms duration for the dual-arrow conveyor handoff
+      categoryTimerRef.current = setTimeout(() => {
+        setIsCategorySwitching(false);
+        setExitCategory(null);
+      }, 720);
+    }
+  }, [categoryId]);
 
   // Smart Headroom: hide on scroll down, reveal on scroll up
   useEffect(() => {
@@ -62,7 +99,8 @@ export function Header({
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('keydown', handleKeyDown);
       if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
-      if (turbineTimerRef.current) clearTimeout(turbineTimerRef.current);
+      if (categoryTimerRef.current) clearTimeout(categoryTimerRef.current);
+      if (easterEggTimerRef.current) clearTimeout(easterEggTimerRef.current);
     };
   }, []);
 
@@ -71,12 +109,18 @@ export function Header({
     if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
 
     if (clickCountRef.current >= 3) {
+      if (e) e.preventDefault();
       clickCountRef.current = 0;
-      setIsTurbineSpinning(true);
-      if (turbineTimerRef.current) clearTimeout(turbineTimerRef.current);
-      turbineTimerRef.current = setTimeout(() => {
-        setIsTurbineSpinning(false);
+      setSpinKey((k) => k + 1);
+      if (categoryTimerRef.current) clearTimeout(categoryTimerRef.current);
+      if (easterEggTimerRef.current) clearTimeout(easterEggTimerRef.current);
+      setIsCategorySwitching(false);
+      setExitCategory(null);
+      setIsEasterEggSpinning(true);
+      easterEggTimerRef.current = setTimeout(() => {
+        setIsEasterEggSpinning(false);
       }, 1100);
+      return;
     } else {
       clickTimerRef.current = setTimeout(() => {
         clickCountRef.current = 0;
@@ -87,16 +131,26 @@ export function Header({
     if (onGoHome) onGoHome(e);
   };
 
+  const isMaskActive = isCategorySwitching || isEasterEggSpinning;
+
   return (
     <header
       ref={headerRef}
       className={`ct-header ${isNavHidden ? 'ct-header-hidden' : ''}`}
       onFocusCapture={() => setIsNavHidden(false)}
     >
-      <div className="ct-header-inner">
-        <a href="/" className="ct-brand" onClick={handleBrandClick} aria-label="ConvertThings Home">
-          <div className={`ct-logo-wrap ${isTurbineSpinning ? 'ct-turbine-active' : ''}`} aria-hidden="true">
-            <Icon name="BrandLogo" size={36} />
+      <div className={`ct-header-inner ${isMaskActive ? 'ct-header-turbine-active' : ''}`}>
+        <a
+          href="/"
+          className={`ct-brand ${isMaskActive ? 'ct-brand-turbine-active' : ''} ${isEasterEggSpinning ? 'ct-brand-easter-egg' : ''} ct-cat-${categoryId}`}
+          onClick={handleBrandClick}
+          aria-label="ConvertThings Home"
+        >
+          <div
+            className={`ct-logo-wrap ${isCategorySwitching ? 'ct-cat-switch-active' : ''} ${isEasterEggSpinning ? 'ct-turbine-active' : ''}`}
+            aria-hidden="true"
+          >
+            <Icon key={spinKey} name="BrandLogo" size={36} exitCategory={exitCategory} />
           </div>
           <div className="ct-brand-text">
             <h1 className="ct-brand-title" aria-label="ConvertThings">

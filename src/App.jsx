@@ -930,6 +930,7 @@ function App() {
   return (
     <div className={`ct-app ct-cat-${categoryId}`}>
       <Header
+        categoryId={categoryId}
         theme={theme}
         onToggleTheme={toggleTheme}
         onGoHome={handleGoHome}
