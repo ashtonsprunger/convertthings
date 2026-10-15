@@ -982,7 +982,7 @@ export function getSeoMetadata({
   const directAnswer = baselineAnswer ? `1 ${fromUnit.symbol} = ${baselineAnswer} ${toUnit.symbol}` : null;
   const editorial = buildPairEditorialContent(categoryId, fromUnit, toUnit);
   const isCommonPair = fromUnit.tier === 'common' && toUnit.tier === 'common';
-  const isIndexable = isDefaultOne && isCommonPair;
+  const isIndexable = isDefaultOne;
 
   return {
     title,
@@ -997,6 +997,7 @@ export function getSeoMetadata({
     ogTitle: title.replace(' | ConvertThings', ''),
     ogDescription: description,
     ...(editorial || {}),
+    isCommonPair,
     isIndexable,
     robots: isIndexable ? 'index, follow' : 'noindex, follow',
   };

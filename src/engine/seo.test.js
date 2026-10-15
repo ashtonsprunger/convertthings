@@ -135,16 +135,24 @@ describe('SEO Metadata Engine', () => {
       expect(meta.robots).toBe('index, follow');
     });
 
-    test('marks specialized unit permutations as noindex, follow to prevent thin doorway indexing', () => {
-      const meta = getSeoMetadata({
-        categoryId: 'length',
-        fromUnitId: 'pc',
-        toUnitId: 'hand',
+    test('marks canonical specialized unit pairs as index, follow and custom number permutations as noindex, follow', () => {
+      const canonicalSpecialized = getSeoMetadata({
+        categoryId: 'volume',
+        fromUnitId: 'cucm',
+        toUnitId: 'ml',
         value: '1',
       });
+      expect(canonicalSpecialized.isIndexable).toBe(true);
+      expect(canonicalSpecialized.robots).toBe('index, follow');
 
-      expect(meta.isIndexable).toBe(false);
-      expect(meta.robots).toBe('noindex, follow');
+      const customValPermutation = getSeoMetadata({
+        categoryId: 'mass',
+        fromUnitId: 'lb',
+        toUnitId: 'kg',
+        value: '100',
+      });
+      expect(customValPermutation.isIndexable).toBe(false);
+      expect(customValPermutation.robots).toBe('noindex, follow');
     });
   });
 });

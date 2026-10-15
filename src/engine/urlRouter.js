@@ -594,7 +594,8 @@ export function getAllUnitPairs() {
           toName: toUnit.name,
           path,
           url: `https://convertthings.com${path}`,
-          isIndexable: fromUnit.tier === 'common' && toUnit.tier === 'common',
+          isCommonPair: fromUnit.tier === 'common' && toUnit.tier === 'common',
+          isIndexable: true,
         });
       }
     }
@@ -606,14 +607,14 @@ export function getAllUnitPairs() {
 /**
  * Generates an XML sitemap for search engine bots indexing.
  * Includes the homepage, Kitchen Studio, About/Privacy/Terms pages, high-intent hubs,
- * all 22 category landing pages, and core everyday (common-tier) unit pairs.
+ * all 22 category landing pages, and all canonical pre-rendered unit pairs.
  *
  * @param {string} domain Base domain (defaults to 'https://www.convertthings.com')
  * @returns {string} Valid XML sitemap string
  */
 export function generateSitemapXml(domain = 'https://www.convertthings.com') {
   const today = new Date().toISOString().split('T')[0];
-  const pairs = getAllUnitPairs().filter((p) => p.isIndexable);
+  const pairs = getAllUnitPairs();
 
   let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
   xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
@@ -664,13 +665,14 @@ export function generateSitemapXml(domain = 'https://www.convertthings.com') {
     xml += `  </url>\n`;
   });
 
-  // 4. High-Value Everyday Unit Pairs (common tier)
+  // 4. Canonical Pre-Rendered Unit Pairs
   pairs.forEach((pair) => {
+    const priority = pair.isCommonPair ? '0.8' : '0.7';
     xml += `  <url>\n`;
     xml += `    <loc>${domain}${pair.path}</loc>\n`;
     xml += `    <lastmod>${today}</lastmod>\n`;
     xml += `    <changefreq>monthly</changefreq>\n`;
-    xml += `    <priority>0.8</priority>\n`;
+    xml += `    <priority>${priority}</priority>\n`;
     xml += `  </url>\n`;
   });
 
