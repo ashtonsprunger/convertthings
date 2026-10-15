@@ -10,13 +10,13 @@
 
 ## Features
 
-- **15 Measurement Categories & 120+ Units**: Length, Weight/Mass, Temperature, Area, Volume, Speed, Time, Digital Storage, Data Transfer Rate, Pressure, Energy, Power, Angle, Fuel Economy, Cooking.
+- **22 Measurement Categories & 228 Standardized Units**: Length, Weight/Mass, Temperature, Area, Volume, Speed, Time, Digital Storage, Data Transfer Rate, Pressure, Energy, Power, Angle, Fuel Economy, Cooking, Frequency, Torque, Force, Volumetric Flow Rate, Typography, Electric Current, Illuminance.
 - **Exact NIST / SI Standards**: Zero-dependency calculation engine eliminating IEEE 754 floating-point inaccuracies.
 - **Model Context Protocol (MCP) Server**: Native support for Anthropic's Model Context Protocol. Connect Claude Desktop, Cursor, and agent frameworks to eliminate conversion hallucinations.
 - **Serverless Public REST API**: Fast, zero-config endpoints deployed on Vercel Serverless Edge with natural language query parsing.
-- **Natural Language Parsing**: Omnibox and APIs understand queries like *"100 km to miles"*, *"72 f in c"*, *"150 lbs into kg"*, and *"1 cup to ml"*.
+- **Natural Language & Semantic Search**: Omnibox and APIs understand conversational queries (*"100 km to miles"*, *"1 gold oz to grams"*, *"16 hands to feet"*, *"2000 food calories to kj"*, *"600 rpm to hz"*, *"100 ft-lb to nm"*, *"100 cfm to l/s"*, *"16 px to rem"*, *"5000 mah to ah"*, *"500 lx to fc"*), compound expressions, and topic keyword discovery (*"gold"*, *"jewelry"*, *"astronomy"*, *"tire pressure"*, *"lug nut"*, *"airflow"*, *"battery capacity"*, *"lighting"*).
 - **Zero Cumulative Layout Shift (CLS)**: Perfectly stable layout with 100% Core Web Vitals score.
-- **SEO & Discoverability**: Programmatic URL pair routing (`/convert/celsius-to-fahrenheit`, `/convert/100-km-to-miles`), dynamic JSON-LD Schema.org metadata, and automated 1,244-URL XML sitemap.
+- **SEO & Discoverability**: Programmatic URL pair routing (`/convert/celsius-to-fahrenheit`, `/convert/100-km-to-miles`, `/convert/px-to-rem`, `/convert/amps-to-milliamps`), dynamic JSON-LD Schema.org metadata, and automated 2,648-URL XML sitemap.
 - **Dark & Light Mode**: Seamless theme switching with system preference detection and localStorage persistence.
 
 ---
@@ -26,7 +26,7 @@
 ConvertThings runs an MCP server that exposes 4 tools to AI models:
 1. `convert_units`: High-precision bidirectional conversion with step-by-step formula.
 2. `parse_and_convert`: Natural language conversion for queries like *"100 km to miles"*.
-3. `list_units`: Unit discovery across all 15 domains.
+3. `list_units`: Unit discovery across all 22 domains.
 4. `get_reference_table`: Benchmark value equivalence tables (1 to 1,000).
 
 ### Claude Desktop Configuration

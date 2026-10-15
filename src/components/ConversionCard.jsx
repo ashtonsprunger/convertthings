@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useLayoutEffect, useMemo } from 're
 import { Icon } from './Icons';
 import { Fraction } from './Fraction';
 import {
+  CATEGORIES,
   getUnitsForCategory,
   getUnit,
   getFormulaString,
@@ -9,12 +10,15 @@ import {
   convertUnits,
   filterAndSortUnits,
   formatDisplayNumber,
+  formatCompoundForDisplay,
   parseFractionString,
   isFractionLike,
   isCompoundLike,
   parseCompoundValue,
+  evaluateInputStatus,
   getKitchenDrawerBreakdown,
   getSmartEquationDisplay,
+  isKitchenCategory,
 } from '../engine/conversions';
 
 const PRECISION_OPTIONS = [
@@ -63,8 +67,8 @@ export function ConversionCard({
   fromValue,
   toValue,
   precision,
-  kitchenMode = true,
-  onToggleKitchenMode,
+  kitchenMode = false,
+  isKitchenMode = false,
   isFavorite,
   onFromUnitChange,
   onToUnitChange,
@@ -75,18 +79,30 @@ export function ConversionCard({
   onToggleFavorite,
   onCopy,
   onShare,
+  favorites = [],
+  onSelectFavorite,
+  onRemoveFavorite,
+  onClearFavorites,
 }) {
-  const units = getUnitsForCategory(categoryId);
-  const fromUnit = getUnit(categoryId, fromUnitId) || units[0];
-  const toUnit = getUnit(categoryId, toUnitId) || units[1] || units[0];
-
-  const isKitchenActive = categoryId === 'cooking' && kitchenMode;
+  const isKitchenActive = Boolean(kitchenMode || isKitchenMode || isKitchenCategory(categoryId));
+  const units = useMemo(() => getUnitsForCategory(categoryId), [categoryId]);
+  const fromUnit = useMemo(
+    () => getUnit(categoryId, fromUnitId) || units[0] || { id: fromUnitId, name: fromUnitId, symbol: fromUnitId },
+    [categoryId, fromUnitId, units]
+  );
+  const toUnit = useMemo(
+    () => getUnit(categoryId, toUnitId) || units[1] || units[0] || { id: toUnitId, name: toUnitId, symbol: toUnitId },
+    [categoryId, toUnitId, units]
+  );
 
   const [fromSearch, setFromSearch] = useState('');
   const [toSearch, setToSearch] = useState('');
   const [showFromDropdown, setShowFromDropdown] = useState(false);
   const [showToDropdown, setShowToDropdown] = useState(false);
+  const [showFromSpecialized, setShowFromSpecialized] = useState(false);
+  const [showToSpecialized, setShowToSpecialized] = useState(false);
   const [showPrecisionDropdown, setShowPrecisionDropdown] = useState(false);
+  const [showFavoritesDropdown, setShowFavoritesDropdown] = useState(false);
   const [isSwapping, setIsSwapping] = useState(false);
   const [copiedNumber, setCopiedNumber] = useState(false);
   const [copiedFormula, setCopiedFormula] = useState(false);
@@ -99,6 +115,7 @@ export function ConversionCard({
   const fromSearchInputRef = useRef(null);
   const toSearchInputRef = useRef(null);
   const precisionRef = useRef(null);
+  const favoritesDropdownRef = useRef(null);
   const fromBlockRef = useRef(null);
   const toBlockRef = useRef(null);
   const swapBtnRef = useRef(null);
@@ -142,8 +159,25 @@ export function ConversionCard({
     };
   }, []);
 
-  const displayFromValue = formatDisplayNumber(fromValue || '0');
-  const displayToValue = formatDisplayNumber(toValue || '0');
+  const fromStatus = useMemo(
+    () => evaluateInputStatus(fromValue, categoryId, fromUnit.id),
+    [fromValue, categoryId, fromUnit.id]
+  );
+  const toStatus = useMemo(
+    () => evaluateInputStatus(toValue, categoryId, toUnit.id),
+    [toValue, categoryId, toUnit.id]
+  );
+
+  const isFromInvalid = fromStatus.isInvalid;
+  const isFromPending = fromStatus.isPending;
+  const isToInvalid = toStatus.isInvalid;
+
+  const displayFromValue = isCompoundLike(fromValue)
+    ? formatCompoundForDisplay(fromValue)
+    : formatDisplayNumber(fromValue || '0');
+  const displayToValue = (isFromInvalid || isFromPending || toValue === '')
+    ? (fromValue === '' ? '0' : '—')
+    : formatDisplayNumber(toValue);
 
   const tempVibe = useMemo(() => {
     if (categoryId !== 'temperature' || !fromValue) return null;
@@ -246,6 +280,9 @@ export function ConversionCard({
       if (precisionRef.current && !precisionRef.current.contains(e.target)) {
         setShowPrecisionDropdown(false);
       }
+      if (favoritesDropdownRef.current && !favoritesDropdownRef.current.contains(e.target)) {
+        setShowFavoritesDropdown(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -255,8 +292,11 @@ export function ConversionCard({
   useEffect(() => {
     setShowFromDropdown(false);
     setShowToDropdown(false);
+    setShowFavoritesDropdown(false);
     setFromSearch('');
     setToSearch('');
+    setShowFromSpecialized(false);
+    setShowToSpecialized(false);
   }, [categoryId]);
 
   // Filtered unit lists for searchable dropdowns (prioritizing prefix matches)
@@ -489,7 +529,7 @@ export function ConversionCard({
 
   // Keyboard arrow stepping: increment/decrement to next whole number
   const getNextWholeNumber = (valStr, direction) => {
-    const num = parseFloat(valStr);
+    const num = isFractionLike(valStr) ? parseFractionString(valStr) : parseFloat(valStr);
     if (isNaN(num)) {
       return direction > 0 ? 1 : 0;
     }
@@ -529,18 +569,26 @@ export function ConversionCard({
 
   const rawTargetValue = (() => {
     if (!fromValue) return null;
-    let num = typeof fromValue === 'string' && isFractionLike(fromValue)
-      ? parseFractionString(fromValue)
-      : parseFloat(fromValue);
-    if (isNaN(num) && typeof fromValue === 'string' && isCompoundLike(fromValue)) {
+    let num;
+    if (typeof fromValue === 'string' && isCompoundLike(fromValue)) {
       const comp = parseCompoundValue(fromValue, categoryId, fromUnit.id);
       if (comp !== null && !isNaN(comp)) num = comp;
+    }
+    if (num === undefined && typeof fromValue === 'string' && isFractionLike(fromValue)) {
+      num = parseFractionString(fromValue);
+    }
+    if (num === undefined) {
+      num = parseFloat(fromValue);
     }
     if (isNaN(num)) return null;
     return convertUnits(num, categoryId, fromUnit.id, toUnit.id);
   })();
 
-  const kitchenDrawer = isKitchenActive
+  const isCulinaryVolume = [
+    'cup_us', 'cup_metric', 'tbsp_us', 'tbsp_metric', 'tsp_us',
+    'floz_us', 'ml', 'l', 'dsp', 'pinch', 'dash', 'tad', 'smidgen', 'drop', 'shot', 'stick_butter',
+  ].includes(fromUnit.id);
+  const kitchenDrawer = isKitchenActive && isCulinaryVolume
     ? getKitchenDrawerBreakdown(fromValue, fromUnit.id)
     : null;
 
@@ -561,7 +609,7 @@ export function ConversionCard({
       ? PRECISION_OPTIONS.find((opt) => opt.id === 'fraction_tape')
       : PRECISION_OPTIONS[0]);
 
-  const smartEquation = precision === 'auto' && !isKitchenActive
+  const smartEquation = precision === 'auto' && !isFromInvalid && !isFromPending
     ? getSmartEquationDisplay(categoryId, fromUnit, toUnit, fromValue, rawTargetValue, displayToValue)
     : { value: displayToValue, unit: toUnit.symbol, subtext: null, isSmart: false };
 
@@ -787,6 +835,30 @@ export function ConversionCard({
     return 'ct-font-large';
   };
 
+  // Helper to render unit option in dropdown list with subtitles and badges
+  const renderUnitOption = (u, selectedId, onSelect) => {
+    const isSelected = u.id === selectedId;
+    return (
+      <button
+        key={u.id}
+        type="button"
+        role="option"
+        aria-selected={isSelected}
+        className={`ct-dropdown-item ${isSelected ? 'selected' : ''} ${u.subtitle ? 'has-subtitle' : ''}`}
+        onClick={() => onSelect(u.id)}
+      >
+        <div className="ct-item-info">
+          <div className="ct-item-title-row">
+            <span className="ct-item-name">{u.plural || u.name}</span>
+            {u.badge && <span className="ct-item-badge">{u.badge}</span>}
+          </div>
+          {u.subtitle && <span className="ct-item-subtitle">{u.subtitle}</span>}
+        </div>
+        <span className="ct-item-symbol">{u.symbol}</span>
+      </button>
+    );
+  };
+
   return (
     <div
       className={`ct-card ct-cat-${categoryId}`}
@@ -797,112 +869,89 @@ export function ConversionCard({
       {/* Card Header Actions */}
       <div className="ct-card-header">
         <div className="ct-card-header-left">
-          {categoryId === 'cooking' && (
+          <div className={`ct-precision-wrap ${showPrecisionDropdown ? 'dropdown-open' : ''}`} ref={precisionRef}>
+            <label htmlFor="ct-precision" className="ct-sr-only">
+              Decimal Precision
+            </label>
+            <select
+              id="ct-precision"
+              className="ct-sr-only"
+              value={precision}
+              onChange={(e) => onPrecisionChange(e.target.value)}
+              aria-label="Decimal Precision and Formatting"
+              tabIndex={-1}
+            >
+              {PRECISION_OPTIONS.map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+
             <button
               type="button"
-              className={`ct-kitchen-mode-toggle ${kitchenMode ? 'active' : ''}`}
-              onClick={onToggleKitchenMode}
-              title={
-                kitchenMode
-                  ? 'Kitchen Drawer Mode active — click to switch to Standard Units'
-                  : 'Standard Units active — click to switch to Kitchen Drawer Mode'
-              }
-              aria-label="Toggle Kitchen Mode"
-              aria-pressed={kitchenMode}
+              className={`ct-precision-btn ${showPrecisionDropdown ? 'active' : ''}`}
+              onClick={() => {
+                setShowPrecisionDropdown(!showPrecisionDropdown);
+                setShowFromDropdown(false);
+                setShowToDropdown(false);
+              }}
+              aria-haspopup="listbox"
+              aria-expanded={showPrecisionDropdown}
+              title="Select formatting and decimal precision"
             >
-              <Icon name="ChefHat" size={15} />
-              <span className="ct-kitchen-toggle-text">Kitchen Mode</span>
-              <span className={`ct-kitchen-toggle-pill ${kitchenMode ? 'on' : 'off'}`}>
-                {kitchenMode ? 'ON' : 'OFF'}
+              <span className="ct-precision-btn-icon" aria-hidden="true">
+                <Icon name={currentPrecisionOption?.icon || 'Sparkles'} size={14} />
               </span>
+              <span className="ct-precision-btn-prefix">Precision:</span>
+              <span className="ct-precision-btn-val">
+                {currentPrecisionOption?.btnLabel || 'Auto'}
+              </span>
+              <Icon
+                name="ChevronDown"
+                size={14}
+                className={`ct-dropdown-chevron ${showPrecisionDropdown ? 'rotated' : ''}`}
+              />
             </button>
-          )}
 
-          {!isKitchenActive && (
-            <div className="ct-precision-wrap" ref={precisionRef}>
-              <label htmlFor="ct-precision" className="ct-sr-only">
-                Decimal Precision
-              </label>
-              <select
-                id="ct-precision"
-                className="ct-sr-only"
-                value={precision}
-                onChange={(e) => onPrecisionChange(e.target.value)}
-                aria-label="Decimal Precision and Formatting"
-                tabIndex={-1}
+            {showPrecisionDropdown && (
+              <div
+                className="ct-dropdown-menu ct-precision-dropdown"
+                role="listbox"
+                aria-label="Precision options"
               >
-                {PRECISION_OPTIONS.map((opt) => (
-                  <option key={opt.id} value={opt.id}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-
-              <button
-                type="button"
-                className={`ct-precision-btn ${showPrecisionDropdown ? 'active' : ''}`}
-                onClick={() => {
-                  setShowPrecisionDropdown(!showPrecisionDropdown);
-                  setShowFromDropdown(false);
-                  setShowToDropdown(false);
-                }}
-                aria-haspopup="listbox"
-                aria-expanded={showPrecisionDropdown}
-                title="Select formatting and decimal precision"
-              >
-                <span className="ct-precision-btn-icon" aria-hidden="true">
-                  <Icon name={currentPrecisionOption?.icon || 'Sparkles'} size={14} />
-                </span>
-                <span className="ct-precision-btn-prefix">Precision:</span>
-                <span className="ct-precision-btn-val">
-                  {currentPrecisionOption?.btnLabel || 'Auto'}
-                </span>
-                <Icon
-                  name="ChevronDown"
-                  size={14}
-                  className={`ct-dropdown-chevron ${showPrecisionDropdown ? 'rotated' : ''}`}
-                />
-              </button>
-
-              {showPrecisionDropdown && (
-                <div
-                  className="ct-dropdown-menu ct-precision-dropdown"
-                  role="listbox"
-                  aria-label="Precision options"
-                >
-                  {PRECISION_OPTIONS.map((opt) => {
-                    const isSelected =
-                      opt.id === precision ||
-                      (opt.id === 'fraction_tape' &&
-                        (precision === 'tape' || precision === 'fraction_16' || precision === 'fraction_32' || precision === 'fraction_64'));
-                    return (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        role="option"
-                        aria-selected={isSelected}
-                        className={`ct-dropdown-item ct-precision-item ${isSelected ? 'selected' : ''}`}
-                        onClick={() => {
-                          onPrecisionChange(opt.id);
-                          setShowPrecisionDropdown(false);
-                        }}
-                      >
-                        <span className="ct-precision-item-icon" aria-hidden="true">
-                          <Icon name={opt.icon} size={15} />
+                {PRECISION_OPTIONS.map((opt) => {
+                  const isSelected =
+                    opt.id === precision ||
+                    (opt.id === 'fraction_tape' &&
+                      (precision === 'tape' || precision === 'fraction_16' || precision === 'fraction_32' || precision === 'fraction_64'));
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      className={`ct-dropdown-item ct-precision-item ${isSelected ? 'selected' : ''}`}
+                      onClick={() => {
+                        onPrecisionChange(opt.id);
+                        setShowPrecisionDropdown(false);
+                      }}
+                    >
+                      <span className="ct-precision-item-icon" aria-hidden="true">
+                        <Icon name={opt.icon} size={15} />
+                      </span>
+                      <span className="ct-precision-item-label">{opt.label}</span>
+                      {isSelected && (
+                        <span className="ct-precision-item-check" aria-hidden="true">
+                          <Icon name="Check" size={14} />
                         </span>
-                        <span className="ct-precision-item-label">{opt.label}</span>
-                        {isSelected && (
-                          <span className="ct-precision-item-check" aria-hidden="true">
-                            <Icon name="Check" size={14} />
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="ct-card-header-right">
@@ -916,21 +965,147 @@ export function ConversionCard({
             <Icon name={copiedShare ? 'Check' : 'Share'} size={18} />
           </button>
 
-          <button
-            type="button"
-            className={`ct-btn-icon ${isFavorite ? 'active' : ''}`}
-            onClick={onToggleFavorite}
-            title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-            aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+          <div
+            className={`ct-favorites-action-wrap ${favorites && favorites.length > 0 ? 'has-favorites' : ''} ${showFavoritesDropdown ? 'dropdown-open' : ''}`}
+            ref={favoritesDropdownRef}
+            aria-label={favorites && favorites.length > 0 ? "Favorite Conversions" : undefined}
           >
-            <span key={isFavorite ? 'fav' : 'unfav'} className={isFavorite ? 'ct-star-burst' : ''}>
-              <Icon
-                name="Star"
-                size={18}
-                fill={isFavorite ? 'currentColor' : 'none'}
-              />
-            </span>
-          </button>
+            <button
+              type="button"
+              className={`ct-btn-icon ct-fav-star-btn ${isFavorite ? 'active' : ''}`}
+              onClick={onToggleFavorite}
+              title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+              aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              <span key={isFavorite ? 'fav' : 'unfav'} className={isFavorite ? 'ct-star-burst' : ''}>
+                <Icon
+                  name="Star"
+                  size={18}
+                  fill={isFavorite ? 'currentColor' : 'none'}
+                />
+              </span>
+            </button>
+
+            {favorites && favorites.length > 0 && (
+              <>
+                <div className="ct-fav-split-divider" aria-hidden="true" />
+                <button
+                  type="button"
+                  className={`ct-fav-split-caret-btn ${showFavoritesDropdown ? 'active' : ''}`}
+                  onClick={() => {
+                    setShowFavoritesDropdown((prev) => !prev);
+                    setShowPrecisionDropdown(false);
+                    setShowFromDropdown(false);
+                    setShowToDropdown(false);
+                  }}
+                  title={`View saved favorites (${favorites.length})`}
+                  aria-label={`View saved favorites (${favorites.length})`}
+                  aria-haspopup="true"
+                  aria-expanded={showFavoritesDropdown}
+                >
+                  <span className="ct-fav-count-badge">{favorites.length}</span>
+                  <Icon
+                    name="ChevronDown"
+                    size={12}
+                    className={`ct-dropdown-chevron ${showFavoritesDropdown ? 'rotated' : ''}`}
+                  />
+                </button>
+              </>
+            )}
+
+            {showFavoritesDropdown && favorites && favorites.length > 0 && (
+              <div
+                className="ct-dropdown-menu ct-favorites-dropdown-menu"
+                role="menu"
+                aria-label="Favorite Conversions"
+              >
+                {favorites.map((fav) => {
+                  const fUnit = getUnit(fav.categoryId, fav.fromUnitId);
+                  const tUnit = getUnit(fav.categoryId, fav.toUnitId);
+                  if (!fUnit || !tUnit) return null;
+
+                  const catInfo = CATEGORIES.find((c) => c.id === fav.categoryId);
+                  const catIcon = catInfo?.icon || 'Sparkles';
+
+                  const isExact =
+                    fav.categoryId === categoryId &&
+                    fav.fromUnitId === fromUnitId &&
+                    fav.toUnitId === toUnitId;
+                  const isSwapped =
+                    fav.categoryId === categoryId &&
+                    fav.fromUnitId === toUnitId &&
+                    fav.toUnitId === fromUnitId;
+                  const isActive = isExact || isSwapped;
+
+                  return (
+                    <div
+                      key={`${fav.categoryId}-${fav.fromUnitId}-${fav.toUnitId}`}
+                      className={`ct-favorite-pill ct-fav-dropdown-row ${isActive ? 'active selected' : ''} ct-cat-${fav.categoryId}`}
+                    >
+                      <button
+                        type="button"
+                        className="ct-fav-select-btn"
+                        onClick={() => {
+                          if (onSelectFavorite) {
+                            onSelectFavorite(fav);
+                          }
+                          setShowFavoritesDropdown(false);
+                        }}
+                        title={`Convert ${fUnit.name} to ${tUnit.name}${isActive ? ' (currently active)' : ''}`}
+                        aria-pressed={isActive}
+                      >
+                        <span className="ct-fav-item-icon" aria-hidden="true">
+                          <Icon name={catIcon} size={15} />
+                        </span>
+                        <span className="ct-fav-item-label">
+                          <span className="ct-fav-unit-from">{fUnit.symbol}</span>
+                          <span className="ct-fav-arrow">→</span>
+                          <span className="ct-fav-unit-to">{tUnit.symbol}</span>
+                        </span>
+                        {isActive && (
+                          <span className="ct-fav-item-check" aria-hidden="true">
+                            <Icon name="Check" size={14} />
+                          </span>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        className="ct-fav-remove-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onRemoveFavorite) {
+                            onRemoveFavorite(fav);
+                          }
+                        }}
+                        title={`Remove ${fUnit.symbol} → ${tUnit.symbol} from favorites`}
+                        aria-label={`Remove favorite ${fUnit.symbol} to ${tUnit.symbol}`}
+                      >
+                        <Icon name="X" size={13} />
+                      </button>
+                    </div>
+                  );
+                })}
+                {favorites.length >= 5 && onClearFavorites && (
+                  <div className="ct-fav-footer">
+                    <button
+                      type="button"
+                      className="ct-fav-clear-all-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onClearFavorites();
+                        setShowFavoritesDropdown(false);
+                      }}
+                      title="Clear all saved favorites"
+                      aria-label="Clear all saved favorites"
+                    >
+                      <Icon name="Trash" size={13} />
+                      <span>Clear all favorites</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -939,7 +1114,7 @@ export function ConversionCard({
         {/* FIRST UNIT BLOCK (FROM - VIOLET) */}
         <div
           ref={fromBlockRef}
-          className={`ct-unit-block ct-unit-block-from ${isSwapping ? 'ct-is-swapping' : ''} ${showFromDropdown ? 'ct-dropdown-open' : ''}`}
+          className={`ct-unit-block ct-unit-block-from ${isSwapping ? 'ct-is-swapping' : ''} ${showFromDropdown ? 'ct-dropdown-open' : ''} ${isFromInvalid ? 'ct-pod-warning' : ''}`}
         >
           <div className="ct-unit-label-wrap" ref={fromDropdownRef}>
             <button
@@ -949,6 +1124,9 @@ export function ConversionCard({
                 const nextState = !showFromDropdown;
                 if (nextState) {
                   setFromSearch('');
+                  if (fromUnit?.tier === 'specialized') {
+                    setShowFromSpecialized(true);
+                  }
                 }
                 setShowFromDropdown(nextState);
                 setShowToDropdown(false);
@@ -994,25 +1172,78 @@ export function ConversionCard({
                   )}
                 </div>
                 <div className="ct-dropdown-list">
-                  {filteredFromUnits.map((u) => (
-                    <button
-                      key={u.id}
-                      type="button"
-                      role="option"
-                      aria-selected={u.id === fromUnit.id}
-                      className={`ct-dropdown-item ${u.id === fromUnit.id ? 'selected' : ''}`}
-                      onClick={() => {
-                        onFromUnitChange(u.id);
-                        setShowFromDropdown(false);
-                        setFromSearch('');
-                      }}
-                    >
-                      <span className="ct-item-name">{u.plural || u.name}</span>
-                      <span className="ct-item-symbol">{u.symbol}</span>
-                    </button>
-                  ))}
-                  {filteredFromUnits.length === 0 && (
-                    <div className="ct-dropdown-empty">No units match "{fromSearch}"</div>
+                  {fromSearch.trim() ? (
+                    <>
+                      {filteredFromUnits.map((u) =>
+                        renderUnitOption(u, fromUnit.id, (id) => {
+                          onFromUnitChange(id);
+                          setShowFromDropdown(false);
+                          setFromSearch('');
+                        })
+                      )}
+                      {filteredFromUnits.length === 0 && (
+                        <div className="ct-dropdown-empty">No units match "{fromSearch}"</div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {filteredFromUnits
+                        .filter((u) => u.tier !== 'specialized')
+                        .map((u) =>
+                          renderUnitOption(u, fromUnit.id, (id) => {
+                            onFromUnitChange(id);
+                            setShowFromDropdown(false);
+                            setFromSearch('');
+                          })
+                        )}
+
+                      {filteredFromUnits.some((u) => u.tier === 'specialized') && (
+                        <>
+                          {showFromSpecialized || fromUnit?.tier === 'specialized' ? (
+                            <>
+                              <div className="ct-dropdown-tier-header">
+                                <span className="ct-dropdown-tier-title">Specialized &amp; Trade Units</span>
+                                {fromUnit?.tier !== 'specialized' && (
+                                  <button
+                                    type="button"
+                                    className="ct-dropdown-tier-collapse"
+                                    onClick={() => setShowFromSpecialized(false)}
+                                    aria-label="Hide specialized units"
+                                  >
+                                    Hide
+                                  </button>
+                                )}
+                              </div>
+                              {filteredFromUnits
+                                .filter((u) => u.tier === 'specialized')
+                                .map((u) =>
+                                  renderUnitOption(u, fromUnit.id, (id) => {
+                                    onFromUnitChange(id);
+                                    setShowFromDropdown(false);
+                                    setFromSearch('');
+                                  })
+                                )}
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              className="ct-dropdown-tier-toggle"
+                              onClick={() => setShowFromSpecialized(true)}
+                              aria-label="Show specialized and trade units"
+                            >
+                              <span>
+                                + {filteredFromUnits.filter((u) => u.tier === 'specialized').length} specialized &amp; trade units
+                              </span>
+                              <Icon name="ChevronDown" size={13} />
+                            </button>
+                          )}
+                        </>
+                      )}
+
+                      {filteredFromUnits.length === 0 && (
+                        <div className="ct-dropdown-empty">No units available</div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -1022,9 +1253,11 @@ export function ConversionCard({
             <div className="ct-input-inner">
               <input
                 id="fromInput"
-                type={isFractionMode || isCompoundLike(fromValue) ? 'text' : 'number'}
-                step="any"
-                inputMode="decimal"
+                type="text"
+                inputMode="text"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck="false"
                 className={`ct-number-input ${getNumberFontSizeClass(fromValue)} ${isFractionLike(fromValue) ? 'ct-fraction-input' : ''}`}
                 value={fromValue}
                 onChange={(e) => onFromValueChange(e.target.value)}
@@ -1058,79 +1291,76 @@ export function ConversionCard({
               )}
             </div>
           </div>
+          {isFromInvalid && (
+            <div className="ct-pod-hint-msg" role="alert">
+              <Icon name="AlertCircle" size={13} />
+              <span>Unrecognized format (e.g. 5.5, 3/4, or 4 ft 5 in)</span>
+            </div>
+          )}
         </div>
 
-        {/* CENTER SWAP BUTTON / KITCHEN TRANSFER PILL */}
-        {isKitchenActive ? (
-          <div className="ct-swap-column ct-kitchen-transfer-column" aria-hidden="true">
-            <div className="ct-kitchen-arrow-pill" title="Translates recipe quantity to physical kitchen tools">
-              <Icon name="ArrowRight" size={18} />
-            </div>
-          </div>
-        ) : (
-          <div className="ct-swap-column">
-            <button
-              ref={swapBtnRef}
-              type="button"
-              className={`ct-swap-btn ${isHyperspace ? 'ct-swap-hyperspace' : ''} ${isFasterThanLight ? 'ct-swap-ftl' : ''}`}
-              onClick={handleSwapClick}
-              title={
-                isFasterThanLight
-                  ? 'Faster-than-Light speed! Hyperspace engaged. Swap units (Alt + S)'
-                  : isHyperspace
-                  ? 'Supersonic (Mach 1+) speed! Hyperspace trail active. Swap units (Alt + S)'
-                  : 'Swap units (Alt + S)'
-              }
-              aria-label="Swap from and to units"
-            >
-              <Icon
-                name="Swap"
-                size={20}
-                className={isSwapping && typeof swapBtnRef.current?.animate !== 'function' ? 'ct-swap-icon-spin' : ''}
-              />
-              {isHyperspace && (
-                <span className="ct-hyperspace-trail" aria-hidden="true">
-                  <span className="ct-hyperspace-line ct-hl-1" />
-                  <span className="ct-hyperspace-line ct-hl-2" />
-                  <span className="ct-hyperspace-line ct-hl-3" />
-                </span>
-              )}
-            </button>
-          </div>
-        )}
+        {/* CENTER SWAP BUTTON */}
+        <div className="ct-swap-column">
+          <button
+            ref={swapBtnRef}
+            type="button"
+            className={`ct-swap-btn ${isHyperspace ? 'ct-swap-hyperspace' : ''} ${isFasterThanLight ? 'ct-swap-ftl' : ''}`}
+            onClick={handleSwapClick}
+            title={
+              isFasterThanLight
+                ? 'Faster-than-Light speed! Hyperspace engaged. Swap units (Alt + S)'
+                : isHyperspace
+                ? 'Supersonic (Mach 1+) speed! Hyperspace trail active. Swap units (Alt + S)'
+                : 'Swap units (Alt + S)'
+            }
+            aria-label="Swap from and to units"
+          >
+            <Icon
+              name="Swap"
+              size={20}
+              className={isSwapping && typeof swapBtnRef.current?.animate !== 'function' ? 'ct-swap-icon-spin' : ''}
+            />
+            {isHyperspace && (
+              <span className="ct-hyperspace-trail" aria-hidden="true">
+                <span className="ct-hyperspace-line ct-hl-1" />
+                <span className="ct-hyperspace-line ct-hl-2" />
+                <span className="ct-hyperspace-line ct-hl-3" />
+              </span>
+            )}
+          </button>
+        </div>
 
-        {/* SECOND UNIT BLOCK (TO - EMERALD / KITCHEN OUTPUT) */}
+        {/* SECOND UNIT BLOCK (TO - EMERALD) */}
         <div
           ref={toBlockRef}
-          className={`ct-unit-block ct-unit-block-to ${isSwapping ? 'ct-is-swapping' : ''} ${showToDropdown ? 'ct-dropdown-open' : ''}`}
+          className={`ct-unit-block ct-unit-block-to ${isSwapping ? 'ct-is-swapping' : ''} ${showToDropdown ? 'ct-dropdown-open' : ''} ${isToInvalid ? 'ct-pod-warning' : ''}`}
         >
           <div className="ct-unit-label-wrap" ref={toDropdownRef}>
-            {isKitchenActive ? (
-              <span className="ct-unit-header-label">Kitchen Tools</span>
-            ) : (
-              <button
-                type="button"
-                className={`ct-unit-selector-chip ct-chip-to ${showToDropdown ? 'active' : ''}`}
-                onClick={() => {
-                  const nextState = !showToDropdown;
-                  if (nextState) {
-                    setToSearch('');
+            <button
+              type="button"
+              className={`ct-unit-selector-chip ct-chip-to ${showToDropdown ? 'active' : ''}`}
+              onClick={() => {
+                const nextState = !showToDropdown;
+                if (nextState) {
+                  setToSearch('');
+                  if (toUnit?.tier === 'specialized') {
+                    setShowToSpecialized(true);
                   }
-                  setShowToDropdown(nextState);
-                  setShowFromDropdown(false);
-                }}
-                aria-haspopup="listbox"
-                aria-expanded={showToDropdown}
-                title={`Change unit to ${toUnit.name}`}
-                aria-label={`Target unit: ${toUnit.name}. Click to change.`}
-              >
-                <span className="ct-unit-chip-name">{toUnit.name}</span>
-                <span className="ct-unit-chip-symbol ct-unit-sym-to">{toUnit.symbol}</span>
-                <Icon name="ChevronDown" size={14} strokeWidth={2.5} className={`ct-dropdown-chevron ${showToDropdown ? 'rotated' : ''}`} />
-              </button>
-            )}
+                }
+                setShowToDropdown(nextState);
+                setShowFromDropdown(false);
+              }}
+              aria-haspopup="listbox"
+              aria-expanded={showToDropdown}
+              title={`Change unit to ${toUnit.name}`}
+              aria-label={`Target unit: ${toUnit.name}. Click to change.`}
+            >
+              <span className="ct-unit-chip-name">{toUnit.name}</span>
+              <span className="ct-unit-chip-symbol ct-unit-sym-to">{toUnit.symbol}</span>
+              <Icon name="ChevronDown" size={14} strokeWidth={2.5} className={`ct-dropdown-chevron ${showToDropdown ? 'rotated' : ''}`} />
+            </button>
 
-            {!isKitchenActive && showToDropdown && (
+            {showToDropdown && (
               <div className="ct-dropdown-menu ct-integrated-dropdown" role="listbox">
                 <div className="ct-dropdown-search">
                   <Icon name="Search" size={14} />
@@ -1161,240 +1391,192 @@ export function ConversionCard({
                   )}
                 </div>
                 <div className="ct-dropdown-list">
-                  {filteredToUnits.map((u) => (
-                    <button
-                      key={u.id}
-                      type="button"
-                      role="option"
-                      aria-selected={u.id === toUnit.id}
-                      className={`ct-dropdown-item ${u.id === toUnit.id ? 'selected' : ''}`}
-                      onClick={() => {
-                        onToUnitChange(u.id);
-                        setShowToDropdown(false);
-                        setToSearch('');
-                      }}
-                    >
-                      <span className="ct-item-name">{u.plural || u.name}</span>
-                      <span className="ct-item-symbol">{u.symbol}</span>
-                    </button>
-                  ))}
-                  {filteredToUnits.length === 0 && (
-                    <div className="ct-dropdown-empty">No units match "{toSearch}"</div>
+                  {toSearch.trim() ? (
+                    <>
+                      {filteredToUnits.map((u) =>
+                        renderUnitOption(u, toUnit.id, (id) => {
+                          onToUnitChange(id);
+                          setShowToDropdown(false);
+                          setToSearch('');
+                        })
+                      )}
+                      {filteredToUnits.length === 0 && (
+                        <div className="ct-dropdown-empty">No units match "{toSearch}"</div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {filteredToUnits
+                        .filter((u) => u.tier !== 'specialized')
+                        .map((u) =>
+                          renderUnitOption(u, toUnit.id, (id) => {
+                            onToUnitChange(id);
+                            setShowToDropdown(false);
+                            setToSearch('');
+                          })
+                        )}
+
+                      {filteredToUnits.some((u) => u.tier === 'specialized') && (
+                        <>
+                          {showToSpecialized || toUnit?.tier === 'specialized' ? (
+                            <>
+                              <div className="ct-dropdown-tier-header">
+                                <span className="ct-dropdown-tier-title">Specialized &amp; Trade Units</span>
+                                {toUnit?.tier !== 'specialized' && (
+                                  <button
+                                    type="button"
+                                    className="ct-dropdown-tier-collapse"
+                                    onClick={() => setShowToSpecialized(false)}
+                                    aria-label="Hide specialized units"
+                                  >
+                                    Hide
+                                  </button>
+                                )}
+                              </div>
+                              {filteredToUnits
+                                .filter((u) => u.tier === 'specialized')
+                                .map((u) =>
+                                  renderUnitOption(u, toUnit.id, (id) => {
+                                    onToUnitChange(id);
+                                    setShowToDropdown(false);
+                                    setToSearch('');
+                                  })
+                                )}
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              className="ct-dropdown-tier-toggle"
+                              onClick={() => setShowToSpecialized(true)}
+                              aria-label="Show specialized and trade units"
+                            >
+                              <span>
+                                + {filteredToUnits.filter((u) => u.tier === 'specialized').length} specialized &amp; trade units
+                              </span>
+                              <Icon name="ChevronDown" size={13} />
+                            </button>
+                          )}
+                        </>
+                      )}
+
+                      {filteredToUnits.length === 0 && (
+                        <div className="ct-dropdown-empty">No units available</div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
             )}
           </div>
-          {isKitchenActive ? (
-            <div
-              className="ct-integrated-input-box ct-kitchen-output-box"
-              role="button"
-              tabIndex={0}
-              onClick={handleCopyKitchenOutput}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleCopyKitchenOutput();
-                }
-              }}
-              title={copiedKitchen ? 'Copied to clipboard!' : `Click to copy: ${kitchenDrawer?.primary || '0'}`}
-              aria-label={`Kitchen measuring tools: ${kitchenDrawer?.primary || '0'}. Click to copy.`}
-            >
-              <div className="ct-kitchen-output-content">
-                <span className="ct-kitchen-output-caption">Drawer Tools to Pull</span>
-                <span className={`ct-kitchen-output-text ${getNumberFontSizeClass(kitchenDrawer?.primary || '0')}`}>
-                  {kitchenDrawer?.primary || '0'}
-                </span>
-              </div>
-              <span className={`ct-kitchen-copy-indicator ${copiedKitchen ? 'copied' : ''}`} aria-hidden="true">
-                <Icon name={copiedKitchen ? 'Check' : 'Copy'} size={16} />
-              </span>
+          <div className="ct-integrated-input-box ct-input-box-to">
+            <div className="ct-input-inner">
+              <input
+                id="toInput"
+                type="text"
+                inputMode="text"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck="false"
+                className={`ct-number-input ${getNumberFontSizeClass(toValue)} ${isFractionLike(toValue) ? 'ct-fraction-input' : ''}`}
+                value={toValue}
+                onChange={(e) => onToValueChange(e.target.value)}
+                onFocus={handleInputFocus}
+                onMouseDown={handleInputMouseDown}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    onToValueChange('');
+                  } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    handleStepTo(1);
+                  } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    handleStepTo(-1);
+                  }
+                }}
+                placeholder={isFromInvalid || isFromPending ? '—' : '0'}
+                title={toValue ? `${toValue} ${toUnit.symbol}` : `Converted value in ${toUnit.name}`}
+                aria-label={`Converted value in ${toUnit.plural || toUnit.name}`}
+              />
+              {toValue !== '' && (
+                <button
+                  type="button"
+                  className="ct-input-clear-btn"
+                  onClick={() => onToValueChange('')}
+                  title="Clear result"
+                  aria-label="Clear result"
+                >
+                  <Icon name="X" size={16} />
+                </button>
+              )}
             </div>
-          ) : (
-            <div className="ct-integrated-input-box ct-input-box-to">
-              <div className="ct-input-inner">
-                <input
-                  id="toInput"
-                  type={isFractionMode || isCompoundLike(toValue) ? 'text' : 'number'}
-                  step="any"
-                  inputMode="decimal"
-                  className={`ct-number-input ${getNumberFontSizeClass(toValue)} ${isFractionLike(toValue) ? 'ct-fraction-input' : ''}`}
-                  value={toValue}
-                  onChange={(e) => onToValueChange(e.target.value)}
-                  onFocus={handleInputFocus}
-                  onMouseDown={handleInputMouseDown}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Escape') {
-                      onToValueChange('');
-                    } else if (e.key === 'ArrowUp') {
-                      e.preventDefault();
-                      handleStepTo(1);
-                    } else if (e.key === 'ArrowDown') {
-                      e.preventDefault();
-                      handleStepTo(-1);
-                    }
-                  }}
-                  placeholder="0"
-                  title={toValue ? `${toValue} ${toUnit.symbol}` : `Converted value in ${toUnit.name}`}
-                  aria-label={`Converted value in ${toUnit.plural || toUnit.name}`}
-                />
-                {toValue !== '' && (
-                  <button
-                    type="button"
-                    className="ct-input-clear-btn"
-                    onClick={() => onToValueChange('')}
-                    title="Clear result"
-                    aria-label="Clear result"
-                  >
-                    <Icon name="X" size={16} />
-                  </button>
-                )}
-              </div>
+          </div>
+          {isToInvalid && (
+            <div className="ct-pod-hint-msg" role="alert">
+              <Icon name="AlertCircle" size={13} />
+              <span>Unrecognized format (e.g. 5.5, 3/4, or 4 ft 5 in)</span>
             </div>
           )}
         </div>
       </div>
 
-      {/* Unified Conversion Result & Formula Card or Kitchen Drawer Shelf */}
-      {isKitchenActive ? (
-        <div className="ct-kitchen-drawer-card" aria-label="Kitchen Measuring Drawer">
-          <div className="ct-kitchen-tools-section">
-            <div className="ct-kitchen-shelf-header">
-              <span className="ct-kitchen-shelf-title">
-                <Icon name="ChefHat" size={16} />
-                <span>Measuring Tools Needed</span>
-              </span>
-              <span className="ct-kitchen-shelf-hint">Pull these from your kitchen drawer</span>
-            </div>
-            <div className="ct-kitchen-tools-pills">
-              {kitchenDrawer && kitchenDrawer.tools && kitchenDrawer.tools.length > 0 ? (
-                kitchenDrawer.tools.map((tool, idx) => (
-                  <React.Fragment key={idx}>
-                    {idx > 0 && <span className="ct-kitchen-plus" aria-hidden="true">+</span>}
-                    <button
-                      type="button"
-                      className="ct-kitchen-tool-chip"
-                      onClick={() => onCopy(tool, `${tool} copied!`)}
-                      title={`Click to copy: ${tool}`}
-                    >
-                      <span className="ct-tool-chip-icon" aria-hidden="true">🥄</span>
-                      <span className="ct-tool-chip-text"><Fraction value={tool} /></span>
-                    </button>
-                  </React.Fragment>
-                ))
-              ) : (
-                <span className="ct-kitchen-tool-chip empty">0</span>
-              )}
-            </div>
-          </div>
-
-          {kitchenDrawer && (
-            <div className="ct-kitchen-equivalents-section">
-              <div className="ct-kitchen-shelf-header">
-                <span className="ct-kitchen-shelf-title">
-                  <Icon name="Sparkles" size={14} />
-                  <span>Standard Equivalents</span>
-                </span>
-                <span className="ct-kitchen-shelf-hint">Quick reference for common measures</span>
-              </div>
-              <div className="ct-kitchen-equiv-grid">
-                <button
-                  type="button"
-                  className="ct-kitchen-equiv-pill"
-                  onClick={() => onCopy(kitchenDrawer.cups, `${kitchenDrawer.cups} copied!`)}
-                  title={`Click to copy cups: ${kitchenDrawer.cups}`}
-                >
-                  <span className="ct-equiv-label">Cups</span>
-                  <span className="ct-equiv-val">{kitchenDrawer.cups}</span>
-                </button>
-                <button
-                  type="button"
-                  className="ct-kitchen-equiv-pill"
-                  onClick={() => onCopy(kitchenDrawer.tbsp, `${kitchenDrawer.tbsp} copied!`)}
-                  title={`Click to copy tablespoons: ${kitchenDrawer.tbsp}`}
-                >
-                  <span className="ct-equiv-label">Tablespoons</span>
-                  <span className="ct-equiv-val">{kitchenDrawer.tbsp}</span>
-                </button>
-                <button
-                  type="button"
-                  className="ct-kitchen-equiv-pill"
-                  onClick={() => onCopy(kitchenDrawer.tsp, `${kitchenDrawer.tsp} copied!`)}
-                  title={`Click to copy teaspoons: ${kitchenDrawer.tsp}`}
-                >
-                  <span className="ct-equiv-label">Teaspoons</span>
-                  <span className="ct-equiv-val">{kitchenDrawer.tsp}</span>
-                </button>
-                <button
-                  type="button"
-                  className="ct-kitchen-equiv-pill"
-                  onClick={() => onCopy(kitchenDrawer.flOz, `${kitchenDrawer.flOz} copied!`)}
-                  title={`Click to copy fluid ounces: ${kitchenDrawer.flOz}`}
-                >
-                  <span className="ct-equiv-label">Fluid Ounces</span>
-                  <span className="ct-equiv-val">{kitchenDrawer.flOz}</span>
-                </button>
-                <button
-                  type="button"
-                  className="ct-kitchen-equiv-pill"
-                  onClick={() => onCopy(kitchenDrawer.ml, `${kitchenDrawer.ml} copied!`)}
-                  title={`Click to copy metric milliliters: ${kitchenDrawer.ml}`}
-                >
-                  <span className="ct-equiv-label">Metric</span>
-                  <span className="ct-equiv-val">{kitchenDrawer.ml}</span>
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="ct-footnote-card" aria-label="Conversion equations">
+      {/* Primary Equation and Educational Formulas (Hero) */}
+      <div className="ct-footnote-card" aria-label="Conversion equations">
           {/* Row 1: Primary Equation (Hero) */}
           <div className={`ct-footnote-row ct-footnote-row-hero ${tempVibe || ''}`}>
-            <div className="ct-footnote-val ct-val-hero" title={symbolText}>
-              <span className="ct-fn-from">
-                <span className="ct-fn-num">
-                  <Fraction value={displayFromValue} />
-                </span>{' '}
-                {!isCompoundLike(fromValue) && <span className="ct-fn-sym">{fromUnit.symbol}</span>}
-              </span>
-              <span className="ct-fn-operator"> {relOperator} </span>
-              <button
-                type="button"
-                className={`ct-num-copy-btn ct-fn-to ${copiedNumber ? 'copied' : ''}`}
-                onClick={handleCopyNumber}
-                title={
-                  copiedNumber
-                    ? 'Copied to clipboard!'
-                    : smartEquation.subtext
-                    ? `Copy ${smartEquation.value}${smartEquation.unit ? ' ' + smartEquation.unit : ''} (${smartEquation.subtext})`
-                    : `Copy ${smartEquation.value}${smartEquation.unit ? ' ' + smartEquation.unit : ''}`
-                }
-                aria-label={
-                  copiedNumber
-                    ? 'Number copied to clipboard'
-                    : smartEquation.subtext
-                    ? `Copy result number ${smartEquation.value} (${smartEquation.subtext})`
-                    : `Copy result number ${smartEquation.value}`
-                }
-              >
-                <span className="ct-fn-num">
-                  <Fraction value={smartEquation.value} />
+            {isFromInvalid ? (
+              <div className="ct-footnote-val ct-val-hero ct-val-invalid">
+                <span className="ct-fn-pending">Enter a valid number or expression</span>
+              </div>
+            ) : isFromPending ? (
+              <div className="ct-footnote-val ct-val-hero ct-val-pending">
+                <span className="ct-fn-pending">—</span>
+              </div>
+            ) : (
+              <div className="ct-footnote-val ct-val-hero" title={symbolText}>
+                <span className="ct-fn-from">
+                  <span className="ct-fn-num">
+                    <Fraction value={displayFromValue} />
+                  </span>{' '}
+                  {!isCompoundLike(fromValue) && <span className="ct-fn-sym">{fromUnit.symbol}</span>}
                 </span>
-                {smartEquation.unit ? (
-                  <>
-                    {' '}
-                    <span className="ct-fn-sym">{smartEquation.unit}</span>
-                  </>
-                ) : null}
-                <span className="ct-num-copy-icon" key={copiedNumber ? 'chk' : 'cpy'} aria-hidden="true">
-                  <Icon name={copiedNumber ? 'Check' : 'Copy'} size={13} />
-                </span>
-                <span className="ct-num-tooltip" role="tooltip" aria-hidden="true">
-                  {copiedNumber ? 'Copied!' : (smartEquation.value && smartEquation.value.toString().length <= 14 ? `Copy ${smartEquation.value}` : 'Copy result')}
-                </span>
-              </button>
-            </div>
+                <span className="ct-fn-operator"> {relOperator} </span>
+                <button
+                  type="button"
+                  className={`ct-num-copy-btn ct-fn-to ${copiedNumber ? 'copied' : ''}`}
+                  onClick={handleCopyNumber}
+                  title={
+                    copiedNumber
+                      ? 'Copied to clipboard!'
+                      : smartEquation.subtext
+                      ? `Copy ${smartEquation.value}${smartEquation.unit ? ' ' + smartEquation.unit : ''} (${smartEquation.subtext})`
+                      : `Copy ${smartEquation.value}${smartEquation.unit ? ' ' + smartEquation.unit : ''}`
+                  }
+                  aria-label={
+                    copiedNumber
+                      ? 'Number copied to clipboard'
+                      : smartEquation.subtext
+                      ? `Copy result number ${smartEquation.value} (${smartEquation.subtext})`
+                      : `Copy result number ${smartEquation.value}`
+                  }
+                >
+                  <span className="ct-fn-num">
+                    <Fraction value={smartEquation.value} />
+                  </span>
+                  {smartEquation.unit ? (
+                    <>
+                      {' '}
+                      <span className="ct-fn-sym">{smartEquation.unit}</span>
+                    </>
+                  ) : null}
+                  <span className="ct-num-copy-icon" key={copiedNumber ? 'chk' : 'cpy'} aria-hidden="true">
+                    <Icon name={copiedNumber ? 'Check' : 'Copy'} size={13} />
+                  </span>
+                  <span className="ct-num-tooltip" role="tooltip" aria-hidden="true">
+                    {copiedNumber ? 'Copied!' : (smartEquation.value && smartEquation.value.toString().length <= 14 ? `Copy ${smartEquation.value}` : 'Copy result')}
+                  </span>
+                </button>
+              </div>
+            )}
 
             {tempVibe === 'ct-temp-absolute-zero' && (
               <div className="ct-temp-dynamic-pill ct-temp-pill-zero" title="Approaching Absolute Zero (0 Kelvin)">
@@ -1411,7 +1593,7 @@ export function ConversionCard({
           </div>
 
           {/* Row 2: Invariant Educational Formula & Instruction (Separately copy-able) */}
-          {(formulaInstruction || formulaEquation) && (
+          {!isFromInvalid && !isFromPending && (formulaInstruction || formulaEquation) && (
             <div className="ct-formula-section" aria-label="Conversion formula details">
               <div className="ct-formula-strip">
                 {/* 1. Formal Mathematical Equation */}
@@ -1459,7 +1641,127 @@ export function ConversionCard({
             </div>
           )}
         </div>
-      )}
-    </div>
-  );
-}
+
+        {/* Kitchen Measuring Drawer Shelf (rendered when kitchen drawer tools are applicable) */}
+        {isKitchenActive && kitchenDrawer && (
+          <div className="ct-kitchen-drawer-card" aria-label="Kitchen Measuring Drawer">
+            <div className="ct-kitchen-tools-section">
+              <div className="ct-kitchen-shelf-header">
+                <span className="ct-kitchen-shelf-title">
+                  <Icon name="ChefHat" size={16} />
+                  <span>Measuring Tools Needed</span>
+                </span>
+                <span className="ct-kitchen-shelf-hint">Pull these from your kitchen drawer</span>
+              </div>
+
+              {/* Quick summary box with copy support and caption */}
+              <div
+                className="ct-kitchen-output-box"
+                role="button"
+                tabIndex={0}
+                onClick={handleCopyKitchenOutput}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleCopyKitchenOutput();
+                  }
+                }}
+                title={copiedKitchen ? 'Copied to clipboard!' : `Click to copy: ${kitchenDrawer?.primary || '0'}`}
+                aria-label={`Kitchen measuring tools: ${kitchenDrawer?.primary || '0'}. Click to copy.`}
+              >
+                <div className="ct-kitchen-output-content">
+                  <span className="ct-kitchen-output-caption">Drawer Tools to Pull</span>
+                  <span className={`ct-kitchen-output-text ${getNumberFontSizeClass(kitchenDrawer?.primary || '0')}`}>
+                    {kitchenDrawer?.primary || '0'}
+                  </span>
+                </div>
+                <span className={`ct-kitchen-copy-indicator ${copiedKitchen ? 'copied' : ''}`} aria-hidden="true">
+                  <Icon name={copiedKitchen ? 'Check' : 'Copy'} size={16} />
+                </span>
+              </div>
+
+              <div className="ct-kitchen-tools-pills">
+                {kitchenDrawer && kitchenDrawer.tools && kitchenDrawer.tools.length > 0 ? (
+                  kitchenDrawer.tools.map((tool, idx) => (
+                    <React.Fragment key={idx}>
+                      {idx > 0 && <span className="ct-kitchen-plus" aria-hidden="true">+</span>}
+                      <button
+                        type="button"
+                        className="ct-kitchen-tool-chip"
+                        onClick={() => onCopy(tool, `${tool} copied!`)}
+                        title={`Click to copy: ${tool}`}
+                      >
+                        <span className="ct-tool-chip-icon" aria-hidden="true">🥄</span>
+                        <span className="ct-tool-chip-text"><Fraction value={tool} /></span>
+                      </button>
+                    </React.Fragment>
+                  ))
+                ) : (
+                  <span className="ct-kitchen-tool-chip empty">0</span>
+                )}
+              </div>
+            </div>
+
+            {kitchenDrawer && (
+              <div className="ct-kitchen-equivalents-section">
+                <div className="ct-kitchen-shelf-header">
+                  <span className="ct-kitchen-shelf-title">
+                    <Icon name="Sparkles" size={14} />
+                    <span>Standard Equivalents</span>
+                  </span>
+                  <span className="ct-kitchen-shelf-hint">Quick reference for common measures</span>
+                </div>
+                <div className="ct-kitchen-equiv-grid">
+                  <button
+                    type="button"
+                    className="ct-kitchen-equiv-pill"
+                    onClick={() => onCopy(kitchenDrawer.cups, `${kitchenDrawer.cups} copied!`)}
+                    title={`Click to copy cups: ${kitchenDrawer.cups}`}
+                  >
+                    <span className="ct-equiv-label">Cups</span>
+                    <span className="ct-equiv-val">{kitchenDrawer.cups}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="ct-kitchen-equiv-pill"
+                    onClick={() => onCopy(kitchenDrawer.tbsp, `${kitchenDrawer.tbsp} copied!`)}
+                    title={`Click to copy tablespoons: ${kitchenDrawer.tbsp}`}
+                  >
+                    <span className="ct-equiv-label">Tablespoons</span>
+                    <span className="ct-equiv-val">{kitchenDrawer.tbsp}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="ct-kitchen-equiv-pill"
+                    onClick={() => onCopy(kitchenDrawer.tsp, `${kitchenDrawer.tsp} copied!`)}
+                    title={`Click to copy teaspoons: ${kitchenDrawer.tsp}`}
+                  >
+                    <span className="ct-equiv-label">Teaspoons</span>
+                    <span className="ct-equiv-val">{kitchenDrawer.tsp}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="ct-kitchen-equiv-pill"
+                    onClick={() => onCopy(kitchenDrawer.flOz, `${kitchenDrawer.flOz} copied!`)}
+                    title={`Click to copy fluid ounces: ${kitchenDrawer.flOz}`}
+                  >
+                    <span className="ct-equiv-label">Fluid Ounces</span>
+                    <span className="ct-equiv-val">{kitchenDrawer.flOz}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="ct-kitchen-equiv-pill"
+                    onClick={() => onCopy(kitchenDrawer.ml, `${kitchenDrawer.ml} copied!`)}
+                    title={`Click to copy metric milliliters: ${kitchenDrawer.ml}`}
+                  >
+                    <span className="ct-equiv-label">Metric</span>
+                    <span className="ct-equiv-val">{kitchenDrawer.ml}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }

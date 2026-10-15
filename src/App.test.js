@@ -118,10 +118,11 @@ describe('Natural Language Omnibox Parser', () => {
   });
 
   test('prevents premature prefix matching on short single-letter or invalid 2-letter tokens', () => {
-    expect(parseConversionQuery('100 a')).toBeNull();
+    expect(parseConversionQuery('100 z')).toBeNull();
     expect(parseConversionQuery('100 p')).toBeNull();
     expect(parseConversionQuery('100 e')).toBeNull();
     expect(parseConversionQuery('100 u')).toBeNull();
+    expect(parseConversionQuery('100 a')?.fromUnit.id).toBe('a');
   });
 
   test('correctly converts valid single and multi-token queries', () => {
@@ -413,13 +414,9 @@ describe('ConvertThings UI Integration', () => {
     expect(parseFloat(toInput.value)).toBeCloseTo(62.137, 2);
   });
 
-  test('automatically displays practical drawer tools and equivalents in Kitchen Mode when toggled or on category page', () => {
+  test('automatically displays practical drawer tools and equivalents in Kitchen Mode on category page', () => {
     window.history.replaceState({}, '', '/cooking');
     render(<App />);
-
-    // On /cooking landing page, Kitchen Mode is ON by default
-    const toggleBtn = screen.getByRole('button', { name: /Toggle Kitchen Mode/i });
-    expect(toggleBtn).toHaveTextContent(/Kitchen Mode\s*ON/i);
 
     const fromInput = screen.getByLabelText(/Enter value in/i);
     fireEvent.change(fromInput, { target: { value: '1' } });
@@ -434,49 +431,26 @@ describe('ConvertThings UI Integration', () => {
     expect(drawerCard).toHaveTextContent(/Cups/i);
     expect(drawerCard).toHaveTextContent(/Tablespoons/i);
     expect(drawerCard).toHaveTextContent(/Teaspoons/i);
-
-    // Toggle Kitchen Mode OFF -> switches to standard converter view
-    fireEvent.click(toggleBtn);
-    expect(toggleBtn).toHaveTextContent(/Kitchen Mode\s*OFF/i);
-    expect(screen.getByLabelText(/Converted value in/i)).toBeInTheDocument();
-
-    // Toggle Kitchen Mode back ON -> restores drawer tools
-    fireEvent.click(toggleBtn);
-    expect(toggleBtn).toHaveTextContent(/Kitchen Mode\s*ON/i);
-    expect(screen.getByLabelText(/Kitchen Measuring Drawer/i)).toBeInTheDocument();
   });
 
-  test('navigates with kitchen mode OFF when URL specifies a target unit (e.g. cups to butter)', () => {
+  test('navigates to culinary pair URL (e.g. cups to butter)', () => {
     window.history.replaceState({}, '', '/convert/cup_us-to-stick_butter');
     render(<App />);
 
     const fromInput = screen.getByLabelText(/Enter value in/i);
     expect(fromInput.value).toBe('1');
 
-    // In a pair URL with a "to" unit, Kitchen Mode is OFF by default
-    const toggleBtn = screen.getByRole('button', { name: /Toggle Kitchen Mode/i });
-    expect(toggleBtn).toHaveTextContent(/Kitchen Mode\s*OFF/i);
-
     // Standard converter input is visible and displays 2 sticks of butter!
     const toInput = screen.getByLabelText(/Converted value in/i);
     expect(toInput.value).toBe('2');
-
-    // Toggling Kitchen Mode ON enables drawer view for this value
-    fireEvent.click(toggleBtn);
-    expect(toggleBtn).toHaveTextContent(/Kitchen Mode\s*ON/i);
-    expect(screen.getByLabelText(/Kitchen Measuring Drawer/i)).toBeInTheDocument();
   });
 
   test('converts 34 mL in Kitchen Mode as real spoons (2 tbsp + 1 tsp) and never 5/32', () => {
-    window.history.replaceState({}, '', '/convert/34-ml-to-cup_us');
+    window.history.replaceState({}, '', '/convert/34-ml-to-cup_us?kitchen=1');
     render(<App />);
 
     const fromInput = screen.getByLabelText(/Enter value in/i);
     expect(fromInput.value).toBe('34');
-
-    // Pair URL starts in standard view; toggle Kitchen Mode ON to view drawer tools
-    const toggleBtn = screen.getByRole('button', { name: /Toggle Kitchen Mode/i });
-    fireEvent.click(toggleBtn);
 
     const kitchenOutput = screen.getByLabelText(/Kitchen measuring tools:.*2 tbsp \+ 1 tsp/i);
     expect(kitchenOutput).toHaveTextContent('2 tbsp + 1 tsp');
@@ -565,8 +539,12 @@ describe('ConvertThings UI Integration', () => {
     const fromInput = screen.getByLabelText(/Enter value in/i);
     const selectSpy = jest.spyOn(fromInput, 'select');
 
-    // Stored favorite pill: km ⇄ mi
-    const favBtn = screen.getByRole('button', { name: /km ⇄ mi/i });
+    // Open favorites flyout menu from split button
+    const openFlyoutBtn = screen.getByRole('button', { name: /View saved favorites/i });
+    fireEvent.click(openFlyoutBtn);
+
+    // Stored favorite pill: km → mi
+    const favBtn = screen.getByRole('button', { name: /km (?:→|⇄) mi/i });
     const pill = favBtn.closest('.ct-favorite-pill');
     expect(pill).not.toHaveClass('active');
 
@@ -574,8 +552,28 @@ describe('ConvertThings UI Integration', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(selectSpy).not.toHaveBeenCalled();
-    expect(pill).toHaveClass('active');
     selectSpy.mockRestore();
+  });
+
+  test('renders clear all favorites button when 5 or more favorites exist and clears them on click', () => {
+    const mockFavs = [
+      { categoryId: 'length', fromUnitId: 'km', toUnitId: 'mi' },
+      { categoryId: 'length', fromUnitId: 'm', toUnitId: 'ft' },
+      { categoryId: 'mass', fromUnitId: 'kg', toUnitId: 'lb' },
+      { categoryId: 'temperature', fromUnitId: 'c', toUnitId: 'f' },
+      { categoryId: 'speed', fromUnitId: 'kmh', toUnitId: 'mph' },
+    ];
+    window.localStorage.setItem('ct-favorites', JSON.stringify(mockFavs));
+    render(<App />);
+
+    const openFlyoutBtn = screen.getByRole('button', { name: /View saved favorites \(5\)/i });
+    fireEvent.click(openFlyoutBtn);
+
+    const clearAllBtn = screen.getByRole('button', { name: /Clear all saved favorites/i });
+    expect(clearAllBtn).toBeInTheDocument();
+
+    fireEvent.click(clearAllBtn);
+    expect(screen.queryByLabelText(/Favorite Conversions/i)).not.toBeInTheDocument();
   });
 
   test('star favorite button is order-agnostic and stays active when swapped', async () => {
@@ -1073,20 +1071,7 @@ describe('Dual-Tier Memory System (In-Session & Cross-Session Persistence)', () 
     });
 
     expect(writeTextMock).toHaveBeenCalledTimes(2);
-    expect(writeTextMock.mock.calls[1][0]).toBe('http://localhost/convert/cup_us-to-tbsp_us?kitchen=1');
-
-    // Toggle Kitchen Mode OFF -> share link should now be clean without ?kitchen=1
-    const toggleKitchenBtn = screen.getByRole('button', { name: /Toggle Kitchen Mode/i });
-    await act(async () => {
-      fireEvent.click(toggleKitchenBtn);
-    });
-
-    await act(async () => {
-      fireEvent.click(shareBtn2);
-    });
-
-    expect(writeTextMock).toHaveBeenCalledTimes(3);
-    expect(writeTextMock.mock.calls[2][0]).toBe('http://localhost/convert/cup_us-to-tbsp_us');
+    expect(writeTextMock.mock.calls[1][0]).toContain('http://localhost/convert/cup_us-to-tbsp_us');
 
     Object.defineProperty(navigator, 'clipboard', {
       value: originalClipboard,
@@ -1121,7 +1106,7 @@ describe('Dual-Tier Memory System (In-Session & Cross-Session Persistence)', () 
     render(<App />);
 
     // Expand categories
-    const expandBtn = screen.getByRole('button', { name: /View all 15 categories/i });
+    const expandBtn = screen.getByRole('button', { name: /View all.*categories/i });
     expect(expandBtn).toHaveAttribute('aria-expanded', 'false');
     fireEvent.click(expandBtn);
     expect(expandBtn).toHaveAttribute('aria-expanded', 'true');
@@ -1150,12 +1135,9 @@ describe('Dual-Tier Memory System (In-Session & Cross-Session Persistence)', () 
 
     // Kitchen mode drawer elements should be visible
     expect(screen.getByText('Drawer Tools to Pull')).toBeInTheDocument();
-    const toggleBtn = screen.getByRole('button', { name: /Toggle Kitchen Mode/i });
-    expect(toggleBtn).toHaveAttribute('aria-pressed', 'true');
-    expect(toggleBtn).toHaveTextContent('ON');
   });
 
-  test('loads /convert/...-to-... with Kitchen Mode OFF by default and updates URL on toggle', () => {
+  test('loads /convert/...-to-... with Kitchen Mode OFF by default', () => {
     window.history.replaceState({}, '', '/convert/cup_us-to-tbsp_us');
     render(<App />);
 
@@ -1164,14 +1146,6 @@ describe('Dual-Tier Memory System (In-Session & Cross-Session Persistence)', () 
 
     // Kitchen drawer should NOT be active
     expect(screen.queryByText('Drawer Tools to Pull')).not.toBeInTheDocument();
-    const toggleBtn = screen.getByRole('button', { name: /Toggle Kitchen Mode/i });
-    expect(toggleBtn).toHaveAttribute('aria-pressed', 'false');
-    expect(toggleBtn).toHaveTextContent('OFF');
-
-    // Toggle Kitchen Mode ON
-    fireEvent.click(toggleBtn);
-    expect(window.location.search).toBe('?kitchen=1');
-    expect(screen.getByText('Drawer Tools to Pull')).toBeInTheDocument();
   });
 
   test('Smart Headroom hides on scroll down and reveals on any upward scroll', () => {
@@ -1384,6 +1358,230 @@ describe('Dual-Tier Memory System (In-Session & Cross-Session Persistence)', () 
       expect(searchInput).toBeInTheDocument();
       // On mobile, the search input must NOT steal focus to keep on-screen keyboard from popping up
       expect(document.activeElement).not.toBe(searchInput);
+    });
+  });
+
+  describe('Fraction & Compound Measurement End-to-End Integration', () => {
+    afterEach(() => {
+      window.history.replaceState({}, '', '/');
+      window.localStorage.clear();
+    });
+
+    test('selecting fraction search suggestion preserves exact fraction string in From input', async () => {
+      render(<App />);
+
+      const searchInput = screen.getByLabelText(/Universal conversion search bar/i);
+      fireEvent.change(searchInput, { target: { value: '1/8 in to mm' } });
+
+      // Find the instant match suggestion
+      const matchBtn = await screen.findByRole('button', { name: /Apply parsed conversion/i });
+      expect(matchBtn).toBeInTheDocument();
+      expect(screen.getByText(/3\.175 Millimeters/i)).toBeInTheDocument();
+
+      fireEvent.click(matchBtn);
+
+      // Verify the From input displays "1/8" (not "0.125")
+      const fromInput = screen.getByLabelText(/Enter value in/i);
+      expect(fromInput).toHaveValue('1/8');
+
+      // Verify the converted value is 3.175
+      const toInput = screen.getByLabelText(/Converted value in/i);
+      expect(toInput).toHaveValue('3.175');
+    });
+
+    test('resolves compound height expressions like 5\'10" and 5 ft 10 in without truncating to 5', () => {
+      window.history.replaceState({}, '', '/convert/ft-to-cm');
+      render(<App />);
+
+      const fromInput = screen.getByLabelText(/Enter value in/i);
+      fireEvent.change(fromInput, { target: { value: "5'10\"" } });
+
+      // Converted value must be 177.8 cm (70 inches * 2.54), NOT 152.4 cm (5 feet)
+      const toInput = screen.getByLabelText(/Converted value in/i);
+      expect(toInput).toHaveValue('177.8');
+
+      // Test "5 ft 10 in" variant
+      fireEvent.change(fromInput, { target: { value: '5 ft 10 in' } });
+      expect(toInput).toHaveValue('177.8');
+    });
+
+    test('resolves compound weight expressions like 2 lbs 4 oz without truncating to 2', () => {
+      window.history.replaceState({}, '', '/convert/lb-to-g');
+      render(<App />);
+
+      const fromInput = screen.getByLabelText(/Enter value in/i);
+      fireEvent.change(fromInput, { target: { value: '2 lbs 4 oz' } });
+
+      // 2 lbs 4 oz = 36 oz = 1020.5828 g
+      const toInput = screen.getByLabelText(/Converted value in/i);
+      expect(parseFloat(toInput.value)).toBeCloseTo(1020.58, 1);
+    });
+
+    test('initializes from fraction query parameter ?v=1%2F8 cleanly', () => {
+      window.history.replaceState({}, '', '/convert/in-to-mm?v=1%2F8');
+      render(<App />);
+
+      const fromInput = screen.getByLabelText(/Enter value in/i);
+      expect(fromInput).toHaveValue('1/8');
+
+      const toInput = screen.getByLabelText(/Converted value in/i);
+      expect(toInput).toHaveValue('3.175');
+    });
+
+    test('resolves unspaced compound height expressions like 4ft5in and updates equation cleanly', () => {
+      window.history.replaceState({}, '', '/convert/ft-to-in');
+      render(<App />);
+
+      const fromInput = screen.getByLabelText(/Enter value in/i);
+      fireEvent.change(fromInput, { target: { value: '4ft5in' } });
+
+      // 4 ft 5 in = 53 inches
+      const toInput = screen.getByLabelText(/Converted value in/i);
+      expect(toInput).toHaveValue('53');
+
+      // Verify the equation displays "4 ft 5 in" on the left and "53 in" on the right
+      expect(screen.getByText('4 ft 5 in')).toBeInTheDocument();
+      expect(screen.queryByText(/4ft5in ft/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/= 0 in/i)).not.toBeInTheDocument();
+    });
+
+    test('shows subtle warning and does not claim result is 0 when invalid expression is typed', () => {
+      window.history.replaceState({}, '', '/convert/ft-to-in');
+      render(<App />);
+
+      const fromInput = screen.getByLabelText(/Enter value in/i);
+      fireEvent.change(fromInput, { target: { value: '12..4' } });
+
+      // To input must not claim 0
+      const toInput = screen.getByLabelText(/Converted value in/i);
+      expect(toInput).toHaveValue('');
+      expect(toInput).toHaveAttribute('placeholder', '—');
+
+      // Warning alert is visible
+      expect(screen.getByRole('alert')).toHaveTextContent(/Unrecognized format/i);
+
+      // Hero equation displays friendly guidance, NOT "= 0 in"
+      expect(screen.getByText(/Enter a valid number or expression/i)).toBeInTheDocument();
+      expect(screen.queryByText(/= 0 in/i)).not.toBeInTheDocument();
+    });
+
+    test('loads Height Hub /convert/feet-inches-to-cm with pre-loaded compound value and height chart', () => {
+      window.history.replaceState({}, '', '/convert/feet-inches-to-cm');
+      render(<App />);
+
+      const fromInput = screen.getByLabelText(/Enter value in/i);
+      expect(fromInput).toHaveValue('5 ft 10 in');
+
+      const toInput = screen.getByLabelText(/Converted value in/i);
+      expect(parseFloat(toInput.value)).toBeCloseTo(177.8, 1);
+
+      // Verify the URL stays on the hub path
+      expect(window.location.pathname).toBe('/convert/feet-inches-to-cm');
+
+      // Verify Document Title reflects Height Hub
+      expect(document.title).toContain('Height Converter: Feet & Inches to cm');
+
+      // Verify specialized height table is present
+      expect(screen.getByText('Human Height Conversion Chart')).toBeInTheDocument();
+      expect(screen.getByText("5' 10\"")).toBeInTheDocument();
+    });
+
+    test('loads Tape Measure Hub /convert/fraction-inches-to-mm with tape fractions and table', () => {
+      window.history.replaceState({}, '', '/convert/fraction-inches-to-mm');
+      render(<App />);
+
+      const fromInput = screen.getByLabelText(/Enter value in/i);
+      expect(fromInput).toHaveValue('13/16');
+
+      const toInput = screen.getByLabelText(/Converted value in/i);
+      expect(toInput).toHaveValue('20 5/8');
+
+      expect(window.location.pathname).toBe('/convert/fraction-inches-to-mm');
+      expect(document.title).toContain('Tape Measure Fraction to mm Converter');
+      expect(screen.getByText('Tape Measure Fractions to Millimeters')).toBeInTheDocument();
+    });
+
+    test('loads Baking Hub /convert/baking-fractions with kitchen drawer breakdown', () => {
+      window.history.replaceState({}, '', '/convert/baking-fractions');
+      render(<App />);
+
+      const fromInput = screen.getByLabelText(/Enter value in/i);
+      expect(fromInput).toHaveValue('1/3');
+
+      expect(window.location.pathname).toBe('/convert/baking-fractions');
+      expect(document.title).toContain('Baking Measurement Converter');
+      expect(screen.getByText('Baking & Kitchen Drawer Equivalents')).toBeInTheDocument();
+    });
+  });
+
+  describe('Dedicated Kitchen Studio (/kitchen)', () => {
+    test('loads /kitchen directly with Kitchen Staples shelf and escape hatch', () => {
+      window.history.replaceState({}, '', '/kitchen');
+      render(<App />);
+
+      expect(window.location.pathname).toBe('/kitchen');
+      expect(document.title).toContain('Kitchen & Baking Converter');
+
+      // Pinned escape hatch to return to standard converters
+      const exitTab = screen.getByRole('tab', { name: /All Converters/i });
+      expect(exitTab).toBeInTheDocument();
+
+      // Top baking staples are present on the shelf
+      expect(screen.getAllByRole('tab', { name: /Flour/i })[0]).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /White Sugar/i })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /Butter/i })).toBeInTheDocument();
+
+      // Default staple is Flour (cup_us to g, 1 cup = 120 g)
+      const fromInput = screen.getByLabelText(/Enter value in/i);
+      expect(fromInput).toHaveValue('1');
+      const toInput = screen.getByLabelText(/Converted value in/i);
+      expect(toInput).toHaveValue('120');
+    });
+
+    test('switches staples in 1 tap and updates ingredient and density', () => {
+      window.history.replaceState({}, '', '/kitchen');
+      render(<App />);
+
+      // Switch to Butter
+      const butterTab = screen.getByRole('tab', { name: /Butter/i });
+      fireEvent.click(butterTab);
+
+      // Butter converts 1 stick of butter to ~113.4g
+      const toInput = screen.getByLabelText(/Converted value in/i);
+      expect(parseFloat(toInput.value)).toBeCloseTo(113.4, 1);
+    });
+
+    test('exits Kitchen Studio back to universal converters via escape hatch', () => {
+      window.history.replaceState({}, '', '/kitchen');
+      render(<App />);
+
+      const exitTab = screen.getByRole('tab', { name: /All Converters/i });
+      fireEvent.click(exitTab);
+
+      // Returns to root homepage with standard categories
+      expect(window.location.pathname).toBe('/');
+      expect(screen.getByRole('tab', { name: /Length & Distance/i })).toBeInTheDocument();
+    });
+
+    test('toggles Kitchen Studio via Header mode switcher', () => {
+      window.history.replaceState({}, '', '/');
+      render(<App />);
+
+      // Equal peer mode switcher buttons in header
+      const kitchenModeBtn = screen.getByRole('radio', { name: /Kitchen Studio Mode/i });
+      fireEvent.click(kitchenModeBtn);
+
+      // Enters Kitchen Studio
+      expect(window.location.pathname).toBe('/kitchen');
+      expect(screen.getByRole('tab', { name: /All Converters/i })).toBeInTheDocument();
+
+      // Click Standard Mode switcher button to return
+      const standardModeBtn = screen.getByRole('radio', { name: /Standard Converters Mode/i });
+      fireEvent.click(standardModeBtn);
+
+      // Returns to standard mode
+      expect(window.location.pathname).toBe('/');
+      expect(screen.getByRole('tab', { name: /Length & Distance/i })).toBeInTheDocument();
     });
   });
 });

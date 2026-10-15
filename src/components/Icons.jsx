@@ -248,6 +248,57 @@ export function Icon({ name, size = 18, className = '', ...props }) {
           <rect width="7" height="7" x="3" y="14" rx="1.5" />
         </svg>
       );
+    case 'Waveform':
+    case 'Activity':
+      return (
+        <svg {...defaultProps}>
+          <path d="M3 12h3l3-9 6 18 3-9h3" />
+        </svg>
+      );
+    case 'Wrench':
+      return (
+        <svg {...defaultProps}>
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+        </svg>
+      );
+    case 'Crosshair':
+      return (
+        <svg {...defaultProps}>
+          <circle cx="12" cy="12" r="10" />
+          <line x1="22" y1="12" x2="18" y2="12" />
+          <line x1="6" y1="12" x2="2" y2="12" />
+          <line x1="12" y1="6" x2="12" y2="2" />
+          <line x1="12" y1="22" x2="12" y2="18" />
+        </svg>
+      );
+    case 'Waves':
+    case 'Wind':
+      return (
+        <svg {...defaultProps}>
+          <path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />
+          <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />
+          <path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />
+        </svg>
+      );
+    case 'Type':
+      return (
+        <svg {...defaultProps}>
+          <polyline points="4 7 4 4 20 4 20 7" />
+          <line x1="9" y1="20" x2="15" y2="20" />
+          <line x1="12" y1="4" x2="12" y2="20" />
+        </svg>
+      );
+    case 'BatteryCharging':
+      return (
+        <svg {...defaultProps}>
+          <path d="M15 7h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2" />
+          <path d="M6 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h1" />
+          <line x1="11" y1="7" x2="7" y2="13" />
+          <line x1="7" y1="13" x2="13" y2="13" />
+          <line x1="13" y1="13" x2="9" y2="19" />
+          <line x1="22" y1="11" x2="22" y2="13" />
+        </svg>
+      );
     case 'ExternalLink':
       return (
         <svg {...defaultProps}>
@@ -278,6 +329,13 @@ export function Icon({ name, size = 18, className = '', ...props }) {
         <svg {...defaultProps}>
           <line x1="5" y1="12" x2="19" y2="12" />
           <polyline points="12 5 19 12 12 19" />
+        </svg>
+      );
+    case 'ArrowLeft':
+      return (
+        <svg {...defaultProps}>
+          <line x1="19" y1="12" x2="5" y2="12" />
+          <polyline points="12 19 5 12 12 5" />
         </svg>
       );
     case 'AlertCircle':
@@ -328,6 +386,33 @@ export function Icon({ name, size = 18, className = '', ...props }) {
           <circle cx="12" cy="6" r="1.8" fill="currentColor" stroke="none" />
           <line x1="5" y1="12" x2="19" y2="12" strokeWidth="2" />
           <circle cx="12" cy="18" r="1.8" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    case 'Wheat':
+      return (
+        <svg {...defaultProps}>
+          <path d="m2 22 10-10" />
+          <path d="m16 8-1.5-1.5a2 2 0 0 0-2.83 0L10 8l4 4 1.5-1.5a2 2 0 0 0 0-2.83L14 6" />
+          <path d="m12 12-1.5-1.5a2 2 0 0 0-2.83 0L6 12l4 4 1.5-1.5a2 2 0 0 0 0-2.83L10 10" />
+          <path d="m8 16-1.5-1.5a2 2 0 0 0-2.83 0L2 16l4 4 1.5-1.5a2 2 0 0 0 0-2.83L6 14" />
+          <path d="M14 6c1.5-1.5 4-2 6-2 0 2-.5 4.5-2 6l-4-4Z" />
+        </svg>
+      );
+    case 'Box':
+      return (
+        <svg {...defaultProps}>
+          <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+          <path d="m3.3 7 8.7 5 8.7-5" />
+          <path d="M12 22V12" />
+        </svg>
+      );
+    case 'Utensils':
+      return (
+        <svg {...defaultProps}>
+          <path d="M18 2v6a3 3 0 0 1-3 3 3 3 0 0 1-3-3V2" />
+          <path d="M15 11v11" />
+          <path d="M5 2v20" />
+          <path d="M2 2h6v5a3 3 0 0 1-6 0V2z" />
         </svg>
       );
     default:

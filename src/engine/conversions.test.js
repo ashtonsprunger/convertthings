@@ -1,19 +1,26 @@
 import {
   filterAndSortUnits,
   getUnitsForCategory,
+  getCommonUnitsForCategory,
+  getSpecializedUnitsForCategory,
+  isSpecializedUnit,
   formatDisplayNumber,
   formatNumber,
   toFraction,
   toTapeMeasureFraction,
   parseFractionString,
   formatFractionForDisplay,
+  formatCompoundForDisplay,
   isFractionLike,
   isCompoundLike,
   parseCompoundValue,
+  evaluateInputStatus,
   getCookingCompoundMeasure,
   formatCulinaryFraction,
   convertUnits,
+  getCategory,
   getSmartEquationDisplay,
+  getFormulaDetails,
   UNIT_DEFINITIONS,
 } from './conversions';
 
@@ -573,6 +580,8 @@ describe('getSmartEquationDisplay', () => {
   const minUnit = UNIT_DEFINITIONS.time.units.find((u) => u.id === 'min');
   const tbspUnit = UNIT_DEFINITIONS.volume.units.find((u) => u.id === 'tbsp_us');
   const cupUnit = UNIT_DEFINITIONS.volume.units.find((u) => u.id === 'cup_us');
+  const cuydUnit = UNIT_DEFINITIONS.volume.units.find((u) => u.id === 'cuyd');
+  const cuftUnit = UNIT_DEFINITIONS.volume.units.find((u) => u.id === 'cuft');
 
   test('formats 1 in to ft as exact fraction 1/12 ft (never 1 in ≈ 1 in)', () => {
     const targetVal = convertUnits(1, 'length', 'in', 'ft');
@@ -650,4 +659,512 @@ describe('getSmartEquationDisplay', () => {
     expect(resultTbsp.isSmart).toBe(true);
     expect(resultTbsp.isExact).toBe(true);
   });
+
+  test('converts cubic yards to cubic feet and cubic meters accurately', () => {
+    // 1 cubic yard = 27 cubic feet exactly
+    expect(convertUnits(1, 'volume', 'cuyd', 'cuft')).toBe(27);
+    expect(convertUnits(27, 'volume', 'cuft', 'cuyd')).toBe(1);
+    expect(convertUnits(2, 'volume', 'cuyd', 'cuft')).toBe(54);
+
+    // 1 cubic yard to liters and cubic meters
+    expect(convertUnits(1, 'volume', 'cuyd', 'l')).toBe(764.554857984);
+    expect(convertUnits(1, 'volume', 'cuyd', 'cum')).toBeCloseTo(0.764555, 6);
+  });
+
+  test('formats cubic feet in cubic yards as exact fraction 1/27 yd³', () => {
+    const targetVal = convertUnits(1, 'volume', 'cuft', 'cuyd');
+    const defaultFmt = formatNumber(targetVal, 'auto', 'volume');
+    const result = getSmartEquationDisplay('volume', cuftUnit, cuydUnit, 1, targetVal, defaultFmt);
+
+    expect(result.value).toBe('1/27');
+    expect(result.unit).toBe('yd³');
+    expect(result.isSmart).toBe(true);
+    expect(result.isExact).toBe(true);
+  });
 });
+
+describe('Compound Measurement Robustness & Unspaced Parsing Stress Tests', () => {
+  test('detects all forms of compound measurements via isCompoundLike', () => {
+    // Unspaced / compact
+    expect(isCompoundLike('4ft5in')).toBe(true);
+    expect(isCompoundLike('5ft10in')).toBe(true);
+    expect(isCompoundLike('2lbs4oz')).toBe(true);
+    expect(isCompoundLike('1hr30min')).toBe(true);
+    expect(isCompoundLike('1h30m')).toBe(true);
+    expect(isCompoundLike('1gal2qt')).toBe(true);
+    expect(isCompoundLike('1cup2tbsp')).toBe(true);
+    expect(isCompoundLike('2tbsp1tsp')).toBe(true);
+    // Spaced
+    expect(isCompoundLike('4 ft 5 in')).toBe(true);
+    expect(isCompoundLike('5 ft 10 in')).toBe(true);
+    expect(isCompoundLike('2 lbs 4 oz')).toBe(true);
+    expect(isCompoundLike('1 hr 30 min')).toBe(true);
+    expect(isCompoundLike('1 gal 2 qt')).toBe(true);
+    // Quotes
+    expect(isCompoundLike('5\'10"')).toBe(true);
+    expect(isCompoundLike('5\'10')).toBe(true);
+    expect(isCompoundLike('5\' 10"')).toBe(true);
+    expect(isCompoundLike('5\' 10 1/2"')).toBe(true);
+    // Single units with keywords
+    expect(isCompoundLike('4ft')).toBe(true);
+    expect(isCompoundLike('50in')).toBe(true);
+    expect(isCompoundLike('2lb')).toBe(true);
+    // Non-compounds
+    expect(isCompoundLike('10')).toBe(false);
+    expect(isCompoundLike('3.14')).toBe(false);
+    expect(isCompoundLike('-5')).toBe(false);
+    expect(isCompoundLike('1/8')).toBe(false);
+    expect(isCompoundLike('')).toBe(false);
+    expect(isCompoundLike(null)).toBe(false);
+  });
+
+  test('parses unspaced and compact compounds with exact precision in parseCompoundValue', () => {
+    // Length: 4ft5in -> inches = 53
+    expect(parseCompoundValue('4ft5in', 'length', 'in')).toBe(53);
+    // Length: 4ft5in -> cm = 134.62
+    expect(parseCompoundValue('4ft5in', 'length', 'cm')).toBe(134.62);
+    // Length: 4ft5in -> ft = 4.4166666667
+    expect(parseCompoundValue('4ft5in', 'length', 'ft')).toBeCloseTo(4.4166667, 5);
+    // Length: 5ft10in -> cm = 177.8
+    expect(parseCompoundValue('5ft10in', 'length', 'cm')).toBe(177.8);
+    // Length: 5'10" -> cm = 177.8
+    expect(parseCompoundValue('5\'10"', 'length', 'cm')).toBe(177.8);
+    // Length: 5' 10 1/2" -> in = 70.5
+    expect(parseCompoundValue('5\' 10 1/2"', 'length', 'in')).toBe(70.5);
+
+    // Weight/Mass: 2lbs4oz -> oz = 36
+    expect(parseCompoundValue('2lbs4oz', 'mass', 'oz')).toBe(36);
+    // Weight/Mass: 2lbs4oz -> g = ~1020.58
+    expect(parseCompoundValue('2lbs4oz', 'mass', 'g')).toBeCloseTo(1020.5828, 2);
+
+    // Time: 1hr30min -> min = 90
+    expect(parseCompoundValue('1hr30min', 'time', 'min')).toBe(90);
+    expect(parseCompoundValue('1h30m', 'time', 'min')).toBe(90);
+    // Time: 1hr30min -> s = 5400
+    expect(parseCompoundValue('1hr30min', 'time', 's')).toBe(5400);
+
+    // Volume: 1gal2qt -> qt = 6
+    expect(parseCompoundValue('1gal2qt', 'volume', 'qt_us')).toBe(6);
+    // Cooking: 1cup2tbsp -> tbsp = 18
+    expect(parseCompoundValue('1cup2tbsp', 'cooking', 'tbsp_us')).toBe(18);
+    // Cooking: 2tbsp1tsp -> tsp = 7
+    expect(parseCompoundValue('2tbsp1tsp', 'cooking', 'tsp_us')).toBe(7);
+
+    // Single unit in compound parser: 4ft -> in = 48
+    expect(parseCompoundValue('4ft', 'length', 'in')).toBe(48);
+    // Single unit: 50cm -> in = ~19.685
+    expect(parseCompoundValue('50cm', 'length', 'in')).toBeCloseTo(19.685, 3);
+  });
+
+  test('formats compound measurements cleanly for display without unit collisions', () => {
+    expect(formatCompoundForDisplay('4ft5in')).toBe('4 ft 5 in');
+    expect(formatCompoundForDisplay('5ft10in')).toBe('5 ft 10 in');
+    expect(formatCompoundForDisplay('2lbs4oz')).toBe('2 lbs 4 oz');
+    expect(formatCompoundForDisplay('1hr30m')).toBe('1 hr 30 m');
+    expect(formatCompoundForDisplay('5\'10"')).toBe('5 ft 10 in');
+    expect(formatCompoundForDisplay('5\' 10"')).toBe('5 ft 10 in');
+    expect(formatCompoundForDisplay('1gal2qt')).toBe('1 gal 2 qt');
+  });
+});
+
+describe('evaluateInputStatus Comprehensive Stress Tests', () => {
+  test('correctly identifies valid standard numbers', () => {
+    expect(evaluateInputStatus('10', 'length', 'm')).toEqual({ isValid: true, isPending: false, isInvalid: false, isCompound: false, parsedValue: 10 });
+    expect(evaluateInputStatus('3.14159', 'length', 'm')).toEqual({ isValid: true, isPending: false, isInvalid: false, isCompound: false, parsedValue: 3.14159 });
+    expect(evaluateInputStatus('-5', 'temperature', 'c')).toEqual({ isValid: true, isPending: false, isInvalid: false, isCompound: false, parsedValue: -5 });
+    expect(evaluateInputStatus('1e6', 'digital', 'mb')).toEqual({ isValid: true, isPending: false, isInvalid: false, isCompound: false, parsedValue: 1000000 });
+    expect(evaluateInputStatus('0', 'length', 'm')).toEqual({ isValid: true, isPending: false, isInvalid: false, isCompound: false, parsedValue: 0 });
+    expect(evaluateInputStatus('', 'length', 'm')).toEqual({ isValid: true, isPending: false, isInvalid: false, isCompound: false, parsedValue: 0 });
+  });
+
+  test('correctly identifies valid fraction expressions', () => {
+    expect(evaluateInputStatus('1/8', 'length', 'in').isValid).toBe(true);
+    expect(evaluateInputStatus('1 3/8', 'length', 'in').isValid).toBe(true);
+    expect(evaluateInputStatus('3 3/8 +1/32', 'length', 'in').isValid).toBe(true);
+    expect(evaluateInputStatus('11/8', 'length', 'in').isValid).toBe(true);
+    expect(evaluateInputStatus('½', 'cooking', 'cup_us').isValid).toBe(true);
+    expect(evaluateInputStatus('¾', 'volume', 'cup_us').isValid).toBe(true);
+  });
+
+  test('correctly identifies valid compound expressions (spaced and unspaced)', () => {
+    expect(evaluateInputStatus('4ft5in', 'length', 'ft')).toEqual(expect.objectContaining({ isValid: true, isInvalid: false, isCompound: true }));
+    expect(evaluateInputStatus('5 ft 10 in', 'length', 'ft')).toEqual(expect.objectContaining({ isValid: true, isInvalid: false, isCompound: true }));
+    expect(evaluateInputStatus('5\'10"', 'length', 'ft')).toEqual(expect.objectContaining({ isValid: true, isInvalid: false, isCompound: true }));
+    expect(evaluateInputStatus('2lbs4oz', 'mass', 'lb')).toEqual(expect.objectContaining({ isValid: true, isInvalid: false, isCompound: true }));
+    expect(evaluateInputStatus('1hr30min', 'time', 'h')).toEqual(expect.objectContaining({ isValid: true, isInvalid: false, isCompound: true }));
+  });
+
+  test('identifies incomplete / pending typing without triggering invalid error state', () => {
+    // Lone operators or decimals
+    expect(evaluateInputStatus('-', 'temperature', 'c')).toEqual(expect.objectContaining({ isValid: false, isPending: true, isInvalid: false }));
+    expect(evaluateInputStatus('+', 'length', 'm')).toEqual(expect.objectContaining({ isValid: false, isPending: true, isInvalid: false }));
+    expect(evaluateInputStatus('.', 'length', 'm')).toEqual(expect.objectContaining({ isValid: false, isPending: true, isInvalid: false }));
+    // Trailing slash while typing fraction
+    expect(evaluateInputStatus('1/', 'length', 'in')).toEqual(expect.objectContaining({ isValid: false, isPending: true, isInvalid: false }));
+    expect(evaluateInputStatus('5 /', 'length', 'in')).toEqual(expect.objectContaining({ isValid: false, isPending: true, isInvalid: false }));
+    expect(evaluateInputStatus('3 1/', 'length', 'in')).toEqual(expect.objectContaining({ isValid: false, isPending: true, isInvalid: false }));
+    expect(evaluateInputStatus('3 3/8 +', 'length', 'in')).toEqual(expect.objectContaining({ isValid: false, isPending: true, isInvalid: false }));
+  });
+
+  test('identifies truly invalid expressions and marks them as isInvalid', () => {
+    // Gibberish words
+    expect(evaluateInputStatus('abc', 'length', 'm')).toEqual(expect.objectContaining({ isValid: false, isPending: false, isInvalid: true }));
+    expect(evaluateInputStatus('hello', 'length', 'm')).toEqual(expect.objectContaining({ isValid: false, isPending: false, isInvalid: true }));
+    // Malformed decimals
+    expect(evaluateInputStatus('12..4', 'length', 'm')).toEqual(expect.objectContaining({ isValid: false, isPending: false, isInvalid: true }));
+    expect(evaluateInputStatus('1.2.3', 'length', 'm')).toEqual(expect.objectContaining({ isValid: false, isPending: false, isInvalid: true }));
+    // Division by zero
+    expect(evaluateInputStatus('1/0', 'length', 'm')).toEqual(expect.objectContaining({ isValid: false, isPending: false, isInvalid: true }));
+    // Malformed compound
+    expect(evaluateInputStatus('4ft?', 'length', 'ft')).toEqual(expect.objectContaining({ isValid: false, isPending: false, isInvalid: true }));
+    expect(evaluateInputStatus('5$$$', 'length', 'm')).toEqual(expect.objectContaining({ isValid: false, isPending: false, isInvalid: true }));
+  });
+});
+
+describe('Two-Tier Unit Architecture & Progressive Disclosure Helpers', () => {
+  test('correctly identifies specialized units with isSpecializedUnit', () => {
+    expect(isSpecializedUnit({ id: 'kg', tier: 'common' })).toBe(false);
+    expect(isSpecializedUnit({ id: 'ct', tier: 'specialized' })).toBe(true);
+    expect(isSpecializedUnit({ id: 'm' })).toBe(false);
+    expect(isSpecializedUnit(null)).toBe(false);
+  });
+
+  test('partitions category units into common and specialized lists', () => {
+    const allMass = getUnitsForCategory('mass');
+    const commonMass = getCommonUnitsForCategory('mass');
+    const specMass = getSpecializedUnitsForCategory('mass');
+
+    expect(commonMass.length).toBeGreaterThan(0);
+    expect(specMass.length).toBeGreaterThan(0);
+    expect(commonMass.length + specMass.length).toBe(allMass.length);
+
+    expect(commonMass.some((u) => u.id === 'kg')).toBe(true);
+    expect(commonMass.some((u) => u.id === 'lb')).toBe(true);
+    expect(specMass.some((u) => u.id === 'ct')).toBe(true);
+    expect(specMass.some((u) => u.id === 'gr')).toBe(true);
+  });
+
+  test('filterAndSortUnits matches against unit subtitle and badge keywords', () => {
+    const massUnits = getUnitsForCategory('mass');
+    // Search for "diamonds" which is in Carat's subtitle
+    const diamondMatches = filterAndSortUnits(massUnits, 'diamonds');
+    expect(diamondMatches.length).toBeGreaterThan(0);
+    expect(diamondMatches[0].id).toBe('ct');
+
+    // Search for "jewelry" which is in Carat's badge
+    const jewelryMatches = filterAndSortUnits(massUnits, 'jewelry');
+    expect(jewelryMatches.length).toBeGreaterThan(0);
+    expect(jewelryMatches[0].id).toBe('ct');
+  });
+});
+
+describe('Phase 2 Unit Precision & Conversions', () => {
+  test('Weight & Mass: Troy ounce, Pennyweight, Dalton, Slug, Metric Quintal', () => {
+    // 1 Troy Ounce = 31.1034768 g
+    const ozTInG = convertUnits(1, 'mass', 'oz_t', 'g');
+    expect(ozTInG).toBeCloseTo(31.1034768, 5);
+
+    // 1 Pennyweight = 1.55517384 g
+    const dwtInG = convertUnits(1, 'mass', 'dwt', 'g');
+    expect(dwtInG).toBeCloseTo(1.55517384, 5);
+
+    // 1 Dalton = 1.660539e-27 kg
+    const daInKg = convertUnits(1, 'mass', 'da', 'kg');
+    expect(daInKg).toBeCloseTo(1.6605390666e-27, 30);
+
+    // 1 Slug = 14.5939 kg
+    const slugInKg = convertUnits(1, 'mass', 'slug', 'kg');
+    expect(slugInKg).toBeCloseTo(14.5939029, 4);
+
+    // 1 Quintal = 100 kg
+    const qInKg = convertUnits(1, 'mass', 'q', 'kg');
+    expect(qInKg).toBe(100);
+  });
+
+  test('Volume & Capacity: Centiliter, Deciliter, Imperial Pint/Quart, Oil Barrel, Microliter, Bushel', () => {
+    // 1 cL = 10 mL
+    expect(convertUnits(1, 'volume', 'cl', 'ml')).toBe(10);
+    // 1 dL = 100 mL
+    expect(convertUnits(1, 'volume', 'dl', 'ml')).toBe(100);
+    // 1 Imperial Pint = 0.56826125 L
+    expect(convertUnits(1, 'volume', 'pt_uk', 'l')).toBeCloseTo(0.56826125, 6);
+    // 1 Imperial Quart = 1.1365225 L
+    expect(convertUnits(1, 'volume', 'qt_uk', 'l')).toBeCloseTo(1.1365225, 6);
+    // 1 Oil Barrel = 42 US Gallons
+    expect(convertUnits(1, 'volume', 'bbl_oil', 'gal_us')).toBeCloseTo(42, 4);
+    // 1 Microliter = 0.001 mL
+    expect(convertUnits(1, 'volume', 'ul', 'ml')).toBeCloseTo(0.001, 6);
+    // 1 US Bushel = ~35.239 L
+    expect(convertUnits(1, 'volume', 'bu', 'l')).toBeCloseTo(35.23907, 3);
+  });
+
+  test('Kitchen Mode: Metric Cup, Metric Tbsp, Dessertspoon, Shot, Smidgen, Tad', () => {
+    // Metric Cup = 250 mL
+    expect(convertUnits(1, 'cooking', 'cup_metric', 'ml')).toBe(250);
+    // Metric Tablespoon = 15 mL
+    expect(convertUnits(1, 'cooking', 'tbsp_metric', 'ml')).toBe(15);
+    // Dessertspoon = 10 mL
+    expect(convertUnits(1, 'cooking', 'dsp', 'ml')).toBe(10);
+    // Shot = 1.5 US fl oz
+    expect(convertUnits(1, 'cooking', 'shot', 'floz_us')).toBeCloseTo(1.5, 4);
+    // Smidgen = 1/32 tsp
+    expect(convertUnits(1, 'cooking', 'smidgen', 'tsp_us')).toBeCloseTo(1 / 32, 4);
+    // Tad = 1/4 tsp
+    expect(convertUnits(1, 'cooking', 'tad', 'tsp_us')).toBeCloseTo(0.25, 4);
+  });
+
+  test('Length & Distance: AU, Parsec, Ångström, Mil, Fathom, Hand', () => {
+    // 1 AU = 149,597,870.7 km
+    expect(convertUnits(1, 'length', 'au', 'km')).toBeCloseTo(149597870.7, 1);
+    // 1 Parsec = ~3.26156 Light-Years
+    expect(convertUnits(1, 'length', 'pc', 'ly')).toBeCloseTo(3.26156, 3);
+    // 1 Ångström = 0.1 nm
+    expect(convertUnits(1, 'length', 'angstrom', 'nm')).toBeCloseTo(0.1, 6);
+    // 1 Mil = 0.001 in
+    expect(convertUnits(1, 'length', 'mil', 'in')).toBeCloseTo(0.001, 6);
+    // 1 Fathom = 6 ft
+    expect(convertUnits(1, 'length', 'fathom', 'ft')).toBeCloseTo(6, 4);
+    // 1 Hand = 4 in
+    expect(convertUnits(1, 'length', 'hand', 'in')).toBeCloseTo(4, 4);
+  });
+
+  test('Digital & Data Rate: Nibble, PiB, EB, EiB, Tbps, TB/s, MiB/s', () => {
+    // 1 Nibble = 4 bits
+    expect(convertUnits(1, 'digital', 'nibble', 'b')).toBe(4);
+    // 1 PiB = 1024 TiB
+    expect(convertUnits(1, 'digital', 'pib', 'tib')).toBe(1024);
+    // 1 EB = 1000 PB
+    expect(convertUnits(1, 'digital', 'eb', 'pb')).toBe(1000);
+    // 1 EiB = 1024 PiB
+    expect(convertUnits(1, 'digital', 'eib', 'pib')).toBe(1024);
+    // 1 Tbps = 1000 Gbps
+    expect(convertUnits(1, 'data_rate', 'tbps', 'gbps')).toBe(1000);
+    // 1 TB/s = 8 Tbps
+    expect(convertUnits(1, 'data_rate', 'tbs', 'tbps')).toBe(8);
+    // 1 MiB/s = 1024 KiB/s
+    expect(convertUnits(1, 'data_rate', 'mibs', 'byps')).toBe(1048576);
+  });
+
+  test('Pressure, Energy, Power: inH2O, cmH2O, ksi, Therm, MWh, Ton of Ref, mW', () => {
+    // 1 inH2O = ~249.0889 Pa
+    expect(convertUnits(1, 'pressure', 'inh2o', 'pa')).toBeCloseTo(249.0889, 2);
+    // 1 cmH2O = 98.0665 Pa
+    expect(convertUnits(1, 'pressure', 'cmh2o', 'pa')).toBeCloseTo(98.0665, 4);
+    // 1 ksi = 1000 psi
+    expect(convertUnits(1, 'pressure', 'ksi', 'psi')).toBeCloseTo(1000, 4);
+    // 1 Therm = 100,000 BTU
+    expect(convertUnits(1, 'energy', 'therm', 'btu')).toBeCloseTo(100000, 0);
+    // 1 MWh = 1000 kWh
+    expect(convertUnits(1, 'energy', 'mwh', 'kwh')).toBe(1000);
+    // 1 Ton of Refrigeration = 12,000 BTU/h
+    expect(convertUnits(1, 'power', 'ton_ref', 'btu_h')).toBeCloseTo(12000, 0);
+    // 1 mW = 0.001 W
+    expect(convertUnits(1, 'power', 'mw_milli', 'w')).toBe(0.001);
+  });
+
+  test('Fuel Economy: mi/kWh and kWh/100km EV conversion reciprocity', () => {
+    // 3 mi/kWh -> ~20.712 kWh/100 km
+    const kwhPer100 = convertUnits(3, 'fuel', 'mi_kwh', 'kwh_100km');
+    expect(kwhPer100).toBeCloseTo(20.71237, 3);
+
+    // 20.71237 kWh/100km -> 3 mi/kWh
+    const miPerKwh = convertUnits(kwhPer100, 'fuel', 'kwh_100km', 'mi_kwh');
+    expect(miPerKwh).toBeCloseTo(3, 4);
+  });
+
+  describe('Phase 3: Core SI Categories (Frequency & Torque)', () => {
+    test('Frequency conversions (Hz, kHz, MHz, GHz, THz, RPM, rad/s, deg/s)', () => {
+      // 1 Hz = 60 RPM
+      expect(convertUnits(1, 'frequency', 'hz', 'rpm')).toBe(60);
+      // 600 RPM = 10 Hz
+      expect(convertUnits(600, 'frequency', 'rpm', 'hz')).toBe(10);
+      // 3.5 GHz = 3500 MHz
+      expect(convertUnits(3.5, 'frequency', 'ghz', 'mhz')).toBe(3500);
+      // 1 MHz = 1000 kHz
+      expect(convertUnits(1, 'frequency', 'mhz', 'khz')).toBe(1000);
+      // 2.4 THz = 2400 GHz
+      expect(convertUnits(2.4, 'frequency', 'thz', 'ghz')).toBe(2400);
+      // 2π rad/s = 1 Hz
+      expect(convertUnits(2 * Math.PI, 'frequency', 'rad_s', 'hz')).toBeCloseTo(1, 6);
+      // 360 deg/s = 1 Hz
+      expect(convertUnits(360, 'frequency', 'deg_s', 'hz')).toBeCloseTo(1, 6);
+    });
+
+    test('Torque conversions (N·m, lb-ft, lb-in, kgf·m, kN·m, oz-in)', () => {
+      // 100 N·m = ~73.7562 lb-ft
+      expect(convertUnits(100, 'torque', 'nm', 'ftlb')).toBeCloseTo(73.7562, 3);
+      // 100 lb-ft = ~135.5818 N·m
+      expect(convertUnits(100, 'torque', 'ftlb', 'nm')).toBeCloseTo(135.5818, 3);
+      // 1 lb-ft = 12 lb-in
+      expect(convertUnits(1, 'torque', 'ftlb', 'inlb')).toBeCloseTo(12, 6);
+      // 12 lb-in = 1 lb-ft
+      expect(convertUnits(12, 'torque', 'inlb', 'ftlb')).toBeCloseTo(1, 6);
+      // 1 kgf·m = 9.80665 N·m
+      expect(convertUnits(1, 'torque', 'kgfm', 'nm')).toBeCloseTo(9.80665, 4);
+      // 1 kN·m = 1000 N·m
+      expect(convertUnits(1, 'torque', 'knm', 'nm')).toBe(1000);
+      // 1 lb-in = 16 oz-in
+      expect(convertUnits(1, 'torque', 'inlb', 'ozin')).toBeCloseTo(16, 5);
+    });
+
+    test('Formula generation for frequency and torque', () => {
+      const freqFormula = getFormulaDetails('frequency', 'rpm', 'hz');
+      expect(freqFormula.equation).toBe('Hz = RPM / 60');
+      expect(freqFormula.instruction).toContain('Divide the revolutions per minute value by 60');
+
+      const torqueFormula = getFormulaDetails('torque', 'ftlb', 'inlb');
+      expect(torqueFormula.equation).toContain('lb-in = lb-ft × 12');
+    });
+  });
+
+  describe('Phase 4: Trade & Developer Categories (Force, Flow Rate, Typography)', () => {
+    test('Force conversions (N, kN, MN, lbf, kgf, dyn, kip, ozf)', () => {
+      // 1 lbf = 4.448222 N
+      expect(convertUnits(1, 'force', 'lbf', 'n')).toBeCloseTo(4.448222, 5);
+      // 100 N = ~22.4809 lbf
+      expect(convertUnits(100, 'force', 'n', 'lbf')).toBeCloseTo(22.48089, 4);
+      // 1 kN = 1000 N
+      expect(convertUnits(1, 'force', 'kn', 'n')).toBe(1000);
+      // 1 MN = 1000 kN
+      expect(convertUnits(1, 'force', 'mn', 'kn')).toBe(1000);
+      // 1 kgf = 9.80665 N
+      expect(convertUnits(1, 'force', 'kgf', 'n')).toBeCloseTo(9.80665, 5);
+      // 1 N = 100,000 dyn
+      expect(convertUnits(1, 'force', 'n', 'dyn')).toBeCloseTo(100000, 5);
+      // 1 kip = 1000 lbf
+      expect(convertUnits(1, 'force', 'kip', 'lbf')).toBeCloseTo(1000, 4);
+      // 1 lbf = 16 ozf
+      expect(convertUnits(1, 'force', 'lbf', 'ozf')).toBeCloseTo(16, 5);
+    });
+
+    test('Volumetric Flow Rate conversions (CFM, L/s, L/min, m³/h, m³/s, GPM, GPH)', () => {
+      // 100 CFM = ~47.1947 L/s
+      expect(convertUnits(100, 'flow_rate', 'cfm', 'l_s')).toBeCloseTo(47.19474, 3);
+      // 100 L/s = ~211.888 CFM
+      expect(convertUnits(100, 'flow_rate', 'l_s', 'cfm')).toBeCloseTo(211.888, 2);
+      // 1 L/s = 60 L/min
+      expect(convertUnits(1, 'flow_rate', 'l_s', 'l_min')).toBeCloseTo(60, 4);
+      // 1 m³/s = 3600 m³/h
+      expect(convertUnits(1, 'flow_rate', 'm3_s', 'm3_h')).toBe(3600);
+      // 1 US GPM = ~3.78541 L/min
+      expect(convertUnits(1, 'flow_rate', 'gpm_us', 'l_min')).toBeCloseTo(3.78541, 4);
+      // 1 US GPM = 60 GPH
+      expect(convertUnits(1, 'flow_rate', 'gpm_us', 'gph_us')).toBeCloseTo(60, 4);
+    });
+
+    test('Typography & Digital Design conversions (px, pt, rem, em, pc, in_css, mm_css)', () => {
+      // 16 px = 1 rem
+      expect(convertUnits(16, 'typography', 'px', 'rem')).toBe(1);
+      // 1.5 rem = 24 px
+      expect(convertUnits(1.5, 'typography', 'rem', 'px')).toBe(24);
+      // 12 pt = 16 px
+      expect(convertUnits(12, 'typography', 'pt', 'px')).toBe(16);
+      // 16 px = 12 pt
+      expect(convertUnits(16, 'typography', 'px', 'pt')).toBe(12);
+      // 1 pc = 16 px
+      expect(convertUnits(1, 'typography', 'pc', 'px')).toBe(16);
+      // 1 pc = 12 pt
+      expect(convertUnits(1, 'typography', 'pc', 'pt')).toBe(12);
+      // 1 CSS in = 96 px
+      expect(convertUnits(1, 'typography', 'in_css', 'px')).toBe(96);
+      // 1 CSS in = 25.4 CSS mm
+      expect(convertUnits(1, 'typography', 'in_css', 'mm_css')).toBeCloseTo(25.4, 4);
+      // 1 rem = 1 em (both 16px baseline)
+      expect(convertUnits(1, 'typography', 'rem', 'em')).toBe(1);
+    });
+
+    test('Formula generation for force, flow rate, and typography', () => {
+      const forceFormula = getFormulaDetails('force', 'kn', 'n');
+      expect(forceFormula.equation).toBe('N = kN × 1000');
+
+      const flowFormula = getFormulaDetails('flow_rate', 'm3_s', 'm3_h');
+      expect(flowFormula.equation).toBe('m³/h = m³/s × 3600');
+
+      const typoFormula = getFormulaDetails('typography', 'px', 'rem');
+      expect(typoFormula.equation).toBe('rem = px / 16');
+    });
+  });
+
+  describe('Phase 5: Scientific & Electrical Domain Expansion (Electric Current & Illuminance)', () => {
+    test('Electric Current & Battery Charge conversions (A, mA, µA, kA, Ah, mAh, abA, statA)', () => {
+      // 1 A = 1,000 mA
+      expect(convertUnits(1, 'current', 'a', 'ma')).toBe(1000);
+      // 500 mA = 0.5 A
+      expect(convertUnits(500, 'current', 'ma', 'a')).toBe(0.5);
+      // 1 mA = 1,000 µA
+      expect(convertUnits(1, 'current', 'ma', 'ua')).toBeCloseTo(1000, 5);
+      // 1 kA = 1,000 A
+      expect(convertUnits(1, 'current', 'ka', 'a')).toBe(1000);
+      // 5,000 mAh = 5 Ah
+      expect(convertUnits(5000, 'current', 'mah', 'ah')).toBe(5);
+      // 20 Ah = 20,000 mAh
+      expect(convertUnits(20, 'current', 'ah', 'mah')).toBe(20000);
+      // 1 abA = 10 A
+      expect(convertUnits(1, 'current', 'ab_a', 'a')).toBe(10);
+      // 1 A = 0.1 abA
+      expect(convertUnits(1, 'current', 'a', 'ab_a')).toBe(0.1);
+      // statA conversion
+      expect(convertUnits(1, 'current', 'ab_a', 'stat_a')).toBeCloseTo(29979245800, -2);
+    });
+
+    test('Illuminance conversions (lx, fc, ph, nox, klx)', () => {
+      // 1 fc ≈ 10.76391 lx
+      expect(convertUnits(1, 'illuminance', 'fc', 'lx')).toBeCloseTo(10.76391, 4);
+      // 10.76391 lx ≈ 1 fc
+      expect(convertUnits(10.76391, 'illuminance', 'lx', 'fc')).toBeCloseTo(1, 4);
+      // 1 phot = 10,000 lx
+      expect(convertUnits(1, 'illuminance', 'ph', 'lx')).toBe(10000);
+      // 1 nox = 0.001 lx (1 millilux)
+      expect(convertUnits(1, 'illuminance', 'nox', 'lx')).toBe(0.001);
+      // 1 klx = 1,000 lx
+      expect(convertUnits(1, 'illuminance', 'klx', 'lx')).toBe(1000);
+      // 100 klx = 100,000 lx (direct sunlight)
+      expect(convertUnits(100, 'illuminance', 'klx', 'lx')).toBe(100000);
+    });
+
+    test('Formula generation for electric current and illuminance', () => {
+      const currentFormula = getFormulaDetails('current', 'a', 'ma');
+      expect(currentFormula.equation).toBe('mA = A × 1000');
+
+      const illuminanceFormula = getFormulaDetails('illuminance', 'klx', 'lx');
+      expect(illuminanceFormula.equation).toBe('lx = klx × 1000');
+    });
+  });
+
+  describe('Kitchen Studio Native Conversion Engine', () => {
+    test('getCategory retrieves both engineering domains and kitchen staples', () => {
+      expect(getCategory('length')?.name).toBe('Length & Distance');
+      expect(getCategory('flour_ap')?.name).toBe('All-Purpose Flour');
+      expect(getCategory('butter')?.name).toBe('Butter');
+      expect(getCategory('sugar_granulated')?.name).toBe('Granulated Sugar');
+      expect(getCategory('unknown_xyz')).toBeNull();
+    });
+
+    test('getUnitsForCategory returns units for kitchen ingredients', () => {
+      const flourUnits = getUnitsForCategory('flour_ap');
+      expect(flourUnits.length).toBeGreaterThanOrEqual(10);
+      expect(flourUnits.some((u) => u.id === 'cup_us')).toBe(true);
+      expect(flourUnits.some((u) => u.id === 'g')).toBe(true);
+      expect(flourUnits.some((u) => u.id === 'oz')).toBe(true);
+    });
+
+    test('convertUnits natively converts volume to weight with exact density factors', () => {
+      // 1 US Cup All-Purpose Flour = 120 grams
+      expect(convertUnits(1, 'flour_ap', 'cup_us', 'g')).toBe(120);
+      // 240 grams flour = 2 cups
+      expect(convertUnits(240, 'flour_ap', 'g', 'cup_us')).toBe(2);
+      // 1 cup sugar = 200 grams
+      expect(convertUnits(1, 'sugar_granulated', 'cup_us', 'g')).toBe(200);
+      // 1 stick butter = 113.398 grams = 8 tbsp = 0.5 cups
+      expect(convertUnits(1, 'butter', 'stick_butter', 'tbsp_us')).toBeCloseTo(8, 2);
+      expect(convertUnits(1, 'butter', 'stick_butter', 'cup_us')).toBeCloseTo(0.5, 2);
+    });
+
+    test('getFormulaDetails produces clean formula for kitchen conversions', () => {
+      const details = getFormulaDetails('flour_ap', 'cup_us', 'g');
+      expect(details.equation).toContain('g =');
+    });
+  });
+});
+
+

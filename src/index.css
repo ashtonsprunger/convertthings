@@ -123,6 +123,34 @@
   --cat-cooking-light: rgba(245, 158, 11, 0.12);
   --cat-cooking-glow: rgba(245, 158, 11, 0.25);
 
+  --cat-frequency: #06b6d4;
+  --cat-frequency-light: rgba(6, 182, 212, 0.12);
+  --cat-frequency-glow: rgba(6, 182, 212, 0.25);
+
+  --cat-torque: #d97706;
+  --cat-torque-light: rgba(217, 119, 6, 0.12);
+  --cat-torque-glow: rgba(217, 119, 6, 0.25);
+
+  --cat-force: #e11d48;
+  --cat-force-light: rgba(225, 29, 72, 0.12);
+  --cat-force-glow: rgba(225, 29, 72, 0.25);
+
+  --cat-flow_rate: #0284c7;
+  --cat-flow_rate-light: rgba(2, 132, 199, 0.12);
+  --cat-flow_rate-glow: rgba(2, 132, 199, 0.25);
+
+  --cat-typography: #8b5cf6;
+  --cat-typography-light: rgba(139, 92, 246, 0.12);
+  --cat-typography-glow: rgba(139, 92, 246, 0.25);
+
+  --cat-current-brand: #84cc16;
+  --cat-current-brand-light: rgba(132, 204, 22, 0.12);
+  --cat-current-brand-glow: rgba(132, 204, 22, 0.25);
+
+  --cat-illuminance: #f59e0b;
+  --cat-illuminance-light: rgba(245, 158, 11, 0.12);
+  --cat-illuminance-glow: rgba(245, 158, 11, 0.25);
+
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 18px;

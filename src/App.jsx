@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   CATEGORIES,
+  KITCHEN_CATEGORIES,
+  isKitchenCategory,
   getUnit,
   convertUnits,
   formatNumber,
@@ -9,11 +11,11 @@ import {
   isCompoundLike,
   parseCompoundValue,
 } from './engine/conversions';
-import { parseRoute, formatRoutePath, VALID_PRECISIONS } from './engine/urlRouter';
+import { parseRoute, formatRoutePath, getHubRoute, VALID_PRECISIONS } from './engine/urlRouter';
 import { getSeoMetadata } from './engine/seo';
+import { convertCulinary, isCulinaryMassUnit, CULINARY_MASS_UNITS } from './engine/culinary';
 import { Header } from './components/Header';
 import { CategoryNav } from './components/CategoryNav';
-import { FavoritesBar } from './components/FavoritesBar';
 import { ConversionCard } from './components/ConversionCard';
 import { ConversionTable } from './components/ConversionTable';
 import { ConversionHistory } from './components/ConversionHistory';
@@ -38,7 +40,9 @@ function getSavedCategoryUnits(catId) {
     const data = JSON.parse(raw);
     const pref = data?.[catId];
     if (pref && typeof pref === 'object' && pref.fromUnitId && pref.toUnitId) {
-      if (getUnit(catId, pref.fromUnitId) && getUnit(catId, pref.toUnitId)) {
+      const fromValid = getUnit(catId, pref.fromUnitId) || (catId === 'cooking' && isCulinaryMassUnit(pref.fromUnitId));
+      const toValid = getUnit(catId, pref.toUnitId) || (catId === 'cooking' && isCulinaryMassUnit(pref.toUnitId));
+      if (fromValid && toValid) {
         return { fromUnitId: pref.fromUnitId, toUnitId: pref.toUnitId };
       }
     }
@@ -51,7 +55,9 @@ function getSavedCategoryUnits(catId) {
 function saveCategoryUnits(catId, fromId, toId) {
   try {
     if (typeof window === 'undefined') return;
-    if (!getUnit(catId, fromId) || !getUnit(catId, toId)) return;
+    const fromValid = getUnit(catId, fromId) || (catId === 'cooking' && isCulinaryMassUnit(fromId));
+    const toValid = getUnit(catId, toId) || (catId === 'cooking' && isCulinaryMassUnit(toId));
+    if (!fromValid || !toValid) return;
     const raw = window.localStorage.getItem(CATEGORY_UNITS_STORAGE_KEY);
     const data = raw ? JSON.parse(raw) : {};
     data[catId] = { fromUnitId: fromId, toUnitId: toId };
@@ -79,6 +85,8 @@ function App() {
                 toUnitId: savedUnits.toUnitId,
                 isRoot: false,
                 isCategoryPage: true,
+                isHubPage: false,
+                hubId: null,
               };
             }
           }
@@ -86,6 +94,8 @@ function App() {
             ...parsed,
             isRoot: false,
             isCategoryPage: !!parsed.isCategoryPage,
+            isHubPage: !!parsed.isHubPage,
+            hubId: parsed.hubId || null,
           };
         }
       }
@@ -100,12 +110,18 @@ function App() {
       fromValue: '1',
       isRoot: true,
       isCategoryPage: false,
+      isHubPage: false,
+      hubId: null,
     };
   };
 
   const getInitialPrecision = () => {
     try {
       if (typeof window !== 'undefined') {
+        const parsed = parseRoute(window.location.pathname, window.location.search);
+        if (parsed && parsed.precision && VALID_PRECISIONS.includes(parsed.precision.toLowerCase())) {
+          return parsed.precision.toLowerCase();
+        }
         const params = new URLSearchParams(window.location.search);
         const queryP = params.get('p') || params.get('prec');
         if (queryP && VALID_PRECISIONS.includes(queryP.toLowerCase())) {
@@ -113,8 +129,8 @@ function App() {
         }
         const item = window.localStorage.getItem('ct-precision');
         if (item) {
-          const parsed = JSON.parse(item);
-          if (VALID_PRECISIONS.includes(parsed)) return parsed;
+          const parsedItem = JSON.parse(item);
+          if (VALID_PRECISIONS.includes(parsedItem)) return parsedItem;
         }
       }
     } catch (e) {
@@ -127,14 +143,13 @@ function App() {
     try {
       if (typeof window !== 'undefined') {
         const parsed = parseRoute(window.location.pathname, window.location.search);
-        if (parsed && parsed.categoryId === 'cooking') {
-          // If explicit ?kitchen=1 query param was passed, obey it!
+        if (parsed) {
           if (parsed.isKitchenMode !== undefined) {
             return parsed.isKitchenMode;
           }
-          // If category landing page (/cooking), Kitchen Mode is ON (true)
-          // If pair path (/convert/...-to-...), it has an explicit "to", so Kitchen Mode is OFF (false)
-          return !!parsed.isCategoryPage;
+          if (parsed.categoryId === 'cooking') {
+            return !!parsed.isCategoryPage;
+          }
         }
       }
     } catch (e) {
@@ -143,17 +158,53 @@ function App() {
     return true;
   };
 
+  const getInitialIngredient = () => {
+    try {
+      if (typeof window !== 'undefined') {
+        const parsed = parseRoute(window.location.pathname, window.location.search);
+        if (parsed && parsed.ingredient) {
+          return parsed.ingredient;
+        }
+        const params = new URLSearchParams(window.location.search);
+        const ing = params.get('ing') || params.get('ingredient');
+        if (ing) return ing.trim().toLowerCase();
+      }
+    } catch (e) {
+      // ignore
+    }
+    return 'liquid';
+  };
+
   const initial = getInitialState();
   const initialPrecision = getInitialPrecision();
+  const [isKitchenStudio, setIsKitchenStudio] = useState(initial.isKitchenStudio ?? false);
   const [kitchenMode, setKitchenMode] = useState(getInitialKitchenMode);
+  const [culinaryIngredient, setCulinaryIngredient] = useState(getInitialIngredient);
   const [isRoot, setIsRoot] = useState(initial.isRoot ?? false);
   const [isCategoryPage, setIsCategoryPage] = useState(initial.isCategoryPage ?? false);
+  const [isHubPage, setIsHubPage] = useState(initial.isHubPage ?? false);
+  const [hubId, setHubId] = useState(initial.hubId || null);
   const [categoryId, setCategoryId] = useState(initial.categoryId);
   const [fromUnitId, setFromUnitId] = useState(initial.fromUnitId);
   const [toUnitId, setToUnitId] = useState(initial.toUnitId);
   const [fromValue, setFromValue] = useState(initial.fromValue);
   const [toValue, setToValue] = useState(() => {
-    const res = convertUnits(initial.fromValue, initial.categoryId, initial.fromUnitId, initial.toUnitId);
+    let numInitial;
+    if (typeof initial.fromValue === 'string' && isCompoundLike(initial.fromValue)) {
+      const compVal = parseCompoundValue(initial.fromValue, initial.categoryId, initial.fromUnitId);
+      if (compVal !== null && !isNaN(compVal)) {
+        numInitial = compVal;
+      }
+    }
+    if (numInitial === undefined) {
+      numInitial = typeof initial.fromValue === 'string' && isFractionLike(initial.fromValue)
+        ? parseFractionString(initial.fromValue)
+        : Number(initial.fromValue);
+    }
+    if (isNaN(numInitial)) return '';
+    const res = initial.categoryId === 'cooking'
+      ? convertCulinary(numInitial, initial.fromUnitId, initial.toUnitId, getInitialIngredient())
+      : convertUnits(numInitial, initial.categoryId, initial.fromUnitId, initial.toUnitId);
     return res !== null ? formatNumber(res, initialPrecision, initial.categoryId) : '';
   });
   const [lastEdited, setLastEdited] = useState('from');
@@ -193,24 +244,35 @@ function App() {
 
   // Recalculate toValue when fromValue, units, or precision changes
   const performCalculation = useCallback(
-    (val, catId, fUnitId, tUnitId, prec) => {
+    (val, catId, fUnitId, tUnitId, prec, ing = culinaryIngredient) => {
       if (val === '' || val === null) {
         setToValue('');
         return;
       }
-      let numVal = typeof val === 'string' && isFractionLike(val)
-        ? parseFractionString(val)
-        : Number(val);
-
-      if (isNaN(numVal) && typeof val === 'string' && isCompoundLike(val)) {
+      let numVal;
+      if (typeof val === 'string' && isCompoundLike(val)) {
         const compVal = parseCompoundValue(val, catId, fUnitId);
         if (compVal !== null && !isNaN(compVal)) {
           numVal = compVal;
         }
       }
+      if (numVal === undefined) {
+        numVal = typeof val === 'string' && isFractionLike(val)
+          ? parseFractionString(val)
+          : Number(val);
+      }
 
       if (isNaN(numVal)) {
         setToValue('');
+        return;
+      }
+      if (catId === 'cooking') {
+        const result = convertCulinary(numVal, fUnitId, tUnitId, ing || 'liquid');
+        if (result !== null) {
+          setToValue(formatNumber(result, prec, catId));
+        } else {
+          setToValue('');
+        }
         return;
       }
       const result = convertUnits(numVal, catId, fUnitId, tUnitId);
@@ -220,7 +282,7 @@ function App() {
         setToValue('');
       }
     },
-    []
+    [culinaryIngredient]
   );
 
   // Record conversion to history safely (debounced)
@@ -230,9 +292,9 @@ function App() {
       const numF = typeof fVal === 'string' && fVal.includes('/') ? parseFractionString(fVal) : Number(fVal);
       if (isNaN(numF)) return;
 
-      const fUnit = getUnit(catId, fUnitId);
-      const tUnit = getUnit(catId, tUnitId);
-      const cat = CATEGORIES.find((c) => c.id === catId);
+      const fUnit = getUnit(catId, fUnitId) || (catId === 'cooking' ? CULINARY_MASS_UNITS.find((u) => u.id === fUnitId) : null);
+      const tUnit = getUnit(catId, tUnitId) || (catId === 'cooking' ? CULINARY_MASS_UNITS.find((u) => u.id === tUnitId) : null);
+      const cat = CATEGORIES.find((c) => c.id === catId) || KITCHEN_CATEGORIES.find((k) => k.id === catId);
 
       if (!fUnit || !tUnit || !cat) return;
 
@@ -248,6 +310,7 @@ function App() {
           fromSymbol: fUnit.symbol,
           toSymbol: tUnit.symbol,
           timestamp: Date.now(),
+          ingredient: catId === 'cooking' ? culinaryIngredient : undefined,
         };
 
         // Filter out identical immediate predecessor
@@ -257,14 +320,15 @@ function App() {
               h.categoryId === catId &&
               h.fromUnitId === fUnitId &&
               h.toUnitId === tUnitId &&
-              h.fromValue === fVal
+              h.fromValue === fVal &&
+              h.ingredient === item.ingredient
             )
         );
 
         return [item, ...filtered].slice(0, 10);
       });
     },
-    [setHistory]
+    [setHistory, culinaryIngredient]
   );
 
   // Sync to URL parameters & Document Title for SEO
@@ -295,6 +359,7 @@ function App() {
 
         // Meta Description update
         setMetaTag('meta[name="description"]', 'name', 'description', seo.description);
+        setMetaTag('meta[name="robots"]', 'name', 'robots', seo.robots || 'index, follow');
 
         // Open Graph tags
         setMetaTag('meta[property="og:title"]', 'property', 'og:title', seo.ogTitle);
@@ -322,6 +387,48 @@ function App() {
         return;
       }
 
+      // 1.5 Dedicated Kitchen Studio Landing Page (/kitchen)
+      if (isKitchenStudio) {
+        const seo = getSeoMetadata({
+          categoryId: 'cooking',
+          isCategoryPage: true,
+          isKitchenStudio: true,
+        });
+
+        document.title = seo.title;
+        setMetaTag('meta[name="description"]', 'name', 'description', seo.description);
+        setMetaTag('meta[name="robots"]', 'name', 'robots', seo.robots || 'index, follow');
+        setMetaTag('meta[property="og:title"]', 'property', 'og:title', seo.ogTitle);
+        setMetaTag('meta[property="og:description"]', 'property', 'og:description', seo.ogDescription);
+        setMetaTag('meta[property="og:url"]', 'property', 'og:url', seo.canonicalUrl);
+        setMetaTag('meta[name="twitter:title"]', 'name', 'twitter:title', seo.ogTitle);
+        setMetaTag('meta[name="twitter:description"]', 'name', 'twitter:description', seo.ogDescription);
+
+        let canonical = document.querySelector('link[rel="canonical"]');
+        if (!canonical) {
+          canonical = document.createElement('link');
+          canonical.rel = 'canonical';
+          document.head.appendChild(canonical);
+        }
+        canonical.href = seo.canonicalUrl;
+
+        const targetUrl = formatRoutePath(
+          'cooking',
+          fromUnitId,
+          toUnitId,
+          fromValue,
+          precision,
+          kitchenMode,
+          null,
+          culinaryIngredient,
+          true
+        );
+        if (window.location.pathname + (window.location.search || '') !== targetUrl) {
+          window.history.replaceState({}, '', targetUrl);
+        }
+        return;
+      }
+
       // 2. Category Landing Page (e.g. /mass, /area, /cooking)
       if (isCategoryPage) {
         const seo = getSeoMetadata({
@@ -334,6 +441,7 @@ function App() {
 
         // Meta Description update
         setMetaTag('meta[name="description"]', 'name', 'description', seo.description);
+        setMetaTag('meta[name="robots"]', 'name', 'robots', seo.robots || 'index, follow');
 
         // Open Graph tags
         setMetaTag('meta[property="og:title"]', 'property', 'og:title', seo.ogTitle);
@@ -362,8 +470,55 @@ function App() {
         return;
       }
 
-      const fromUnit = getUnit(categoryId, fromUnitId);
-      const toUnit = getUnit(categoryId, toUnitId);
+      // 3. Dedicated High-Intent Hub Pages (e.g. /convert/feet-inches-to-cm, /convert/fraction-inches-to-mm, /convert/baking-fractions)
+      if (isHubPage && hubId) {
+        const hub = getHubRoute(hubId);
+        if (hub && hub.categoryId === categoryId && hub.fromUnitId === fromUnitId && hub.toUnitId === toUnitId) {
+          const seo = getSeoMetadata({
+            hubId,
+            value: fromValue,
+          });
+
+          document.title = seo.title;
+          setMetaTag('meta[name="description"]', 'name', 'description', seo.description);
+          setMetaTag('meta[name="robots"]', 'name', 'robots', seo.robots || 'index, follow');
+          setMetaTag('meta[property="og:title"]', 'property', 'og:title', seo.ogTitle);
+          setMetaTag('meta[property="og:description"]', 'property', 'og:description', seo.ogDescription);
+          setMetaTag('meta[property="og:url"]', 'property', 'og:url', seo.canonicalUrl);
+          setMetaTag('meta[name="twitter:title"]', 'name', 'twitter:title', seo.ogTitle);
+          setMetaTag('meta[name="twitter:description"]', 'name', 'twitter:description', seo.ogDescription);
+
+          let canonical = document.querySelector('link[rel="canonical"]');
+          if (!canonical) {
+            canonical = document.createElement('link');
+            canonical.rel = 'canonical';
+            document.head.appendChild(canonical);
+          }
+          canonical.href = seo.canonicalUrl;
+
+          const routePath = formatRoutePath(
+            categoryId,
+            fromUnitId,
+            toUnitId,
+            fromValue,
+            precision,
+            categoryId === 'cooking' ? kitchenMode : false,
+            hubId,
+            categoryId === 'cooking' ? culinaryIngredient : null
+          );
+
+          if (window.location.pathname + (window.location.search || '') !== routePath) {
+            window.history.replaceState({}, '', routePath);
+          }
+          return;
+        } else {
+          setIsHubPage(false);
+          setHubId(null);
+        }
+      }
+
+      const fromUnit = getUnit(categoryId, fromUnitId) || (categoryId === 'cooking' ? CULINARY_MASS_UNITS.find((u) => u.id === fromUnitId) : null);
+      const toUnit = getUnit(categoryId, toUnitId) || (categoryId === 'cooking' ? CULINARY_MASS_UNITS.find((u) => u.id === toUnitId) : null);
 
       if (fromUnit && toUnit) {
         const seo = getSeoMetadata({
@@ -378,6 +533,7 @@ function App() {
 
         // Meta Description update
         setMetaTag('meta[name="description"]', 'name', 'description', seo.description);
+        setMetaTag('meta[name="robots"]', 'name', 'robots', seo.robots || 'index, follow');
 
         // Open Graph tags
         setMetaTag('meta[property="og:title"]', 'property', 'og:title', seo.ogTitle);
@@ -395,7 +551,9 @@ function App() {
           toUnitId,
           fromValue,
           precision,
-          categoryId === 'cooking' ? kitchenMode : false
+          categoryId === 'cooking' ? kitchenMode : false,
+          null,
+          categoryId === 'cooking' ? culinaryIngredient : null
         );
 
         // Update Canonical Link tag for search bots (always clean!)
@@ -415,7 +573,7 @@ function App() {
     } catch (e) {
       // ignore
     }
-  }, [isRoot, isCategoryPage, categoryId, fromUnitId, toUnitId, fromValue, precision, kitchenMode]);
+  }, [isRoot, isKitchenStudio, isCategoryPage, isHubPage, hubId, categoryId, fromUnitId, toUnitId, fromValue, precision, kitchenMode, culinaryIngredient]);
 
   // Listen for browser Back / Forward history navigation
   useEffect(() => {
@@ -439,6 +597,7 @@ function App() {
           const rootFrom = savedLengthUnits?.fromUnitId || 'm';
           const rootTo = savedLengthUnits?.toUnitId || 'ft';
           setIsRoot(true);
+          setIsKitchenStudio(false);
           setIsCategoryPage(false);
           setCategoryId('length');
           setFromUnitId(rootFrom);
@@ -450,7 +609,10 @@ function App() {
         const parsed = parseRoute(pathname, window.location.search);
         if (parsed) {
           setIsRoot(false);
+          setIsKitchenStudio(!!parsed.isKitchenStudio);
           setIsCategoryPage(!!parsed.isCategoryPage);
+          setIsHubPage(!!parsed.isHubPage);
+          setHubId(parsed.hubId || null);
 
           let nextCat = parsed.categoryId;
           let nextFrom = parsed.fromUnitId;
@@ -473,7 +635,9 @@ function App() {
           }
 
           setCategoryId(nextCat);
+          let nextIng = parsed.ingredient || 'liquid';
           if (nextCat === 'cooking') {
+            setCulinaryIngredient(nextIng);
             if (parsed.isKitchenMode !== undefined) {
               setKitchenMode(parsed.isKitchenMode);
             } else {
@@ -483,7 +647,7 @@ function App() {
           setFromUnitId(nextFrom);
           setToUnitId(nextTo);
           setFromValue(nextVal);
-          performCalculation(nextVal, nextCat, nextFrom, nextTo, effectivePrec);
+          performCalculation(nextVal, nextCat, nextFrom, nextTo, effectivePrec, nextIng);
         }
       } catch (e) {
         // ignore
@@ -500,7 +664,10 @@ function App() {
     const rootFrom = savedLengthUnits?.fromUnitId || 'm';
     const rootTo = savedLengthUnits?.toUnitId || 'ft';
     setIsRoot(true);
+    setIsKitchenStudio(false);
     setIsCategoryPage(false);
+    setIsHubPage(false);
+    setHubId(null);
     setCategoryId('length');
     setFromUnitId(rootFrom);
     setToUnitId(rootTo);
@@ -538,17 +705,22 @@ function App() {
     // Queue history recording
     if (historyTimeoutRef.current) clearTimeout(historyTimeoutRef.current);
     historyTimeoutRef.current = setTimeout(() => {
-      let numVal = typeof newVal === 'string' && isFractionLike(newVal)
-        ? parseFractionString(newVal)
-        : Number(newVal);
-      if (isNaN(numVal) && typeof newVal === 'string' && isCompoundLike(newVal)) {
+      let numVal;
+      if (typeof newVal === 'string' && isCompoundLike(newVal)) {
         const compVal = parseCompoundValue(newVal, categoryId, fromUnitId);
         if (compVal !== null && !isNaN(compVal)) {
           numVal = compVal;
         }
       }
-      if (!isNaN(numVal)) {
-        const res = convertUnits(numVal, categoryId, fromUnitId, toUnitId);
+      if (numVal === undefined) {
+        numVal = typeof newVal === 'string' && isFractionLike(newVal)
+          ? parseFractionString(newVal)
+          : Number(newVal);
+      }
+      if (numVal !== undefined && !isNaN(numVal)) {
+        const res = categoryId === 'cooking'
+          ? convertCulinary(numVal, fromUnitId, toUnitId, culinaryIngredient)
+          : convertUnits(numVal, categoryId, fromUnitId, toUnitId);
         if (res !== null) {
           recordHistory(categoryId, fromUnitId, toUnitId, newVal, formatNumber(res, precision, categoryId));
         }
@@ -556,7 +728,7 @@ function App() {
     }, 1200);
   };
 
-  // Handle To Value changes (Reverse calculation)
+  // Handle To Value changes (reverse conversion)
   const handleToValueChange = (newVal) => {
     setIsRoot(false);
     setIsCategoryPage(false);
@@ -573,11 +745,20 @@ function App() {
       }
       return;
     }
-    const numVal = typeof newVal === 'string' && isFractionLike(newVal)
-      ? parseFractionString(newVal)
-      : Number(newVal);
+    let numVal;
+    if (typeof newVal === 'string' && isCompoundLike(newVal)) {
+      const compVal = parseCompoundValue(newVal, categoryId, toUnitId);
+      if (compVal !== null && !isNaN(compVal)) {
+        numVal = compVal;
+      }
+    }
+    if (numVal === undefined) {
+      numVal = typeof newVal === 'string' && isFractionLike(newVal)
+        ? parseFractionString(newVal)
+        : Number(newVal);
+    }
 
-    if (isNaN(numVal)) {
+    if (numVal === undefined || isNaN(numVal)) {
       setFromValue('');
       if (sessionStateRef.current) {
         sessionStateRef.current[categoryId] = {
@@ -588,7 +769,9 @@ function App() {
       }
       return;
     }
-    const reverseRes = convertUnits(numVal, categoryId, toUnitId, fromUnitId);
+    const reverseRes = categoryId === 'cooking'
+      ? convertCulinary(numVal, toUnitId, fromUnitId, culinaryIngredient)
+      : convertUnits(numVal, categoryId, toUnitId, fromUnitId);
     if (reverseRes !== null) {
       const formatted = formatNumber(reverseRes, precision, categoryId);
       setFromValue(formatted);
@@ -615,7 +798,10 @@ function App() {
     if (!catDef) return;
 
     setIsRoot(false);
+    setIsKitchenStudio(false);
     setIsCategoryPage(true);
+    setIsHubPage(false);
+    setHubId(null);
     setLastEdited('from');
     setCategoryId(newCatId);
     if (newCatId === 'cooking') {
@@ -669,12 +855,21 @@ function App() {
   const handleFromUnitChange = (newFromId) => {
     setIsRoot(false);
     setIsCategoryPage(false);
+    if (isHubPage && hubId) {
+      const hub = getHubRoute(hubId);
+      if (!hub || hub.fromUnitId !== newFromId) {
+        setIsHubPage(false);
+        setHubId(null);
+      }
+    }
     setFromUnitId(newFromId);
     saveCategoryUnits(categoryId, newFromId, toUnitId);
 
     let nextVal = fromValue;
     if (lastEdited === 'to' && toValue !== '' && toValue !== null && !isNaN(toValue)) {
-      const reverseRes = convertUnits(Number(toValue), categoryId, toUnitId, newFromId);
+      const reverseRes = categoryId === 'cooking'
+        ? convertCulinary(Number(toValue), toUnitId, newFromId, culinaryIngredient)
+        : convertUnits(Number(toValue), categoryId, toUnitId, newFromId);
       if (reverseRes !== null) {
         nextVal = formatNumber(reverseRes, precision, categoryId);
         setFromValue(nextVal);
@@ -696,6 +891,13 @@ function App() {
   const handleToUnitChange = (newToId) => {
     setIsRoot(false);
     setIsCategoryPage(false);
+    if (isHubPage && hubId) {
+      const hub = getHubRoute(hubId);
+      if (!hub || hub.toUnitId !== newToId) {
+        setIsHubPage(false);
+        setHubId(null);
+      }
+    }
     setToUnitId(newToId);
     saveCategoryUnits(categoryId, fromUnitId, newToId);
     performCalculation(fromValue, categoryId, fromUnitId, newToId, precision);
@@ -718,6 +920,13 @@ function App() {
     const nextFrom = toUnitId;
     const nextTo = fromUnitId;
     const nextVal = (toValue !== '' && toValue !== null) ? toValue : fromValue;
+    if (isHubPage && hubId) {
+      const hub = getHubRoute(hubId);
+      if (!hub || hub.fromUnitId !== nextFrom || hub.toUnitId !== nextTo) {
+        setIsHubPage(false);
+        setHubId(null);
+      }
+    }
     setFromUnitId(nextFrom);
     setToUnitId(nextTo);
     setFromValue(nextVal);
@@ -751,7 +960,9 @@ function App() {
           ? parseFractionString(toValue)
           : Number(toValue);
         if (!isNaN(numVal)) {
-          const reverseRes = convertUnits(numVal, categoryId, toUnitId, fromUnitId);
+          const reverseRes = categoryId === 'cooking'
+            ? convertCulinary(numVal, toUnitId, fromUnitId, culinaryIngredient)
+            : convertUnits(numVal, categoryId, toUnitId, fromUnitId);
           if (reverseRes !== null) {
             const formatted = formatNumber(reverseRes, newPrec, categoryId);
             setFromValue(formatted);
@@ -771,17 +982,118 @@ function App() {
     }
   };
 
+  // Change culinary ingredient
+  const handleSelectCulinaryIngredient = (newIngId) => {
+    setCulinaryIngredient(newIngId);
+    let nextFrom = fromUnitId;
+    let nextTo = toUnitId;
+    if (newIngId !== 'liquid') {
+      // If switching to an ingredient and both units are volume, switch toUnitId to grams for immediate baking scale utility
+      if (!isCulinaryMassUnit(fromUnitId) && !isCulinaryMassUnit(toUnitId)) {
+        nextTo = 'g';
+        setToUnitId('g');
+        saveCategoryUnits('cooking', fromUnitId, 'g');
+      }
+    } else {
+      // If switching back to liquid and any unit is mass, restore volume defaults
+      if (isCulinaryMassUnit(fromUnitId)) {
+        nextFrom = 'cup_us';
+        setFromUnitId('cup_us');
+      }
+      if (isCulinaryMassUnit(toUnitId)) {
+        nextTo = 'tbsp_us';
+        setToUnitId('tbsp_us');
+      }
+      saveCategoryUnits('cooking', nextFrom, nextTo);
+    }
+    performCalculation(fromValue, 'cooking', nextFrom, nextTo, precision, newIngId);
+  };
+
+  // Open Dedicated Kitchen Studio (/kitchen)
+  const handleOpenKitchenStudio = (ingredientId = 'flour_ap') => {
+    const staple = KITCHEN_CATEGORIES.find((k) => k.id === ingredientId) || KITCHEN_CATEGORIES[0];
+    const catId = staple.id;
+    setIsKitchenStudio(true);
+    setIsRoot(false);
+    setIsCategoryPage(true);
+    setIsHubPage(false);
+    setHubId(null);
+    setCategoryId(catId);
+    setCulinaryIngredient(catId);
+
+    const nextFrom = staple.defaultFrom || 'cup_us';
+    const nextTo = staple.defaultTo || 'g';
+
+    setFromUnitId(nextFrom);
+    setToUnitId(nextTo);
+    setFromValue('1');
+    setKitchenMode(catId === 'liquid' || catId === 'water');
+    saveCategoryUnits(catId, nextFrom, nextTo);
+    performCalculation('1', catId, nextFrom, nextTo, precision, catId);
+
+    const targetUrl = catId === 'flour_ap' || catId === 'liquid' ? '/kitchen' : `/kitchen?ing=${catId}`;
+    if (typeof window !== 'undefined' && window.location.pathname + (window.location.search || '') !== targetUrl) {
+      window.history.pushState({}, '', targetUrl);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Exit Kitchen Studio to Standard Converters
+  const handleExitKitchenStudio = () => {
+    setIsKitchenStudio(false);
+    handleGoHome();
+  };
+
+  // Toggle Kitchen Studio mode
+  const handleToggleKitchenStudio = () => {
+    if (isKitchenStudio) {
+      handleExitKitchenStudio();
+    } else {
+      handleOpenKitchenStudio(culinaryIngredient && culinaryIngredient !== 'liquid' ? culinaryIngredient : 'flour_ap');
+    }
+  };
+
+  // Select a Kitchen Staple from the contextual shelf
+  const handleSelectKitchenStaple = (staple) => {
+    const stapleId = typeof staple === 'string' ? staple : staple.id;
+    const stapleDef = KITCHEN_CATEGORIES.find((k) => k.id === stapleId) || staple;
+    const nextFrom = stapleDef.defaultFrom || staple.fromUnit || 'cup_us';
+    const nextTo = stapleDef.defaultTo || staple.toUnit || 'g';
+    setCulinaryIngredient(stapleId);
+    setCategoryId(stapleId);
+    setFromUnitId(nextFrom);
+    setToUnitId(nextTo);
+    setKitchenMode(stapleId === 'liquid' || stapleId === 'water');
+    saveCategoryUnits(stapleId, nextFrom, nextTo);
+    performCalculation(fromValue || '1', stapleId, nextFrom, nextTo, precision, stapleId);
+
+    const targetUrl = stapleId === 'flour_ap' ? '/kitchen' : `/kitchen?ing=${stapleId}`;
+    if (typeof window !== 'undefined' && window.location.pathname + (window.location.search || '') !== targetUrl) {
+      window.history.pushState({}, '', targetUrl);
+    }
+  };
+
   // Handle Natural Language / Omnibox selection
-  const handleSelectConversion = ({ categoryId: cId, fromUnitId: fId, toUnitId: tId, value: val, displayValue, hasExplicitValue, hasExplicitTo }) => {
+  const handleSelectConversion = ({ categoryId: cId, fromUnitId: fId, toUnitId: tId, value: val, displayValue, hasExplicitValue, hasExplicitTo, ingredient }) => {
     setIsRoot(false);
     setIsCategoryPage(false);
+    setIsHubPage(false);
+    setHubId(null);
     setLastEdited('from');
     setCategoryId(cId);
     setFromUnitId(fId);
     setToUnitId(tId);
-    if (cId === 'cooking') {
+    let nextIng = culinaryIngredient;
+    if (cId === 'cooking' || isKitchenCategory(cId)) {
+      nextIng = ingredient || (isKitchenCategory(cId) ? cId : (isCulinaryMassUnit(fId) || isCulinaryMassUnit(tId) ? (culinaryIngredient === 'liquid' ? 'flour_ap' : culinaryIngredient) : 'liquid'));
+      setCulinaryIngredient(nextIng);
       // Automatic rule: Searches with an explicit "to" navigate with kitchen mode OFF
       setKitchenMode(hasExplicitTo === false ? true : false);
+      if (ingredient || isKitchenCategory(cId) || isCulinaryMassUnit(fId) || isCulinaryMassUnit(tId)) {
+        setIsKitchenStudio(true);
+      }
+    } else {
+      setIsKitchenStudio(false);
     }
     const strVal = displayValue || (val !== undefined ? val.toString() : '1');
     setFromValue(strVal);
@@ -793,7 +1105,7 @@ function App() {
         toUnitId: tId,
       };
     }
-    performCalculation(strVal, cId, fId, tId, precision);
+    performCalculation(strVal, cId, fId, tId, precision, nextIng);
     const toastMsg = displayValue
       ? `Converted ${displayValue} to ${tId}`
       : `Converted ${strVal} ${fId} to ${tId}`;
@@ -876,6 +1188,11 @@ function App() {
     );
   };
 
+  const handleClearFavorites = () => {
+    setFavorites([]);
+    showToast('Favorites cleared');
+  };
+
   // Clipboard copy helper
   const copyToClipboard = async (text, successMsg = 'Copied to clipboard!') => {
     try {
@@ -938,6 +1255,8 @@ function App() {
         onSelectCategory={handleSelectCategory}
         history={history}
         favorites={favorites}
+        isKitchenStudio={isKitchenStudio}
+        onToggleKitchenStudio={handleToggleKitchenStudio}
       />
 
       <main className="ct-main">
@@ -950,17 +1269,12 @@ function App() {
             {/* Category Navigation Pills */}
             <CategoryNav
               activeCategoryId={categoryId}
+              categories={isKitchenStudio ? KITCHEN_CATEGORIES : CATEGORIES}
               onSelectCategory={handleSelectCategory}
-            />
-
-            {/* Favorites Bar */}
-            <FavoritesBar
-              favorites={favorites}
-              activeCategoryId={categoryId}
-              activeFromUnitId={fromUnitId}
-              activeToUnitId={toUnitId}
-              onSelectFavorite={handleSelectFavorite}
-              onRemoveFavorite={handleRemoveFavorite}
+              isKitchenStudio={isKitchenStudio}
+              activeIngredientId={culinaryIngredient}
+              onSelectKitchenStaple={handleSelectKitchenStaple}
+              onExitKitchenStudio={handleExitKitchenStudio}
             />
 
             <ConversionCard
@@ -970,6 +1284,8 @@ function App() {
               fromValue={fromValue}
               toValue={toValue}
               precision={precision}
+              culinaryIngredient={culinaryIngredient}
+              onSelectCulinaryIngredient={handleSelectCulinaryIngredient}
               kitchenMode={kitchenMode}
               onToggleKitchenMode={() => {
                 setKitchenMode((prev) => {
@@ -990,6 +1306,10 @@ function App() {
               onToggleFavorite={handleToggleFavorite}
               onCopy={handleCopyResult}
               onShare={handleShare}
+              favorites={favorites}
+              onSelectFavorite={handleSelectFavorite}
+              onRemoveFavorite={handleRemoveFavorite}
+              onClearFavorites={handleClearFavorites}
             />
           </div>
 
@@ -1007,9 +1327,12 @@ function App() {
           fromUnitId={fromUnitId}
           toUnitId={toUnitId}
           fromValue={fromValue}
+          hubId={isHubPage ? hubId : null}
           onSelectTargetUnit={(targetUnitId) => {
             setIsRoot(false);
             setIsCategoryPage(false);
+            setIsHubPage(false);
+            setHubId(null);
             if (categoryId === 'cooking') {
               setKitchenMode(false);
             }
@@ -1032,6 +1355,8 @@ function App() {
           onSelectHistory={(item) => {
             setIsRoot(false);
             setIsCategoryPage(false);
+            setIsHubPage(false);
+            setHubId(null);
             setCategoryId(item.categoryId);
             setFromUnitId(item.fromUnitId);
             setToUnitId(item.toUnitId);
@@ -1039,6 +1364,9 @@ function App() {
             setToValue(item.toValue);
             if (item.categoryId === 'cooking') {
               setKitchenMode(false);
+              if (item.ingredient) {
+                setCulinaryIngredient(item.ingredient);
+              }
             }
             saveCategoryUnits(item.categoryId, item.fromUnitId, item.toUnitId);
             if (sessionStateRef.current) {
@@ -1061,6 +1389,7 @@ function App() {
           categoryId={categoryId}
           fromUnitId={fromUnitId}
           toUnitId={toUnitId}
+          hubId={isHubPage ? hubId : null}
           onSelectPair={(catId, fUnitId, tUnitId) => {
             setIsRoot(false);
             setIsCategoryPage(false);

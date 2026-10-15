@@ -11,6 +11,8 @@ export function Header({
   onSelectCategory,
   history,
   favorites,
+  isKitchenStudio = false,
+  onToggleKitchenStudio,
 }) {
   const [isCategorySwitching, setIsCategorySwitching] = useState(false);
   const [exitCategory, setExitCategory] = useState(null);
@@ -176,6 +178,37 @@ export function Header({
         </div>
 
         <div className="ct-header-actions">
+          <div className="ct-mode-switcher" role="radiogroup" aria-label="Converter Mode">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={!isKitchenStudio}
+              className={`ct-mode-btn ${!isKitchenStudio ? 'active' : ''}`}
+              onClick={() => {
+                if (isKitchenStudio && onToggleKitchenStudio) onToggleKitchenStudio();
+              }}
+              title="Universal Physical & Engineering Unit Converters"
+              aria-label="Standard Converters Mode"
+            >
+              <Icon name="Ruler" size={14} />
+              <span className="ct-mode-btn-text">Standard</span>
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={isKitchenStudio}
+              className={`ct-mode-btn ${isKitchenStudio ? 'active is-kitchen' : ''}`}
+              onClick={() => {
+                if (!isKitchenStudio && onToggleKitchenStudio) onToggleKitchenStudio();
+              }}
+              title="Kitchen & Baking Ingredient Volume-to-Weight Studio"
+              aria-label="Kitchen Studio Mode"
+            >
+              <Icon name="ChefHat" size={14} />
+              <span className="ct-mode-btn-text">Kitchen</span>
+            </button>
+          </div>
+
           <button
             type="button"
             className="ct-btn-icon ct-theme-toggle-btn"

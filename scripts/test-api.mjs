@@ -112,7 +112,7 @@ async function runTests() {
     await unitsHandler(req, res);
     const { statusCode, responseData } = res._getData();
     assert(statusCode === 200, '/api/units returns 200');
-    assert(responseData.totalCategories === 15, `Returns 15 categories (got ${responseData.totalCategories})`);
+    assert(responseData.totalCategories === 22, `Returns 22 categories (got ${responseData.totalCategories})`);
   }
 
   // 5. Test /api/units with category filter

@@ -286,5 +286,28 @@ describe('Omnibox Component', () => {
     fireEvent.click(shortcut);
     expect(document.activeElement).toBe(input);
   });
+
+  test('displays semantic topic recommendations when searching trade phrases like gold', () => {
+    const handleConvert = jest.fn();
+    const { container } = render(
+      <Omnibox onSelectConversion={handleConvert} onSelectCategory={jest.fn()} />
+    );
+
+    const input = screen.getByRole('combobox');
+    fireEvent.change(input, { target: { value: 'gold' } });
+
+    // Expect suggestions to be rendered
+    const items = container.querySelectorAll('.ct-omnibox-item');
+    expect(items.length).toBeGreaterThanOrEqual(1);
+
+    // Click first item (Troy Ounce)
+    fireEvent.click(items[0]);
+    expect(handleConvert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        categoryId: 'mass',
+        fromUnitId: 'oz_t',
+      })
+    );
+  });
 });
 

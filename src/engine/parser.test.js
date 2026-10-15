@@ -67,6 +67,26 @@ describe('Smart Convert Search Parser Engine', () => {
       expect(res.fromUnit.id).toBe('km');
       expect(res.toUnit.id).toBe('mi');
     });
+
+    test('parses cubic yards queries and abbreviations', () => {
+      const res1 = parseConversionQuery('3 cubic yards to cubic feet');
+      expect(res1).not.toBeNull();
+      expect(res1.fromUnit.id).toBe('cuyd');
+      expect(res1.toUnit.id).toBe('cuft');
+      expect(res1.result).toBe(81);
+
+      const res2 = parseConversionQuery('54 cu ft to cu yd');
+      expect(res2).not.toBeNull();
+      expect(res2.fromUnit.id).toBe('cuft');
+      expect(res2.toUnit.id).toBe('cuyd');
+      expect(res2.result).toBe(2);
+
+      const res3 = parseConversionQuery('1 cu yd');
+      expect(res3).not.toBeNull();
+      expect(res3.fromUnit.id).toBe('cuyd');
+      expect(res3.toUnit.id).toBe('cuft');
+      expect(res3.result).toBe(27);
+    });
   });
 
   describe('Punctuation, Abbreviations, and Directional Symbols', () => {
@@ -385,6 +405,19 @@ describe('Smart Convert Search Parser Engine', () => {
       expect(heightMatch[0].equation.toUnit).toBe('Centimeters');
     });
 
+    test('generates instant match for fraction queries preserving displayValue string', () => {
+      const fracMatch = getSearchSuggestions('1/8 in to mm');
+      expect(fracMatch.length).toBe(1);
+      expect(fracMatch[0].type).toBe('conversion');
+      expect(fracMatch[0].payload.value).toBe(0.125);
+      expect(fracMatch[0].payload.displayValue).toBe('1/8');
+
+      // Also incomplete fraction query like "1/8 in"
+      const incFrac = getSearchSuggestions('1/8 in');
+      expect(incFrac.length).toBeGreaterThan(0);
+      expect(incFrac[0].payload.displayValue).toBe('1/8');
+    });
+
     test('generates suggestions for incomplete queries with domain icon and equation', () => {
       const suggestions = getSearchSuggestions('100 km to');
       expect(suggestions.length).toBeGreaterThan(0);
@@ -417,4 +450,402 @@ describe('Smart Convert Search Parser Engine', () => {
       expect(parseConversionQuery('km miles')?.hasExplicitValue).toBe(false);
     });
   });
+
+  describe('Phase 2 Natural Language Queries', () => {
+    test('parses specialized and common Phase 2 queries', () => {
+      // Troy ounces
+      const troyRes = parseConversionQuery('1 troy oz to g');
+      expect(troyRes).not.toBeNull();
+      expect(troyRes.fromUnit.id).toBe('oz_t');
+      expect(troyRes.toUnit.id).toBe('g');
+      expect(parseFloat(troyRes.result)).toBeCloseTo(31.1035, 2);
+
+      // Centiliters to Liters
+      const clRes = parseConversionQuery('100 cl to l');
+      expect(clRes).not.toBeNull();
+      expect(clRes.fromUnit.id).toBe('cl');
+      expect(clRes.toUnit.id).toBe('l');
+      expect(clRes.result).toBe(1);
+
+      // Metric cup to ml
+      const metricCupRes = parseConversionQuery('1 metric cup to ml');
+      expect(metricCupRes).not.toBeNull();
+      expect(metricCupRes.fromUnit.id).toBe('cup_metric');
+      expect(metricCupRes.result).toBe(250);
+
+      // Astronomical unit to km
+      const auRes = parseConversionQuery('1 au to km');
+      expect(auRes).not.toBeNull();
+      expect(auRes.fromUnit.id).toBe('au');
+      expect(parseFloat(auRes.result)).toBeCloseTo(149597870.7, 1);
+
+      // Mil to inches
+      const milRes = parseConversionQuery('1000 mil to in');
+      expect(milRes).not.toBeNull();
+      expect(milRes.fromUnit.id).toBe('mil');
+      expect(milRes.toUnit.id).toBe('in');
+      expect(parseFloat(milRes.result)).toBeCloseTo(1, 6);
+      expect(milRes.formattedResult).toBe('1');
+
+      // EV efficiency query
+      const evRes = parseConversionQuery('3 mi/kwh to kwh/100km');
+      expect(evRes).not.toBeNull();
+      expect(evRes.fromUnit.id).toBe('mi_kwh');
+      expect(evRes.toUnit.id).toBe('kwh_100km');
+      expect(parseFloat(evRes.result)).toBeCloseTo(20.71, 1);
+    });
+  });
+
+  describe('Phase 2.5 Omnibox Parity & Colloquial Aliases', () => {
+    test('parses natural conversion queries using trade colloquialisms', () => {
+      // Gold oz to grams
+      const goldOzRes = parseConversionQuery('1 gold oz to grams');
+      expect(goldOzRes).not.toBeNull();
+      expect(goldOzRes.fromUnit.id).toBe('oz_t');
+      expect(goldOzRes.toUnit.id).toBe('g');
+      expect(parseFloat(goldOzRes.result)).toBeCloseTo(31.1035, 2);
+
+      // Gold ounce in kg
+      const goldOunceRes = parseConversionQuery('10 gold ounce in kg');
+      expect(goldOunceRes).not.toBeNull();
+      expect(goldOunceRes.fromUnit.id).toBe('oz_t');
+      expect(goldOunceRes.toUnit.id).toBe('kg');
+      expect(parseFloat(goldOunceRes.result)).toBeCloseTo(0.311, 3);
+
+      // Single unit query: "gold oz"
+      const singleGoldOz = parseConversionQuery('gold oz');
+      expect(singleGoldOz).not.toBeNull();
+      expect(singleGoldOz.fromUnit.id).toBe('oz_t');
+      expect(singleGoldOz.toUnit.id).toBe('g');
+
+      // Equine horse hands
+      const horseRes = parseConversionQuery('16 hands to feet');
+      expect(horseRes).not.toBeNull();
+      expect(horseRes.fromUnit.id).toBe('hand');
+      expect(horseRes.toUnit.id).toBe('ft');
+      expect(parseFloat(horseRes.result)).toBeCloseTo(5.333, 2);
+
+      // Food calories
+      const calRes = parseConversionQuery('2000 food calories to kj');
+      expect(calRes).not.toBeNull();
+      expect(calRes.fromUnit.id).toBe('kcal');
+      expect(calRes.toUnit.id).toBe('kj');
+      expect(parseFloat(calRes.result)).toBeCloseTo(8368, 0);
+
+      // Tire pressure (psi)
+      const psiRes = parseConversionQuery('32 tire psi to bar');
+      expect(psiRes).not.toBeNull();
+      expect(psiRes.fromUnit.id).toBe('psi');
+      expect(psiRes.toUnit.id).toBe('bar');
+      expect(parseFloat(psiRes.result)).toBeCloseTo(2.206, 2);
+
+      // Machining thou
+      const thouRes = parseConversionQuery('10 thou to mm');
+      expect(thouRes).not.toBeNull();
+      expect(thouRes.fromUnit.id).toBe('mil');
+      expect(thouRes.toUnit.id).toBe('mm');
+      expect(parseFloat(thouRes.result)).toBeCloseTo(0.254, 3);
+    });
+
+    test('getSearchSuggestions returns semantic topic recommendations', () => {
+      // Searching "gold" returns Troy Ounce and Pennyweight
+      const goldSugg = getSearchSuggestions('gold');
+      expect(goldSugg.length).toBeGreaterThanOrEqual(1);
+      const hasTroy = goldSugg.some((s) => s.payload?.fromUnitId === 'oz_t');
+      expect(hasTroy).toBe(true);
+
+      // Searching "jewelry" returns jewelry-badged units
+      const jewelrySugg = getSearchSuggestions('jewelry');
+      expect(jewelrySugg.length).toBeGreaterThanOrEqual(1);
+      const jewelryUnits = jewelrySugg.map((s) => s.payload?.fromUnitId);
+      expect(jewelryUnits.some((id) => ['oz_t', 'dwt', 'ct'].includes(id))).toBe(true);
+
+      // Searching "astronomy" returns space units
+      const astroSugg = getSearchSuggestions('astronomy');
+      expect(astroSugg.length).toBeGreaterThanOrEqual(1);
+      const astroUnits = astroSugg.map((s) => s.payload?.fromUnitId);
+      expect(astroUnits.some((id) => ['au', 'ly', 'pc'].includes(id))).toBe(true);
+
+      // Searching "horse" returns Hand
+      const horseSugg = getSearchSuggestions('horse');
+      expect(horseSugg.length).toBeGreaterThanOrEqual(1);
+      expect(horseSugg.some((s) => s.payload?.fromUnitId === 'hand')).toBe(true);
+
+      // Searching "tire pressure" returns PSI
+      const tireSugg = getSearchSuggestions('tire pressure');
+      expect(tireSugg.length).toBeGreaterThanOrEqual(1);
+      expect(tireSugg.some((s) => s.payload?.fromUnitId === 'psi')).toBe(true);
+    });
+  });
+
+  describe('Phase 3 Natural Language & Intent Tests (Frequency & Torque)', () => {
+    test('parses frequency equations and colloquial terms', () => {
+      // 600 rpm to hz
+      const rpmRes = parseConversionQuery('600 rpm to hz');
+      expect(rpmRes).not.toBeNull();
+      expect(rpmRes.categoryId).toBe('frequency');
+      expect(rpmRes.fromUnit.id).toBe('rpm');
+      expect(rpmRes.toUnit.id).toBe('hz');
+      expect(rpmRes.result).toBe(10);
+
+      // 3.5 GHz in MHz
+      const ghzRes = parseConversionQuery('3.5 ghz in mhz');
+      expect(ghzRes).not.toBeNull();
+      expect(ghzRes.categoryId).toBe('frequency');
+      expect(ghzRes.fromUnit.id).toBe('ghz');
+      expect(ghzRes.toUnit.id).toBe('mhz');
+      expect(ghzRes.result).toBe(3500);
+
+      // Single unit query with complementary default (rpm -> hz)
+      const singleRpm = parseConversionQuery('1200 rpm');
+      expect(singleRpm).not.toBeNull();
+      expect(singleRpm.categoryId).toBe('frequency');
+      expect(singleRpm.fromUnit.id).toBe('rpm');
+      expect(singleRpm.toUnit.id).toBe('hz');
+      expect(singleRpm.result).toBe(20);
+    });
+
+    test('parses torque equations and disambiguates from length/energy', () => {
+      // 100 nm to ftlb (Newton-meters to Pound-feet)
+      const nmTorque = parseConversionQuery('100 nm to ftlb');
+      expect(nmTorque).not.toBeNull();
+      expect(nmTorque.categoryId).toBe('torque');
+      expect(nmTorque.fromUnit.id).toBe('nm');
+      expect(nmTorque.toUnit.id).toBe('ftlb');
+      expect(parseFloat(nmTorque.result)).toBeCloseTo(73.7562, 3);
+
+      // 100 ft-lb to nm
+      const ftlbTorque = parseConversionQuery('100 ft-lb to nm');
+      expect(ftlbTorque).not.toBeNull();
+      expect(ftlbTorque.categoryId).toBe('torque');
+      expect(ftlbTorque.fromUnit.id).toBe('ftlb');
+      expect(ftlbTorque.toUnit.id).toBe('nm');
+      expect(parseFloat(ftlbTorque.result)).toBeCloseTo(135.5818, 3);
+
+      // 15 ft-lbs in in-lbs
+      const inlbTorque = parseConversionQuery('15 ft-lbs in in-lbs');
+      expect(inlbTorque).not.toBeNull();
+      expect(inlbTorque.categoryId).toBe('torque');
+      expect(inlbTorque.fromUnit.id).toBe('ftlb');
+      expect(inlbTorque.toUnit.id).toBe('inlb');
+      expect(inlbTorque.result).toBe(180);
+    });
+
+    test('resolves frequency and torque category search intent', () => {
+      expect(findCategoryMatch('frequency')?.id).toBe('frequency');
+      expect(findCategoryMatch('torque')?.id).toBe('torque');
+      expect(findCategoryMatch('lug nut')?.id).toBe('torque');
+      expect(findCategoryMatch('hertz')?.id).toBe('frequency');
+    });
+  });
+
+  describe('Phase 4 Natural Language & Intent Tests (Force, Flow Rate, Typography)', () => {
+    test('parses force equations and units', () => {
+      // 100 n to lbf
+      const nRes = parseConversionQuery('100 n to lbf');
+      expect(nRes).not.toBeNull();
+      expect(nRes.categoryId).toBe('force');
+      expect(nRes.fromUnit.id).toBe('n');
+      expect(nRes.toUnit.id).toBe('lbf');
+      expect(parseFloat(nRes.result)).toBeCloseTo(22.4809, 3);
+
+      // 10 kn to lbf
+      const knRes = parseConversionQuery('10 kn to lbf');
+      expect(knRes).not.toBeNull();
+      expect(knRes.categoryId).toBe('force');
+      expect(knRes.fromUnit.id).toBe('kn');
+      expect(knRes.toUnit.id).toBe('lbf');
+      expect(parseFloat(knRes.result)).toBeCloseTo(2248.089, 2);
+
+      // 1 kip in kn
+      const kipRes = parseConversionQuery('1 kip in kn');
+      expect(kipRes).not.toBeNull();
+      expect(kipRes.categoryId).toBe('force');
+      expect(kipRes.fromUnit.id).toBe('kip');
+      expect(kipRes.toUnit.id).toBe('kn');
+      expect(parseFloat(kipRes.result)).toBeCloseTo(4.4482, 3);
+    });
+
+    test('parses volumetric flow rate equations (CFM, L/s, GPM)', () => {
+      // 100 cfm to l/s
+      const cfmRes = parseConversionQuery('100 cfm to l/s');
+      expect(cfmRes).not.toBeNull();
+      expect(cfmRes.categoryId).toBe('flow_rate');
+      expect(cfmRes.fromUnit.id).toBe('cfm');
+      expect(cfmRes.toUnit.id).toBe('l_s');
+      expect(parseFloat(cfmRes.result)).toBeCloseTo(47.1947, 3);
+
+      // 5 gpm to l/min
+      const gpmRes = parseConversionQuery('5 gpm to l/min');
+      expect(gpmRes).not.toBeNull();
+      expect(gpmRes.categoryId).toBe('flow_rate');
+      expect(gpmRes.fromUnit.id).toBe('gpm_us');
+      expect(gpmRes.toUnit.id).toBe('l_min');
+      expect(parseFloat(gpmRes.result)).toBeCloseTo(18.927, 2);
+    });
+
+    test('parses typography equations (px, rem, pt)', () => {
+      // 16 px to rem
+      const pxRes = parseConversionQuery('16 px to rem');
+      expect(pxRes).not.toBeNull();
+      expect(pxRes.categoryId).toBe('typography');
+      expect(pxRes.fromUnit.id).toBe('px');
+      expect(pxRes.toUnit.id).toBe('rem');
+      expect(pxRes.result).toBe(1);
+
+      // 1.5 rem to px
+      const remRes = parseConversionQuery('1.5 rem to px');
+      expect(remRes).not.toBeNull();
+      expect(remRes.categoryId).toBe('typography');
+      expect(remRes.fromUnit.id).toBe('rem');
+      expect(remRes.toUnit.id).toBe('px');
+      expect(remRes.result).toBe(24);
+
+      // 12 pt to px
+      const ptRes = parseConversionQuery('12 pt to px');
+      expect(ptRes).not.toBeNull();
+      expect(ptRes.categoryId).toBe('typography');
+      expect(ptRes.fromUnit.id).toBe('pt');
+      expect(ptRes.toUnit.id).toBe('px');
+      expect(ptRes.result).toBe(16);
+    });
+
+    test('resolves force, flow rate, and typography search intent', () => {
+      expect(findCategoryMatch('force')?.id).toBe('force');
+      expect(findCategoryMatch('flow rate')?.id).toBe('flow_rate');
+      expect(findCategoryMatch('typography')?.id).toBe('typography');
+      expect(findCategoryMatch('font size')?.id).toBe('typography');
+      expect(findCategoryMatch('airflow')?.id).toBe('flow_rate');
+    });
+  });
+
+  describe('Phase 5 Natural Language & Intent Tests (Electric Current & Illuminance)', () => {
+    test('parses electric current and battery capacity queries (A, mA, mAh, Ah)', () => {
+      // 10 a to ma
+      const aRes = parseConversionQuery('10 a to ma');
+      expect(aRes).not.toBeNull();
+      expect(aRes.categoryId).toBe('current');
+      expect(aRes.fromUnit.id).toBe('a');
+      expect(aRes.toUnit.id).toBe('ma');
+      expect(aRes.result).toBe(10000);
+
+      // 5000 mah to ah
+      const mahRes = parseConversionQuery('5000 mah to ah');
+      expect(mahRes).not.toBeNull();
+      expect(mahRes.categoryId).toBe('current');
+      expect(mahRes.fromUnit.id).toBe('mah');
+      expect(mahRes.toUnit.id).toBe('ah');
+      expect(mahRes.result).toBe(5);
+
+      // 500 ma in a
+      const maRes = parseConversionQuery('500 ma in a');
+      expect(maRes).not.toBeNull();
+      expect(maRes.categoryId).toBe('current');
+      expect(maRes.fromUnit.id).toBe('ma');
+      expect(maRes.toUnit.id).toBe('a');
+      expect(maRes.result).toBe(0.5);
+    });
+
+    test('parses illuminance equations (lux, fc, foot-candles)', () => {
+      // 500 lx to fc
+      const lxRes = parseConversionQuery('500 lx to fc');
+      expect(lxRes).not.toBeNull();
+      expect(lxRes.categoryId).toBe('illuminance');
+      expect(lxRes.fromUnit.id).toBe('lx');
+      expect(lxRes.toUnit.id).toBe('fc');
+      expect(parseFloat(lxRes.result)).toBeCloseTo(46.45, 1);
+
+      // 50 fc to lx
+      const fcRes = parseConversionQuery('50 fc to lx');
+      expect(fcRes).not.toBeNull();
+      expect(fcRes.categoryId).toBe('illuminance');
+      expect(fcRes.fromUnit.id).toBe('fc');
+      expect(fcRes.toUnit.id).toBe('lx');
+      expect(parseFloat(fcRes.result)).toBeCloseTo(538.195, 1);
+
+      // 500 lux in foot candles
+      const luxRes = parseConversionQuery('500 lux in foot candles');
+      expect(luxRes).not.toBeNull();
+      expect(luxRes.categoryId).toBe('illuminance');
+      expect(luxRes.fromUnit.id).toBe('lx');
+      expect(luxRes.toUnit.id).toBe('fc');
+      expect(parseFloat(luxRes.result)).toBeCloseTo(46.45, 1);
+    });
+
+    test('resolves current and illuminance category search intent', () => {
+      expect(findCategoryMatch('current')?.id).toBe('current');
+      expect(findCategoryMatch('amperage')?.id).toBe('current');
+      expect(findCategoryMatch('battery capacity')?.id).toBe('current');
+      expect(findCategoryMatch('illuminance')?.id).toBe('illuminance');
+      expect(findCategoryMatch('lighting')?.id).toBe('illuminance');
+      expect(findCategoryMatch('foot candle')?.id).toBe('illuminance');
+    });
+  });
+
+  describe('Culinary & Baking Studio Entity & Density Parsing', () => {
+    test('parses baking query with flour (Volume -> Mass)', () => {
+      const res = parseConversionQuery('1 cup flour to grams');
+      expect(res).not.toBeNull();
+      expect(res.categoryId).toBe('cooking');
+      expect(res.fromUnit.id).toBe('cup_us');
+      expect(res.toUnit.id).toBe('g');
+      expect(res.ingredient).toBe('flour_ap');
+      expect(res.result).toBe(120);
+      expect(res.formattedResult).toBe('120');
+    });
+
+    test('parses reverse baking query (Mass -> Volume)', () => {
+      const res = parseConversionQuery('120g flour to cups');
+      expect(res).not.toBeNull();
+      expect(res.categoryId).toBe('cooking');
+      expect(res.fromUnit.id).toBe('g');
+      expect(res.toUnit.id).toBe('cup_us');
+      expect(res.ingredient).toBe('flour_ap');
+      expect(res.result).toBe(1);
+    });
+
+    test('parses natural question with ingredient', () => {
+      const res = parseConversionQuery('how many grams in 1 cup flour');
+      expect(res).not.toBeNull();
+      expect(res.categoryId).toBe('cooking');
+      expect(res.fromUnit.id).toBe('cup_us');
+      expect(res.toUnit.id).toBe('g');
+      expect(res.ingredient).toBe('flour_ap');
+      expect(res.result).toBe(120);
+    });
+
+    test('parses sugar density conversions', () => {
+      // Granulated sugar: 1 cup = 200g
+      const sugarRes = parseConversionQuery('1 cup sugar to grams');
+      expect(sugarRes).not.toBeNull();
+      expect(sugarRes.ingredient).toBe('sugar_granulated');
+      expect(sugarRes.result).toBe(200);
+
+      // Brown sugar: 1 cup = 220g
+      const brownRes = parseConversionQuery('1 cup brown sugar to grams');
+      expect(brownRes).not.toBeNull();
+      expect(brownRes.ingredient).toBe('sugar_brown');
+      expect(brownRes.result).toBe(220);
+    });
+
+    test('parses butter conversions', () => {
+      // 1 stick butter = 113.4g
+      const butterRes = parseConversionQuery('1 stick butter to grams');
+      expect(butterRes).not.toBeNull();
+      expect(butterRes.ingredient).toBe('butter');
+      expect(butterRes.result).toBeCloseTo(113.4, 1);
+    });
+
+    test('surfaces baking match in getSearchSuggestions', () => {
+      const suggs = getSearchSuggestions('1 cup flour to grams');
+      expect(suggs.length).toBeGreaterThanOrEqual(1);
+      const main = suggs[0];
+      expect(main.badge).toBe('Baking Match');
+      expect(main.payload.categoryId).toBe('cooking');
+      expect(main.payload.ingredient).toBe('flour_ap');
+      expect(main.payload.fromUnitId).toBe('cup_us');
+      expect(main.payload.toUnitId).toBe('g');
+    });
+  });
 });
+

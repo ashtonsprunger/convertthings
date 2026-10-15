@@ -1,4 +1,13 @@
-import { parseRoute, formatRoutePath, getAllUnitPairs, generateSitemapXml } from './urlRouter';
+import {
+  parseRoute,
+  formatRoutePath,
+  getAllUnitPairs,
+  generateSitemapXml,
+  HUB_ROUTES,
+  getHubRoute,
+  CULINARY_PREFERRED_UNITS,
+  getDefaultCategoryForPair,
+} from './urlRouter';
 
 describe('ConvertThings URL Router', () => {
   test('parses clean unit pair paths with unit IDs', () => {
@@ -86,6 +95,35 @@ describe('ConvertThings URL Router', () => {
     expect(route.fromUnitId).toBe('cup_us');
   });
 
+  test('parses dedicated /kitchen studio destination route', () => {
+    const route = parseRoute('/kitchen');
+    expect(route).not.toBeNull();
+    expect(route.categoryId).toBe('flour_ap');
+    expect(route.isKitchenStudio).toBe(true);
+    expect(route.ingredient).toBe('flour_ap');
+    expect(route.fromUnitId).toBe('cup_us');
+    expect(route.toUnitId).toBe('g');
+
+    const butterRoute = parseRoute('/kitchen', '?ing=butter');
+    expect(butterRoute).not.toBeNull();
+    expect(butterRoute.categoryId).toBe('butter');
+    expect(butterRoute.isKitchenStudio).toBe(true);
+    expect(butterRoute.ingredient).toBe('butter');
+    expect(butterRoute.fromUnitId).toBe('stick_butter');
+    expect(butterRoute.toUnitId).toBe('g');
+
+    const sugarRoute = parseRoute('/kitchen', '?ing=sugar_granulated&v=2');
+    expect(sugarRoute).not.toBeNull();
+    expect(sugarRoute.ingredient).toBe('sugar_granulated');
+    expect(sugarRoute.fromValue).toBe('2');
+  });
+
+  test('formats /kitchen studio route paths correctly', () => {
+    expect(formatRoutePath('cooking', 'cup_us', 'g', '1', 'auto', false, null, 'flour_ap', true)).toBe('/kitchen');
+    expect(formatRoutePath('cooking', 'stick_butter', 'g', '1', 'auto', false, null, 'butter', true)).toBe('/kitchen?ing=butter');
+    expect(formatRoutePath('cooking', 'cup_us', 'g', '2', 'auto', false, null, 'flour_ap', true)).toBe('/kitchen?v=2');
+  });
+
   test('maintains backward compatibility with legacy query parameters', () => {
     const route = parseRoute('/', '?cat=mass&from=kg&to=lb&v=250');
     expect(route).not.toBeNull();
@@ -144,6 +182,22 @@ describe('ConvertThings URL Router', () => {
     expect(formatRoutePath('length', 'km', 'mi', '2.')).toBe('/convert/2-km-to-mi');
     expect(formatRoutePath('length', 'km', 'mi', '1.')).toBe('/convert/km-to-mi');
     expect(formatRoutePath('length', 'km', 'mi', '0.5')).toBe('/convert/0.5-km-to-mi');
+  });
+
+  test('formats and parses fractional values cleanly via query parameter ?v=', () => {
+    // Formatting fraction creates ?v=
+    expect(formatRoutePath('length', 'in', 'mm', '1/8')).toBe('/convert/in-to-mm?v=1%2F8');
+    expect(formatRoutePath('cooking', 'cup_us', 'ml', '3/4')).toBe('/convert/cup_us-to-ml?v=3%2F4');
+
+    // Parsing ?v= with fraction restores fromValue
+    const route = parseRoute('/convert/in-to-mm', '?v=1/8');
+    expect(route).not.toBeNull();
+    expect(route.fromValue).toBe('1/8');
+
+    // Also handles encoded %2F
+    const routeEncoded = parseRoute('/convert/in-to-mm', '?v=1%2F8');
+    expect(routeEncoded).not.toBeNull();
+    expect(routeEncoded.fromValue).toBe('1/8');
   });
 
   test('formats route paths with precision query parameter only when non-default', () => {
@@ -227,9 +281,9 @@ describe('ConvertThings URL Router', () => {
   });
 
 
-  test('generates all unit pairs across all 15 categories', () => {
+  test('generates all unit pairs across all 22 categories', () => {
     const pairs = getAllUnitPairs();
-    // 15 categories with 4 to 15 units each yields well over 1,000 distinct pairs
+    // 22 categories with 4 to 23 units each yields well over 1,000 distinct pairs
     expect(pairs.length).toBeGreaterThan(1000);
     expect(pairs[0]).toHaveProperty('path');
     expect(pairs[0]).toHaveProperty('categoryId');
@@ -243,4 +297,263 @@ describe('ConvertThings URL Router', () => {
     expect(xml).toContain('<loc>https://www.convertthings.com/length</loc>');
     expect(xml).toContain('<loc>https://www.convertthings.com/convert/m-to-ft</loc>');
   });
+
+  describe('High-Intent Hub Routes', () => {
+    test('exposes defined HUB_ROUTES and getHubRoute helper', () => {
+      expect(HUB_ROUTES.length).toBe(4);
+      expect(getHubRoute('feet-inches-to-cm')).not.toBeNull();
+      expect(getHubRoute('/convert/feet-inches-to-cm')).not.toBeNull();
+      expect(getHubRoute('fraction-inches-to-mm')).not.toBeNull();
+      expect(getHubRoute('baking-fractions')).not.toBeNull();
+      expect(getHubRoute('flour-cups-to-grams')).not.toBeNull();
+      expect(getHubRoute('nonexistent-hub')).toBeNull();
+    });
+
+    test('parses /convert/flour-cups-to-grams (Culinary Density Hub)', () => {
+      const route = parseRoute('/convert/flour-cups-to-grams');
+      expect(route).not.toBeNull();
+      expect(route.isHubPage).toBe(true);
+      expect(route.hubId).toBe('flour-cups-to-grams');
+      expect(route.categoryId).toBe('cooking');
+      expect(route.fromUnitId).toBe('cup_us');
+      expect(route.toUnitId).toBe('g');
+      expect(route.fromValue).toBe('1');
+      expect(route.ingredient).toBe('flour_ap');
+    });
+
+    test('parses /convert/feet-inches-to-cm (Height Hub)', () => {
+      const route = parseRoute('/convert/feet-inches-to-cm');
+      expect(route).not.toBeNull();
+      expect(route.isHubPage).toBe(true);
+      expect(route.hubId).toBe('feet-inches-to-cm');
+      expect(route.categoryId).toBe('length');
+      expect(route.fromUnitId).toBe('ft');
+      expect(route.toUnitId).toBe('cm');
+      expect(route.fromValue).toBe('5 ft 10 in');
+    });
+
+    test('parses /convert/feet-inches-to-cm with custom query value', () => {
+      const route = parseRoute('/convert/feet-inches-to-cm', '?v=6ft2in');
+      expect(route).not.toBeNull();
+      expect(route.isHubPage).toBe(true);
+      expect(route.hubId).toBe('feet-inches-to-cm');
+      expect(route.fromValue).toBe('6ft2in');
+    });
+
+    test('parses /convert/fraction-inches-to-mm (Tape Measure Hub)', () => {
+      const route = parseRoute('/convert/fraction-inches-to-mm');
+      expect(route).not.toBeNull();
+      expect(route.isHubPage).toBe(true);
+      expect(route.hubId).toBe('fraction-inches-to-mm');
+      expect(route.categoryId).toBe('length');
+      expect(route.fromUnitId).toBe('in');
+      expect(route.toUnitId).toBe('mm');
+      expect(route.fromValue).toBe('13/16');
+      expect(route.precision).toBe('fraction_tape');
+    });
+
+    test('parses /convert/baking-fractions (Cooking Drawer Hub)', () => {
+      const route = parseRoute('/convert/baking-fractions');
+      expect(route).not.toBeNull();
+      expect(route.isHubPage).toBe(true);
+      expect(route.hubId).toBe('baking-fractions');
+      expect(route.categoryId).toBe('cooking');
+      expect(route.fromUnitId).toBe('cup_us');
+      expect(route.toUnitId).toBe('tbsp_us');
+      expect(route.fromValue).toBe('1/3');
+      expect(route.isKitchenMode).toBe(true);
+    });
+
+    test('formats hub route path preserving hub slug when matching hub definition', () => {
+      expect(
+        formatRoutePath('length', 'ft', 'cm', '5 ft 10 in', 'auto', false, 'feet-inches-to-cm')
+      ).toBe('/convert/feet-inches-to-cm');
+
+      // With custom value
+      expect(
+        formatRoutePath('length', 'ft', 'cm', '6 ft 2 in', 'auto', false, 'feet-inches-to-cm')
+      ).toBe('/convert/feet-inches-to-cm?v=6%20ft%202%20in');
+
+      // Tape measure hub
+      expect(
+        formatRoutePath('length', 'in', 'mm', '13/16', 'fraction_tape', false, 'fraction-inches-to-mm')
+      ).toBe('/convert/fraction-inches-to-mm');
+
+      // Baking fractions hub
+      expect(
+        formatRoutePath('cooking', 'cup_us', 'tbsp_us', '1/3', 'auto', true, 'baking-fractions')
+      ).toBe('/convert/baking-fractions');
+    });
+
+    test('includes hub pages in XML sitemap with 0.9 priority', () => {
+      const xml = generateSitemapXml('https://www.convertthings.com');
+      expect(xml).toContain('<loc>https://www.convertthings.com/convert/feet-inches-to-cm</loc>');
+      expect(xml).toContain('<loc>https://www.convertthings.com/convert/fraction-inches-to-mm</loc>');
+      expect(xml).toContain('<loc>https://www.convertthings.com/convert/baking-fractions</loc>');
+    });
+  });
+
+  describe('Cooking vs Volume Semantic Disambiguation & Dual-Domain Resolution', () => {
+    test('routes pure fluid and industrial volume pairs to volume by default', () => {
+      // Liters to Gallons
+      const routeLGal = parseRoute('/convert/l-to-gal_us');
+      expect(routeLGal).not.toBeNull();
+      expect(routeLGal.categoryId).toBe('volume');
+      expect(routeLGal.fromUnitId).toBe('l');
+      expect(routeLGal.toUnitId).toBe('gal_us');
+
+      // Milliliters to Liters
+      const routeMlL = parseRoute('/convert/ml-to-l');
+      expect(routeMlL).not.toBeNull();
+      expect(routeMlL.categoryId).toBe('volume');
+
+      // Gallons to Quarts
+      const routeGalQt = parseRoute('/convert/gal_us-to-qt_us');
+      expect(routeGalQt).not.toBeNull();
+      expect(routeGalQt.categoryId).toBe('volume');
+
+      // Pints to Fluid Ounces
+      const routePtFloz = parseRoute('/convert/pt_us-to-floz_us');
+      expect(routePtFloz).not.toBeNull();
+      expect(routePtFloz.categoryId).toBe('volume');
+    });
+
+    test('routes culinary measuring tool pairs to cooking by default', () => {
+      // Cups to Tablespoons
+      const routeCupTbsp = parseRoute('/convert/cup_us-to-tbsp_us');
+      expect(routeCupTbsp).not.toBeNull();
+      expect(routeCupTbsp.categoryId).toBe('cooking');
+      expect(routeCupTbsp.fromUnitId).toBe('cup_us');
+      expect(routeCupTbsp.toUnitId).toBe('tbsp_us');
+
+      // Cups to Milliliters (culinary cup paired with liquid mL)
+      const routeCupMl = parseRoute('/convert/cup_us-to-ml');
+      expect(routeCupMl).not.toBeNull();
+      expect(routeCupMl.categoryId).toBe('cooking');
+
+      // Tablespoons to Teaspoons
+      const routeTbspTsp = parseRoute('/convert/tbsp_us-to-tsp_us');
+      expect(routeTbspTsp).not.toBeNull();
+      expect(routeTbspTsp.categoryId).toBe('cooking');
+
+      // Teaspoons to Milliliters
+      const routeTspMl = parseRoute('/convert/tsp_us-to-ml');
+      expect(routeTspMl).not.toBeNull();
+      expect(routeTspMl.categoryId).toBe('cooking');
+
+      // Gallons to Cups
+      const routeGalCup = parseRoute('/convert/gal_us-to-cup_us');
+      expect(routeGalCup).not.toBeNull();
+      expect(routeGalCup.categoryId).toBe('cooking');
+    });
+
+    test('honors explicit ?cat= query parameter overrides for cross-category selection', () => {
+      // Pure fluid measures explicitly selected in cooking
+      const routeCookingFluid = parseRoute('/convert/l-to-gal_us', '?cat=cooking');
+      expect(routeCookingFluid).not.toBeNull();
+      expect(routeCookingFluid.categoryId).toBe('cooking');
+      expect(routeCookingFluid.fromUnitId).toBe('l');
+      expect(routeCookingFluid.toUnitId).toBe('gal_us');
+
+      // Culinary tool explicitly selected in volume
+      const routeVolumeCulinary = parseRoute('/convert/cup_us-to-tbsp_us', '?cat=volume');
+      expect(routeVolumeCulinary).not.toBeNull();
+      expect(routeVolumeCulinary.categoryId).toBe('volume');
+      expect(routeVolumeCulinary.fromUnitId).toBe('cup_us');
+      expect(routeVolumeCulinary.toUnitId).toBe('tbsp_us');
+    });
+
+    test('honors ?kitchen=1 query parameter to direct fluid measures to cooking domain', () => {
+      const routeKitchenFluid = parseRoute('/convert/l-to-gal_us', '?kitchen=1');
+      expect(routeKitchenFluid).not.toBeNull();
+      expect(routeKitchenFluid.categoryId).toBe('cooking');
+      expect(routeKitchenFluid.isKitchenMode).toBe(true);
+
+      const routeKitchenMode = parseRoute('/convert/ml-to-l', '?mode=kitchen');
+      expect(routeKitchenMode).not.toBeNull();
+      expect(routeKitchenMode.categoryId).toBe('cooking');
+      expect(routeKitchenMode.isKitchenMode).toBe(true);
+    });
+
+    test('formats clean URLs for natural domain pairs without unnecessary query parameters', () => {
+      // Natural volume stays 100% clean
+      expect(formatRoutePath('volume', 'l', 'gal_us')).toBe('/convert/l-to-gal_us');
+      expect(formatRoutePath('volume', 'ml', 'l')).toBe('/convert/ml-to-l');
+      expect(formatRoutePath('volume', 'gal_us', 'qt_us', '5')).toBe('/convert/5-gal_us-to-qt_us');
+
+      // Natural cooking in standard mode stays 100% clean
+      expect(formatRoutePath('cooking', 'cup_us', 'tbsp_us')).toBe('/convert/cup_us-to-tbsp_us');
+      expect(formatRoutePath('cooking', 'cup_us', 'ml')).toBe('/convert/cup_us-to-ml');
+      expect(formatRoutePath('cooking', 'tbsp_us', 'tsp_us', '2')).toBe('/convert/2-tbsp_us-to-tsp_us');
+    });
+
+    test('formats URLs with disambiguating ?cat= only when used in non-default category', () => {
+      // Pure fluid measures on Cooking tab append ?cat=cooking
+      expect(formatRoutePath('cooking', 'l', 'gal_us', '1', 'auto', false)).toBe(
+        '/convert/l-to-gal_us?cat=cooking'
+      );
+      expect(formatRoutePath('cooking', 'ml', 'l', '500', 'auto', false)).toBe(
+        '/convert/500-ml-to-l?cat=cooking'
+      );
+
+      // Culinary tools on Volume tab append ?cat=volume
+      expect(formatRoutePath('volume', 'cup_us', 'tbsp_us', '1', 'auto', false)).toBe(
+        '/convert/cup_us-to-tbsp_us?cat=volume'
+      );
+      expect(formatRoutePath('volume', 'tbsp_us', 'tsp_us', '3', 'auto', false)).toBe(
+        '/convert/3-tbsp_us-to-tsp_us?cat=volume'
+      );
+    });
+
+    test('formats URLs with ?kitchen=1 when kitchen drawer mode is active in cooking', () => {
+      // Fluid measures in kitchen drawer mode use ?kitchen=1 (which already implies cooking)
+      expect(formatRoutePath('cooking', 'l', 'gal_us', '1', 'auto', true)).toBe(
+        '/convert/l-to-gal_us?kitchen=1'
+      );
+      // Culinary tools in kitchen drawer mode
+      expect(formatRoutePath('cooking', 'cup_us', 'tbsp_us', '1', 'auto', true)).toBe(
+        '/convert/cup_us-to-tbsp_us?kitchen=1'
+      );
+    });
+
+    test('correctly partitions all unit pairs with getDefaultCategoryForPair', () => {
+      expect(getDefaultCategoryForPair('cup_us', 'tbsp_us')).toBe('cooking');
+      expect(getDefaultCategoryForPair('cup_us', 'ml')).toBe('cooking');
+      expect(getDefaultCategoryForPair('l', 'gal_us')).toBe('volume');
+      expect(getDefaultCategoryForPair('ml', 'l')).toBe('volume');
+      expect(getDefaultCategoryForPair('stick_butter', 'tbsp_us')).toBe('cooking');
+      expect(getDefaultCategoryForPair('bbl_oil', 'cum')).toBe('volume');
+      expect(getDefaultCategoryForPair('km', 'mi')).toBe(null);
+    });
+
+    test('getAllUnitPairs produces exactly 2,622 unique canonical routes with 0 duplicates', () => {
+      const allPairs = getAllUnitPairs();
+      const pathSet = new Set(allPairs.map((p) => p.path));
+
+      expect(allPairs.length).toBe(2622);
+      expect(pathSet.size).toBe(2622);
+
+      // Volume canonical pair is in volume
+      const lGalPair = allPairs.find((p) => p.fromUnitId === 'l' && p.toUnitId === 'gal_us');
+      expect(lGalPair).toBeDefined();
+      expect(lGalPair.categoryId).toBe('volume');
+
+      // Culinary canonical pair is in cooking
+      const cupTbspPair = allPairs.find((p) => p.fromUnitId === 'cup_us' && p.toUnitId === 'tbsp_us');
+      expect(cupTbspPair).toBeDefined();
+      expect(cupTbspPair.categoryId).toBe('cooking');
+    });
+
+    test('generateSitemapXml contains no duplicate unit pair URLs', () => {
+      const xml = generateSitemapXml('https://www.convertthings.com');
+      const matchesLGal = xml.match(/<loc>https:\/\/www\.convertthings\.com\/convert\/l-to-gal_us<\/loc>/g);
+      expect(matchesLGal).not.toBeNull();
+      expect(matchesLGal.length).toBe(1);
+
+      const matchesCupTbsp = xml.match(/<loc>https:\/\/www\.convertthings\.com\/convert\/cup_us-to-tbsp_us<\/loc>/g);
+      expect(matchesCupTbsp).not.toBeNull();
+      expect(matchesCupTbsp.length).toBe(1);
+    });
+  });
 });
+

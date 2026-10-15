@@ -156,7 +156,7 @@ export function DeveloperModal({ isOpen, onClose }) {
               </h2>
               <p>
                 Connect Claude Desktop, Cursor, Antigravity, and autonomous AI agents directly to
-                <strong> ConvertThings</strong>. Give your LLM real-time, zero-hallucination unit conversions calibrated to exact NIST/SI standards across 15 measurement domains and 120+ units.
+                <strong> ConvertThings</strong>. Give your LLM real-time, zero-hallucination unit conversions calibrated to exact NIST/SI standards across 22 measurement domains and 228 units.
               </p>
 
               <div className="ct-dev-card">

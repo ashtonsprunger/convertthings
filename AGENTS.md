@@ -6,12 +6,13 @@
 
 ## 1. Project Overview
 
-**ConvertThings** is a modern, high-precision, real-time unit conversion web platform built with React 18, Vercel Serverless Functions, and native Model Context Protocol (MCP) server integration. It provides instantaneous bidirectional unit conversion across 15 physical and computational measurement domains with over 120 standardized units, universal natural language query parsing, zero cumulative layout shift (CLS), dark/light mode, dynamic SEO metadata, Schema.org rich snippet schemas, a public REST API, and native AI agent tooling.
+**ConvertThings** is a modern, high-precision, real-time unit conversion web platform built with React 18, Vercel Serverless Functions, and native Model Context Protocol (MCP) server integration. It provides instantaneous bidirectional unit conversion across 22 physical and computational measurement domains with 228 standardized units, universal natural language query parsing, compound measurement resolution (e.g., `5 ft 10 in`, `2 lbs 4 oz`), tape measure tolerances (`1/16″ ± 1/32″`), zero cumulative layout shift (CLS), dark/light mode, dynamic SEO metadata, Schema.org rich snippet schemas, a public REST API (GET & POST), an LLM discovery manifest (`/llms.txt`), and native AI agent tooling over MCP.
 
 - **Repository:** [https://github.com/ashtonsprunger/convertthings.git](https://github.com/ashtonsprunger/convertthings.git)
 - **Production URL / Homepage:** [https://www.convertthings.com](https://www.convertthings.com)
 - **Remote MCP Endpoint:** `https://www.convertthings.com/api/mcp`
 - **Public REST API:** `https://www.convertthings.com/api/convert`
+- **LLM Manifest:** `https://www.convertthings.com/llms.txt`
 - **Deployment Platform:** Vercel (Edge serverless functions + React SPA) & GitHub Pages (`gh-pages` branch)
 
 ---
@@ -19,33 +20,62 @@
 ## 2. Core Architecture & Highlights
 
 1. **High-Precision Custom Conversion Engine (`src/engine/conversions.js`)**:
-   - Zero-dependency, exact NIST/SI factor calculation engine.
+   - Zero-dependency, exact NIST/SI factor calculation engine across 228 standardized units.
    - Eliminates IEEE 754 floating-point artifacts (e.g., `0.30000000000000004` -> `0.3`).
    - Supports non-linear transformations (Celsius, Fahrenheit, Kelvin, Rankine) and reciprocal transformations (e.g. US mpg, Imperial mpg, L/100km, km/L).
-   - Dynamic step-by-step formula generation for every unit pair.
-   - Generates instant comparison benchmark tables (1 to 1,000) and all-units equivalence grids.
+   - **Fraction & Tape Measure Precision Modes (`toTapeMeasureFraction`, `toFraction`)**:
+     - Carpenter tape measure fraction tolerance (`1/16″ ± 1/32″`, e.g. `"3 3/8 +1/32"`, `"4 -1/32"`, `"1/32"`).
+     - Mixed fraction parsing and formatting (`formatFractionForDisplay`, `parseFractionString`) supporting ASCII, hyphenated (`1-13/16`), and Unicode vulgar fractions (`½`, `¼`, `¾`, `⅝`, etc.).
+     - Improper fraction mode (`fraction_improper`: `11/8`, `3/2`).
+     - Smart culinary fraction formatting (`formatCulinaryFraction`).
+   - **Compound Measurement Resolution (`parseCompoundValue`, `isCompoundLike`)**:
+     - Mixed length expressions: `"5 ft 10 in"`, `"5'11"`, `"5' 11\""`.
+     - Mixed weight/mass expressions: `"2 lbs 4 oz"`, `"5 lb 8 oz"`.
+     - Mixed time expressions: `"1 hr 30 min 15 sec"`.
+     - Kitchen measuring drawer breakdowns (`getKitchenDrawerBreakdown`): converts odd fractional measures into practical real-world drawer tools (e.g., `34 mL` -> `"2 tbsp + 1 tsp"`, `13/16 cup` -> `"3/4 cup + 1 tbsp"`).
+   - **Smart Equation Display (`getSmartEquationDisplay`)**: Formats clean hero equivalence equations with fraction and operator awareness.
+   - Dynamic step-by-step formula generation for every unit pair (`getFormulaString`, `getFormulaDetails`).
+   - Generates instant comparison benchmark tables (1 to 1,000) and all-units equivalence grids (`getQuickReferenceTable`).
 
 2. **Model Context Protocol (MCP) Server (`src/engine/mcpTools.js`, `api/mcp.js`, `bin/mcp.mjs`)**:
    - Full MCP implementation supporting 4 AI agent tools: `convert_units`, `parse_and_convert`, `list_units`, `get_reference_table`.
    - Dual transport support:
      - **Stdio transport** (`bin/mcp.mjs`) for local desktop environments (Claude Desktop, Cursor, Antigravity).
      - **HTTP JSON-RPC 2.0 transport** (`api/mcp.js`) on Vercel Serverless Functions for remote web agents and microservices.
+   - Exposes comprehensive server metadata (`MCP_SERVER_INFO`) and tool schemas for LLM tool calling.
 
 3. **Public Serverless REST API (`api/convert.js`, `api/units.js`)**:
    - Free, CORS-enabled endpoints on Vercel.
    - Natural language queries: `GET /api/convert?q=100+km+to+miles`.
    - Structured unit queries: `GET /api/convert?from=km&to=mi&val=100`.
+   - Direct JSON body POST queries: `POST /api/convert` (`{ "from": "km", "to": "mi", "value": 100 }`).
+   - Compound unit resolution payload: returns `isCompound: true` and `compoundDisplay` (e.g. `5 ft 10 in = ~177.8 cm`).
    - Unit directory: `GET /api/units?cat=temperature`.
 
 4. **Universal Omnibox & Natural Language Query Parser (`src/engine/parser.js`)**:
    - Parses natural queries on the fly: `"100 km to miles"`, `"72 f in c"`, `"150 lbs into kg"`, `"1 cup to ml"`, `"500 sq ft to m²"`.
-   - Omnibox with hotkey (`/`) focus and live preview match banner.
+   - Compound measurement parsing: `"5'11 to cm"`, `"5 ft 10 in to cm"`, `"2 lbs 4 oz to g"`, `"1 hr 30 min in seconds"`.
+   - Word numbers and fractional amounts: `"half a cup to tbsp"`, `"quarter cup to ml"`, `"a mile in feet"`.
+   - Typo-tolerant unit matching and conversational questions: `"what is 100 km in miles"`, `"celcius to fahrenheit"`.
+   - Colloquial trade phrase parsing: `"1 gold oz to grams"`, `"10 gold oz in kg"`, `"16 hands to feet"`, `"2000 food calories to kj"`, `"32 tire psi to bar"`, `"10 thou to mm"`, `"5 crude oil barrels to gal"`.
+   - Semantic topic & keyword discovery (`findTopicUnits`): Searching topic keywords (e.g. `"gold"`, `"jewelry"`, `"astronomy"`, `"space"`, `"diamond"`, `"tire pressure"`, `"hvac"`, `"ev"`) matches unit subtitles, badges, and roots, returning 1-click unit recommendation cards directly in the Omnibox.
+   - Single-unit exploration with sensible complementary defaults (`COMPLEMENTARY_PAIRS`: e.g. `"50 mph"` -> km/h, `"miles"` -> km, `"gold oz"` -> g).
+   - Category navigation keywords (`CATEGORY_SYNONYMS`) and multi-result suggestion palette (`getSearchSuggestions`).
+   - Omnibox with hotkey (`/`) focus, live preview match banner, and clear keyboard navigation.
 
-5. **SEO & Clean Route Architecture (`src/engine/urlRouter.js`, `scripts/generateSitemap.mjs`)**:
+5. **SEO, Clean Route Architecture & AI Discoverability (`src/engine/urlRouter.js`, `src/engine/seo.js`, `scripts/generateSitemap.mjs`, `scripts/prerender.mjs`, `public/llms.txt`)**:
+   - Dynamic high-CTR SEO and SERP metadata generator (`src/engine/seo.js`: `getSeoMetadata`).
    - Programmatic unit-pair URLs (`/convert/:from-to-:to`, `/convert/:val-:from-to-:to`).
-   - Dynamic document title and meta description updates.
-   - Automated sitemap generator indexing 1,310 URLs in `public/sitemap.xml` with 1,325 pre-rendered static HTML routes.
-   - Injects structured JSON-LD schema (`WebApplication` and `FAQPage`) dynamically into `<head>` for Google search rich snippets.
+   - **Semantic Default & Cross-Domain Disambiguation (`getDefaultCategoryForPair`, `parseRoute`, `formatRoutePath`)**:
+     - Resolves the single category pair collision across all 22 domains (`cooking` vs `volume` sharing 9 liquid units).
+     - Pairs involving culinary measuring tools (`cup_us`, `tbsp_us`, `tsp_us`, `stick_butter`, `pinch`, `dash`, etc.) default cleanly to **Cooking** (`/convert/cup-to-tbsp`).
+     - Pure fluid and bulk measures (`l`, `ml`, `gal_us`, `qt_us`, `pt_us`, `floz_us`) default cleanly to **Volume** (`/convert/l-to-gal_us`).
+     - Cross-domain exceptions retain 100% state precision via explicit query params (`?cat=cooking`, `?cat=volume`, or `?kitchen=1`).
+     - Deduplicates the 72 shared pairs in `getAllUnitPairs()` ensuring zero duplicate paths in `sitemap.xml` and pre-rendered builds.
+   - Automated sitemap generator indexing **2,648 unique canonical URLs** in `public/sitemap.xml`.
+   - Pre-rendered static HTML generator creating **2,673 static routes** (including dedicated high-volume aliases like `lbs-to-kg`, `miles-to-km`, `cups-to-ml`).
+   - Structured JSON-LD schema (`WebApplication` and `FAQPage`) dynamically injected for Google rich snippets.
+   - Machine-readable LLM manifest (`public/llms.txt`) detailing developer endpoints, supported categories, and popular conversions for AI web crawlers.
 
 6. **Google Material 3 Rounded Design System (`src/App.css`, `src/index.css`)**:
    - **Full Pill & Floating Capsule Geometry**:
@@ -73,6 +103,18 @@
      - Replaces artificial hairline divider rules with natural, generous vertical whitespace (`0.2rem`–`0.35rem`).
      - The hero equation (`[ 0.03937 in ] ≈ [ 1 mm 📋 ]`) floats freely on the card canvas.
      - The educational formula and instructions sit below as a quiet, borderless typographic caption strip with soft subtle hover capsules.
+   - **Expanded 7-Tier Precision Selector**:
+     - Supports `auto` (Smart auto-precision), `2` (2 Decimals), `4` (4 Decimals), `exact` (Full floating precision), `fraction_tape` (Tape measure `1/16″ ± 1/32″`), `fraction` (Mixed fractions `1 ⅜`), and `fraction_improper` (Improper fractions `11/8`).
+   - **Typographic `<Fraction />` Component (`src/components/Fraction.jsx`)**:
+     - Standalone typography component rendering true diagonal fractions with balanced numerator and denominator proportions across both the workbench, tape measure results, and the benchmark table.
+   - **Vector `<BrandLogo />` Component (`src/components/BrandLogo.jsx`)**:
+     - Custom SVG dual-arrow emblem with independent arrow groups enabling category transitions and interactive animations.
+   - **Dual-Arrow Conveyor Handoff Animation**:
+     - When changing categories in `Header.jsx`, a 720ms conveyor animation smoothly rolls the outgoing arrow out down-right into the nav pill mask while the incoming category arrow rolls in up-left.
+   - **Brand Turbine Easter Egg**:
+     - Rapid repeated clicks on the brand logo trigger an animated 360-degree turbine spin.
+   - **Footer Signature Hover Gestures & Dynamic Illumination**:
+     - Footer category links feature custom keyframe animations (ruler wobble, scale rock, thermometer rise, compass spin) with dynamic category brand color illumination on hover.
    - **Smart Responsive Navigation with Smart Headroom**:
      - **Responsive Hybrid**: Floats as an ambient Material 3 capsule pill on desktop (`border-radius: var(--radius-full)`, `box-shadow: var(--shadow-google-md), var(--shadow-specular)`) and docks flush edge-to-edge on mobile to maximize touch targets and Omnibox input width.
      - **Smart Headroom Dynamics**: Gracefully glides up out of view on scroll down (`translateY(-135%)`), granting 100% immersive reading space for tables and guides, and immediately glides back down on scroll up (`translateY(0)`). Always stays visible at top of page or when search has keyboard focus.
@@ -92,7 +134,7 @@
 ```
 convertThings/
 ├── api/
-│   ├── convert.js             # Vercel serverless REST API endpoint
+│   ├── convert.js             # Vercel serverless REST API endpoint (GET & POST)
 │   ├── mcp.js                 # Vercel serverless MCP JSON-RPC 2.0 remote endpoint
 │   └── units.js               # Vercel serverless units directory endpoint
 ├── bin/
@@ -100,39 +142,61 @@ convertThings/
 │   └── mcp.mjs                # Stdio MCP Server executable for Claude Desktop / Cursor
 ├── build/                     # Production distribution bundle
 ├── public/                    # Static public assets
+│   ├── 404.html               # Static fallback route for GitHub Pages / static servers
 │   ├── ads.txt                # Google AdSense publisher verification
+│   ├── favicon-32.png
 │   ├── favicon.ico
+│   ├── favicon.svg
 │   ├── index.html             # SEO-optimized HTML5 shell with OpenGraph, Twitter, AdSense
+│   ├── llms.txt               # LLM discovery manifest and AI agent reference guide
+│   ├── logo-black.png
+│   ├── logo-white.png
+│   ├── logo192.png
+│   ├── logo512.png
+│   ├── manifest.json          # Web app manifest
 │   ├── privacy.html           # Standalone legal privacy policy
 │   ├── robots.txt             # Crawl directives with sitemap index
-│   ├── sitemap.xml            # 1,310 auto-generated unit pair URLs (1,325 pre-rendered routes)
+│   ├── sitemap.xml            # 2,648 auto-generated canonical URLs (2,673 pre-rendered routes)
 │   └── terms.html             # Standalone terms of service
 ├── scripts/
 │   ├── generateIcons.mjs      # Brand asset & favicon generator from source logo
-│   ├── generateSitemap.mjs    # Automated sitemap generation script (1,310 URLs)
-│   ├── prerender.mjs          # Static HTML pre-rendering generator (1,325 routes)
+│   ├── generateSitemap.mjs    # Automated sitemap generation script (2,648 URLs)
+│   ├── prerender.mjs          # Static HTML pre-rendering generator (2,673 routes)
 │   └── test-api.mjs           # Serverless API and MCP integration test suite
 ├── src/
+│   ├── assets/
+│   │   ├── logo-black.svg     # Source monochrome dark logo
+│   │   └── logo-white.svg     # Source monochrome light logo
 │   ├── components/
 │   │   ├── AdSlot.jsx             # Non-intrusive reserved ad containers (zero CLS)
+│   │   ├── BrandLogo.jsx          # Vector brand logo with independent animated arrow paths
 │   │   ├── CategoryNav.jsx        # Responsive horizontal category tabs
 │   │   ├── ConversionCard.jsx     # Core interactive bidirectional conversion panel
+│   │   ├── ConversionCard.test.js # Unit tests for ConversionCard workbench
 │   │   ├── ConversionHistory.jsx  # Recent conversion drawer with 1-click reload
+│   │   ├── ConversionHistory.test.js # Unit tests for conversion history drawer
 │   │   ├── ConversionTable.jsx    # Benchmark value comparison & all-units equivalence
 │   │   ├── DeveloperModal.jsx     # Developer & AI MCP modal with live API playground
 │   │   ├── FavoritesBar.jsx       # Pinned conversions bar
 │   │   ├── Footer.jsx             # Accessible footer with category index and standards
+│   │   ├── Fraction.jsx           # Typographic diagonal fraction renderer component
+│   │   ├── Fraction.test.js       # Unit tests for typographic Fraction component
 │   │   ├── Header.jsx             # Branding, AI & API modal trigger, theme switch
 │   │   ├── Icons.jsx              # Standalone, zero-dependency SVG icon system
 │   │   ├── LegalModal.jsx         # Accessible Privacy, Terms, and About modal dialog
 │   │   ├── Omnibox.jsx            # Universal natural language search bar with shortcut '/'
+│   │   ├── Omnibox.test.js        # Unit tests for Omnibox search and suggestions
 │   │   ├── SeoContent.jsx         # Category guides, FAQs, and Schema.org JSON-LD injection
 │   │   └── Toast.jsx              # Accessible non-intrusive alert toasts
 │   ├── engine/
 │   │   ├── conversions.js         # Core measurement definitions, NIST factors, formatters
+│   │   ├── conversions.test.js    # Unit tests for conversion calculations and formatters
 │   │   ├── mcpTools.js            # MCP tool definitions and execution dispatcher
 │   │   ├── mcpTools.test.js       # Jest tests for MCP engine
 │   │   ├── parser.js              # Natural language query tokenizer and matching engine
+│   │   ├── parser.test.js         # Jest tests for NLP parser and compound matching
+│   │   ├── seo.js                 # Dynamic SEO & SERP metadata generator
+│   │   ├── seo.test.js            # Unit tests for SEO title and description generation
 │   │   ├── urlRouter.js           # Bidirectional URL slug and query parser/formatter
 │   │   └── urlRouter.test.js      # Jest tests for URL router
 │   ├── hooks/
@@ -144,6 +208,7 @@ convertThings/
 │   ├── index.css                  # CSS resets, typography, and CSS theme tokens
 │   ├── index.js                   # Application entry point (React 18 createRoot)
 │   ├── reportWebVitals.js         # Core Web Vitals monitor
+│   ├── setupProxy.js              # Webpack dev server middleware
 │   └── setupTests.js              # Jest DOM matcher setup
 ├── .gitignore
 ├── AGENTS.md                      # AI agent & developer guide
@@ -155,23 +220,30 @@ convertThings/
 
 ---
 
-## 4. Measurement Categories (15 Domains, 120+ Units)
+## 4. Measurement Categories (22 Domains, 228 Units)
 
-1. **Length & Distance (`length`)**: Meter, Kilometer, Centimeter, Millimeter, Micrometer, Nanometer, Mile, Yard, Foot, Inch, Nautical Mile, Light-Year.
-2. **Weight & Mass (`mass`)**: Kilogram, Gram, Milligram, Microgram, Metric Ton, Pound, Ounce, Stone, US Short Ton, Imperial Long Ton, Carat, Grain.
-3. **Temperature (`temperature`)**: Celsius, Fahrenheit, Kelvin, Rankine.
-4. **Area (`area`)**: Square Meter, Square Kilometer, Square Centimeter, Square Millimeter, Square Mile, Square Yard, Square Foot, Square Inch, Acre, Hectare.
-5. **Volume & Capacity (`volume`)**: Liter, Milliliter, Cubic Meter, Cubic Centimeter, US Gallon, US Quart, US Pint, US Cup, US Fluid Ounce, US Tablespoon, US Teaspoon, Imperial Gallon, Imperial Fluid Ounce, Cubic Foot, Cubic Inch.
-6. **Speed (`speed`)**: Meter per Second, Kilometer per Hour, Mile per Hour, Knot, Foot per Second, Mach.
-7. **Time (`time`)**: Second, Millisecond, Microsecond, Nanosecond, Minute, Hour, Day, Week, Month, Year, Decade, Century.
-8. **Digital Storage (`digital`)**: Bit, Byte, Kilobyte, Kibibyte, Megabyte, Mebibyte, Gigabyte, Gibibyte, Terabyte, Tebibyte, Petabyte.
-9. **Data Transfer Rate (`data_rate`)**: bps, Kbps, Mbps, Gbps, B/s, KB/s, MB/s, GB/s.
-10. **Pressure (`pressure`)**: Pascal, Kilopascal, Megapascal, Bar, Millibar, PSI, Standard Atmosphere, Torr/mmHg, Inch of Mercury, Hectopascal.
-11. **Energy (`energy`)**: Joule, Kilojoule, Calorie, Kilocalorie, Watt-hour, Kilowatt-hour, Electronvolt, BTU, Foot-pound.
-12. **Power (`power`)**: Watt, Kilowatt, Megawatt, Mechanical HP, Metric HP, BTU/hour.
-13. **Angle (`angle`)**: Degree, Radian, Gradian, Arcminute, Arcsecond, Revolution.
-14. **Fuel Economy (`fuel`)**: Liters per 100km, US MPG, UK Imperial MPG, km/L.
-15. **Cooking & Kitchen (`cooking`)**: US Cup, US Tablespoon, US Teaspoon, Fluid Ounce, Milliliter, Liter, Pinch, Dash, Drop, Stick of Butter.
+1. **Length & Distance (`length` - 18 units)**: Meter, Kilometer, Centimeter, Millimeter, Micrometer, Nanometer, Mile, Yard, Foot, Inch, Nautical Mile, Light-Year, Astronomical Unit, Parsec, Ångström, Mil / Thou, Fathom, Hand.
+2. **Weight & Mass (`mass` - 17 units)**: Kilogram, Gram, Milligram, Microgram, Metric Ton, Pound, Ounce, Stone, US Short Ton, Imperial Long Ton, Carat, Grain, Troy Ounce, Pennyweight, Dalton (Atomic Mass Unit), Slug, Metric Quintal.
+3. **Temperature (`temperature` - 4 units)**: Celsius, Fahrenheit, Kelvin, Rankine.
+4. **Area (`area` - 10 units)**: Square Meter, Square Kilometer, Square Centimeter, Square Millimeter, Square Mile, Square Yard, Square Foot, Square Inch, Acre, Hectare.
+5. **Volume & Capacity (`volume` - 23 units)**: Liter, Milliliter, Centiliter, Deciliter, Cubic Meter, Cubic Centimeter, US Gallon, US Quart, US Pint, Imperial Pint, Imperial Quart, US Cup, US Fluid Ounce, US Tablespoon, US Teaspoon, Imperial Gallon, Imperial Fluid Ounce, Oil Barrel, Cubic Foot, Cubic Yard, Cubic Inch, Microliter, Bushel (US Dry).
+6. **Speed (`speed` - 6 units)**: Meter per Second, Kilometer per Hour, Mile per Hour, Knot, Foot per Second, Mach (Standard Sea Level).
+7. **Time (`time` - 12 units)**: Second, Millisecond, Microsecond, Nanosecond, Minute, Hour, Day, Week, Month (Average), Year (365.25 days), Decade, Century.
+8. **Digital Storage (`digital` - 15 units)**: Bit, Nibble, Byte, Kilobyte (Decimal), Kibibyte (Binary), Megabyte (Decimal), Mebibyte (Binary), Gigabyte (Decimal), Gibibyte (Binary), Terabyte (Decimal), Tebibyte (Binary), Petabyte (Decimal), Pebibyte (Binary), Exabyte (Decimal), Exbibyte (Binary).
+9. **Data Transfer Rate (`data_rate` - 11 units)**: Bit per Second, Kilobit per Second, Megabit per Second, Gigabit per Second, Terabit per Second, Byte per Second, Kilobyte per Second, Megabyte per Second, Mebibyte per Second, Gigabyte per Second, Terabyte per Second.
+10. **Pressure (`pressure` - 13 units)**: Pascal, Kilopascal, Megapascal, Bar, Millibar, Pound per Square Inch, Kilopound per Square Inch (ksi), Standard Atmosphere, Torr / mmHg, Inch of Mercury, Hectopascal, Inch of Water, Centimeter of Water.
+11. **Energy (`energy` - 11 units)**: Joule, Kilojoule, Calorie (Gram/Small), Kilocalorie (Food Calorie), Watt-hour, Kilowatt-hour, Megawatt-hour, Electronvolt, British Thermal Unit, Therm, Foot-pound.
+12. **Power (`power` - 8 units)**: Watt, Milliwatt, Kilowatt, Megawatt, Horsepower (Mechanical/US), Metric Horsepower (PS), BTU per Hour, Ton of Refrigeration.
+13. **Angle (`angle` - 6 units)**: Degree, Radian, Gradian, Arcminute, Arcsecond, Revolution (Turn).
+14. **Fuel Economy (`fuel` - 6 units)**: Liters per 100 km, Miles per Gallon (US), Miles per Gallon (UK), Kilometers per Liter, Miles per kWh, kWh per 100 km.
+15. **Kitchen Mode (`cooking` - 19 units)**: Milliliter, US Cup, Metric Cup, US Tablespoon, Metric Tablespoon, US Teaspoon, Dessertspoon, Fluid Ounce, Standard Shot (Jigger), Pinch, Dash, Tad, Smidgen, Drop, Stick of Butter (US), Liter, US Pint, US Quart, US Gallon.
+16. **Frequency (`frequency` - 8 units)**: Hertz, Kilohertz, Megahertz, Gigahertz, Terahertz, Revolutions per Minute, Radians per Second, Degrees per Second.
+17. **Torque (`torque` - 6 units)**: Newton-meter, Pound-foot, Pound-inch, Kilogram-force Meter, Kilonewton-meter, Ounce-force Inch.
+18. **Force (`force` - 8 units)**: Newton, Kilonewton, Meganewton, Pound-force, Kilogram-force, Dyne, Kip, Ounce-force.
+19. **Volumetric Flow Rate (`flow_rate` - 7 units)**: Cubic Feet per Minute, Liter per Second, Liter per Minute, Cubic Meter per Hour, Cubic Meter per Second, US Gallon per Minute, US Gallon per Hour.
+20. **Typography & Screen Resolution (`typography` - 7 units)**: Pixel, Point, Rem, Em, Pica, CSS Inch, CSS Millimeter.
+21. **Electric Current & Battery Charge (`current` - 8 units)**: Ampere, Milliampere, Microampere, Kiloampere, Ampere-hour, Milliampere-hour, Abampere (Biot), Statampere.
+22. **Illuminance (`illuminance` - 5 units)**: Lux, Foot-candle, Phot, Nox, Kilolux.
 
 ---
 
@@ -188,13 +260,14 @@ convertThings/
   ```
 - **Execute Test Suite (Jest):**
   ```powershell
-  $env:CI="true"; npm test
+  $env:CI="true"; npm test -- --runInBand
   ```
-  Runs all 194 unit and integration tests across 8 suites without hanging.
+  Runs all **337 unit and integration tests across 11 suites** without hanging.
 - **Execute API & MCP Test Suite:**
   ```powershell
   npm run test:api
   ```
+  Executes 28 serverless & MCP assertions across REST endpoints and JSON-RPC dispatchers.
 - **Run Local MCP Server (Stdio):**
   ```powershell
   npm run mcp
@@ -203,7 +276,7 @@ convertThings/
   ```powershell
   npm run build
   ```
-  Prebuild generates sitemap with 1,310 URLs and creates optimized bundle with zero warnings (1,325 pre-rendered static routes).
+  Prebuild generates brand icons and canonical sitemap with 2,648 URLs, builds the optimized production bundle, and postbuild runs static pre-rendering generating 2,673 static routes.
 
 ---
 
@@ -215,8 +288,8 @@ convertThings/
 2. **Keep Zero-CLS Guarantee:**
    - All layout elements, cards, and ad placeholders must maintain stable layout dimensions to guarantee a 100% Core Web Vitals score.
 3. **SEO & Routing Integrity:**
-   - Any modifications to URL parsing in `src/engine/urlRouter.js` must be covered by unit tests in `src/engine/urlRouter.test.js`.
-   - Never break static files (`ads.txt`, `sitemap.xml`, `robots.txt`).
+   - Any modifications to URL parsing in `src/engine/urlRouter.js` or metadata generation in `src/engine/seo.js` must be covered by unit tests in `src/engine/urlRouter.test.js` and `src/engine/seo.test.js`.
+   - Never break static files (`ads.txt`, `sitemap.xml`, `robots.txt`, `llms.txt`).
 4. **Adhere to Google Material 3 Design Tokens & Concentric Geometry:**
    - Always preserve the unified concentric corner radius scale (`--radius-card: 38px`, `--radius-surface: 18px`, `--radius-chip: 14px`, `--radius-pill: 9999px`).
    - Maintain the concentric alignment equation: Outer card radius ($38\text{px}$) = Inner nested surface radius ($18\text{px}$) + Card uniform padding ($20\text{px} / 1.25\text{rem}$). Action buttons with $36\text{px}$ height ($R = 18\text{px}$) also satisfy $18\text{px} + 20\text{px} = 38\text{px}$.
@@ -263,6 +336,10 @@ convertThings/
 9. **Touchscreen Native Tactile Fidelity & Sticky Hover Elimination**:
    - **Zero Tap Highlight Overlays**: `-webkit-tap-highlight-color: transparent;` and `-webkit-touch-callout: none;` are applied globally across all interactive elements (`*, button, a, input, select, textarea, [role="button"]`) so mobile browsers never draw default semi-transparent blue or grey tap bounding rectangles.
    - **Zero Sticky Hover on Mobile**: Touchscreens simulate mouse events upon tap without firing `mouseleave` on lift. All kinetic hover lifts (`translateY(-1.5px)`, `scale(1.08)`) and hover shadows are strictly suppressed on touch devices (`@media (hover: none), (pointer: coarse)`) via `:hover:not(:active) { transform: none !important; }`. Mobile taps trigger instantaneous tactile active compression (`:active` with `scale(0.96)`) and immediately settle back flat with zero lingering hovering.
-10. **Test Everything:**
-    - Always run `$env:CI="true"; npm test -- --runInBand` and `npm run test:api` before concluding turns.
-
+10. **Fraction & Compound Measurement Integrity**:
+    - When modifying fraction formatting, tape measure calculations, or compound unit parsing, always ensure that:
+      - Fractions are rendered cleanly using `<Fraction />` (`src/components/Fraction.jsx`) to avoid optical collisions in bold font weights.
+      - Compound inputs (`parseCompoundValue`) correctly parse mixed units without allowing nonsensical cross-category terms.
+      - Edge cases (such as zero values, negative numbers, improper fractions, vulgar fractions, and offset notation like `+1/32`) remain verified against `src/components/Fraction.test.js` and `src/engine/conversions.test.js`.
+11. **Test Everything:**
+    - Always run `$env:CI="true"; npm test -- --runInBand` and `npm run test:api` before concluding turns. Ensure all 248 unit/integration tests and 28 API assertions pass. When running tests, always use CI=true npm test -- <filepath> --watchAll=false --forceExit.

@@ -95,7 +95,7 @@ export function Footer({ onSelectCategory, onOpenLegal, onOpenDevModal, onGoHome
               Terms of Service
             </a>
             <a
-              href="#about"
+              href="/about.html"
               className="ct-footer-legal-link"
               onClick={(e) => handleLegalClick(e, 'about')}
             >

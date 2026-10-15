@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About &amp; Contact - ConvertThings</title>
+  <meta name="description" content="Learn about ConvertThings, our NIST SP 811 and ISO 80000 scientific calibration standards, high-precision unit conversion engine, public REST API, and contact information." />
+  <link rel="canonical" href="https://www.convertthings.com/about.html" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=5" />
+  <link rel="alternate icon" href="/favicon.ico?v=5" />
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --primary: #0f172a;
+      --primary-hover: #1e293b;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #090d16;
+        --card-bg: #111827;
+        --text: #f8fafc;
+        --text-muted: #94a3b8;
+        --border: #1f293d;
+        --primary: #f8fafc;
+        --primary-hover: #cbd5e1;
+      }
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      margin: 0;
+      padding: 2rem 1rem;
+      display: flex;
+      justify-content: center;
+    }
+    .container {
+      max-width: 780px;
+      width: 100%;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 2.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+    .nav {
+      margin-bottom: 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1rem;
+    }
+    .brand {
+      font-weight: 800;
+      font-size: 1.25rem;
+      color: var(--primary);
+      text-decoration: none;
+    }
+    .back-link {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      text-decoration: none;
+    }
+    .back-link:hover {
+      color: var(--primary);
+    }
+    h1 {
+      font-size: 2rem;
+      margin-top: 0;
+      margin-bottom: 0.5rem;
+      font-weight: 800;
+    }
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 1rem;
+      margin-bottom: 2rem;
+    }
+    h2 {
+      font-size: 1.25rem;
+      margin-top: 2rem;
+      margin-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.35rem;
+    }
+    p, li {
+      font-size: 0.95rem;
+      color: var(--text);
+    }
+    ul {
+      padding-left: 1.5rem;
+    }
+    li {
+      margin-bottom: 0.45rem;
+    }
+    a {
+      color: var(--primary);
+      text-decoration: underline;
+    }
+    a:hover {
+      color: var(--primary-hover);
+    }
+    .highlight-box {
+      background: rgba(6, 182, 212, 0.08);
+      border-left: 4px solid var(--primary);
+      padding: 1rem 1.25rem;
+      border-radius: 6px;
+      margin: 1.5rem 0;
+      font-size: 0.925rem;
+    }
+    .footer-links {
+      margin-top: 2.5rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.25rem;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="nav">
+      <a href="/" class="brand">ConvertThings</a>
+      <a href="/" class="back-link">&larr; Back to Unit Converter</a>
+    </div>
+
+    <h1>About ConvertThings</h1>
+    <div class="subtitle">High-Precision Scientific, Engineering &amp; Culinary Measurement Platform</div>
+
+    <div class="highlight-box">
+      <strong>Our Mission:</strong> ConvertThings was engineered to provide instantaneous, mathematically exact unit conversions across 22 physical, computational, and culinary measurement domains without floating-point rounding errors, page reloads, or intrusive clutter.
+    </div>
+
+    <h2>1. Scientific Calibration &amp; Metrology Standards</h2>
+    <p>Every conversion factor and formula in ConvertThings is verified against primary international metrology standards:</p>
+    <ul>
+      <li><strong>NIST Special Publication 811:</strong> Official conversion factors published by the National Institute of Standards and Technology (SI Guide for the Use of the International System of Units).</li>
+      <li><strong>ISO/IEC 80000:</strong> International standard for quantities, units, symbols, and thermodynamic definitions across mechanics, electricity, acoustics, and photometry.</li>
+      <li><strong>IEEE 754 Floating-Point Compensation:</strong> Custom arithmetic normalization eliminates binary floating-point representation artifacts (such as <code>0.1 + 0.2 = 0.30000000000000004</code>), delivering clean, exact decimal and fractional outputs.</li>
+      <li><strong>Culinary Ingredient Density Standards:</strong> Kitchen Studio volume-to-weight conversions are calibrated against USDA FoodData Central and King Arthur Baking ingredient density benchmarks (e.g., 1 US cup all-purpose flour = 120 g; 1 US stick of butter = 113.4 g).</li>
+    </ul>
+
+    <h2>2. Specialized Engineering &amp; Trade Capabilities</h2>
+    <p>Beyond simple decimal multiplication, ConvertThings solves real-world trade, workshop, and kitchen problems:</p>
+    <ul>
+      <li><strong>Carpenter Tape Measure Fractions:</strong> Converts decimal inches and metric lengths into standard <code>1/16&Prime;</code> and <code>1/32&Prime;</code> ruler markings with explicit tolerance indicators.</li>
+      <li><strong>Compound Measurement Resolution:</strong> Directly parses and converts mixed-unit expressions such as human height (<code>5 ft 10 in</code> or <code>5'10"</code> to cm), parcel weights (<code>2 lbs 4 oz</code> to grams), and elapsed durations (<code>1 hr 30 min</code> to seconds).</li>
+      <li><strong>Kitchen Drawer Breakdown:</strong> Translates awkward fractional volumes (such as <code>1/3 cup</code> or <code>34 mL</code>) into practical combinations of standard measuring cups, tablespoons, and teaspoons.</li>
+      <li><strong>22 Measurement Domains (228 Units):</strong> Covers Length, Mass, Temperature, Area, Volume, Speed, Time, Digital Storage (Decimal SI &amp; Binary IEC), Data Transfer Rate, Pressure, Energy, Power, Angle, Fuel Economy, Kitchen &amp; Baking, Frequency, Torque, Force, Volumetric Flow Rate, Typography (W3C 96 DPI), Electric Current, and Illuminance.</li>
+    </ul>
+
+    <h2>3. Open Developer API &amp; Model Context Protocol (MCP)</h2>
+    <p>ConvertThings provides free, public developer infrastructure for engineers, educators, and AI systems:</p>
+    <ul>
+      <li><strong>Public REST API:</strong> CORS-enabled JSON endpoints at <code>/api/convert</code> and <code>/api/units</code> supporting both structured unit parameters and natural-language queries.</li>
+      <li><strong>Model Context Protocol (MCP) Server:</strong> Native JSON-RPC 2.0 MCP endpoint at <code>/api/mcp</code> and standalone CLI/stdio package enabling AI assistants to perform deterministic, hallucination-free scientific unit calculations.</li>
+    </ul>
+
+    <h2>4. Contact &amp; Feedback</h2>
+    <p>ConvertThings is actively maintained and curated by Ashton Sprunger. If you have questions, spot a calculation edge case, or would like to request a new measurement unit or category, please reach out:</p>
+    <ul>
+      <li><strong>Email:</strong> <a href="mailto:support@convertthings.com">support@convertthings.com</a></li>
+      <li><strong>Open Source &amp; Issue Tracker:</strong> <a href="https://github.com/ashtonsprunger/convertthings" target="_blank" rel="noopener noreferrer">github.com/ashtonsprunger/convertthings</a></li>
+      <li><strong>Website:</strong> <a href="https://www.convertthings.com">https://www.convertthings.com</a></li>
+    </ul>
+
+    <div class="footer-links">
+      <a href="/">Home Converter</a>
+      <a href="/kitchen">Kitchen Studio</a>
+      <a href="/about.html">About &amp; Contact</a>
+      <a href="/privacy.html">Privacy Policy</a>
+      <a href="/terms.html">Terms of Service</a>
+    </div>
+  </div>
+</body>
+</html>

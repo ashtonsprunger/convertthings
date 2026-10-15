@@ -6,7 +6,8 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { generateSitemapXml, getAllUnitPairs } from '../src/engine/urlRouter.js';
+import { generateSitemapXml, getAllUnitPairs, HUB_ROUTES } from '../src/engine/urlRouter.js';
+import { CATEGORIES } from '../src/engine/conversions.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,5 +17,6 @@ const outputPath = path.resolve(__dirname, '../public/sitemap.xml');
 
 fs.writeFileSync(outputPath, xml, 'utf8');
 
-const pairs = getAllUnitPairs();
-console.log(`Successfully generated sitemap.xml with ${pairs.length + 16} URLs at ${outputPath}`);
+const pairs = getAllUnitPairs().filter((p) => p.isIndexable);
+const totalUrls = 1 + 1 + 3 + HUB_ROUTES.length + CATEGORIES.length + pairs.length;
+console.log(`Successfully generated sitemap.xml with ${totalUrls} high-value indexable URLs at ${outputPath}`);

@@ -20,8 +20,16 @@ import {
   convertUnits,
   formatNumber,
   getUnit,
-  parseFractionString
+  parseFractionString,
+  isFractionLike,
 } from './conversions.js';
+import {
+  convertCulinary,
+  extractCulinaryIngredient,
+  getCulinaryIngredient,
+  isCulinaryMassUnit,
+  CULINARY_MASS_UNITS,
+} from './culinary.js';
 
 // Category-indexed lookup: { [categoryId]: { [aliasKey]: unit } }
 const LOOKUP_BY_CAT = {};
@@ -30,13 +38,16 @@ const GLOBAL_EXACT = {};
 // Flat list for prefix and fuzzy matching
 const ALL_UNITS_LIST = [];
 
+export const FRACTION_GLYPHS = '½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞';
+export const VALUE_REGEX = `(?:[+-]?\\d+\\s*[-+ ]\\s*\\d+\\/\\d+|[+-]?\\d+\\s*[${FRACTION_GLYPHS}]|[+-]?[${FRACTION_GLYPHS}]|[+-]?\\d+\\/\\d+|[+-]?[0-9]*\\.?[0-9]+(?:e[+-]?[0-9]+)?)`;
+
 // Natural complementary unit pairs for single-unit queries (e.g. "50 mph" -> km/h, "miles" -> km)
 export const COMPLEMENTARY_PAIRS = {
-  length: { m: 'ft', ft: 'm', km: 'mi', mi: 'km', cm: 'in', in: 'cm', mm: 'in', yd: 'm', nmi: 'km', ly: 'km' },
-  mass: { kg: 'lb', lb: 'kg', g: 'oz', oz: 'g', mg: 'gr', t: 'ton_us', ton_us: 't', st: 'kg' },
+  length: { m: 'ft', ft: 'm', km: 'mi', mi: 'km', cm: 'in', in: 'cm', mm: 'in', yd: 'm', nmi: 'km', ly: 'km', au: 'km', pc: 'ly', angstrom: 'nm', mil: 'mm', fathom: 'ft', hand: 'in' },
+  mass: { kg: 'lb', lb: 'kg', g: 'oz', oz: 'g', mg: 'gr', t: 'ton_us', ton_us: 't', st: 'kg', oz_t: 'g', dwt: 'g', da: 'kg', slug: 'kg', q: 'kg' },
   temperature: { c: 'f', f: 'c', k: 'c', r: 'f' },
   area: { sqm: 'sqft', sqft: 'sqm', sqkm: 'sqmi', sqmi: 'sqkm', ac: 'ha', ha: 'ac' },
-  volume: { l: 'gal_us', gal_us: 'l', ml: 'floz_us', floz_us: 'ml', cup_us: 'ml' },
+  volume: { l: 'gal_us', gal_us: 'l', ml: 'floz_us', floz_us: 'ml', cup_us: 'ml', cuyd: 'cuft', cuft: 'cuyd', cl: 'ml', dl: 'ml', pt_uk: 'pt_us', qt_uk: 'qt_us', bbl_oil: 'gal_us', ul: 'ml', bu: 'l' },
   speed: { kmh: 'mph', mph: 'kmh', mps: 'mph', knot: 'kmh', mach: 'mph' },
   time: { h: 'min', min: 's', s: 'ms', d: 'h', wk: 'd', yr: 'd' },
   digital: { gb: 'mb', mb: 'gb', tb: 'gb', kb: 'mb', b: 'byte', byte: 'b' },
@@ -45,8 +56,15 @@ export const COMPLEMENTARY_PAIRS = {
   energy: { j: 'cal', cal: 'j', kj: 'kcal', kcal: 'kj', kwh: 'j', btu: 'j' },
   power: { kw: 'hp', hp: 'kw', w: 'hp', mw: 'kw' },
   angle: { deg: 'rad', rad: 'deg', grad: 'deg', arcmin: 'deg', arcsec: 'deg' },
-  fuel: { mpg_us: 'l100km', l100km: 'mpg_us', mpg_uk: 'l100km', kml: 'mpg_us' },
-  cooking: { cup_us: 'tbsp_us', tbsp_us: 'tsp_us', tsp_us: 'ml', floz_us: 'ml' },
+  fuel: { mpg_us: 'l100km', l100km: 'mpg_us', mpg_uk: 'l100km', kml: 'mpg_us', mi_kwh: 'kwh_100km', kwh_100km: 'mi_kwh' },
+  cooking: { cup_us: 'tbsp_us', tbsp_us: 'tsp_us', tsp_us: 'ml', floz_us: 'ml', cup_metric: 'ml', tbsp_metric: 'ml', dsp: 'tbsp_us', shot: 'floz_us' },
+  frequency: { hz: 'khz', khz: 'mhz', mhz: 'ghz', ghz: 'mhz', thz: 'ghz', rpm: 'hz', rad_s: 'rpm', deg_s: 'rad_s' },
+  torque: { nm: 'ftlb', ftlb: 'nm', inlb: 'ftlb', kgfm: 'nm', knm: 'nm', ozin: 'inlb' },
+  force: { n: 'lbf', lbf: 'n', kn: 'lbf', mn: 'kn', kgf: 'n', dyn: 'n', kip: 'kn', ozf: 'lbf' },
+  flow_rate: { cfm: 'l_s', l_s: 'cfm', l_min: 'cfm', m3_h: 'cfm', m3_s: 'm3_h', gpm_us: 'l_min', gph_us: 'gpm_us' },
+  typography: { px: 'rem', rem: 'px', pt: 'px', em: 'px', pc: 'pt', in_css: 'px', mm_css: 'px' },
+  current: { a: 'ma', ma: 'a', ua: 'ma', ka: 'a', ah: 'mah', mah: 'ah', ab_a: 'a', stat_a: 'ua' },
+  illuminance: { lx: 'fc', fc: 'lx', ph: 'lx', nox: 'lx', klx: 'lx' },
 };
 
 // Rich Category Synonyms and Keywords for Search Intent
@@ -66,6 +84,13 @@ export const CATEGORY_SYNONYMS = {
   power: ['power', 'wattage', 'horsepower', 'watts'],
   angle: ['angle', 'degrees', 'geometry', 'radians', 'trigonometry'],
   fuel: ['fuel', 'gas', 'mileage', 'mpg', 'fuel economy', 'gas mileage', 'consumption', 'petrol'],
+  frequency: ['frequency', 'freq', 'hertz', 'hz', 'rpm', 'cycles', 'cycle', 'clock rate', 'clock speed', 'pitch', 'vibration', 'oscillation', 'sound wave', 'gigahertz', 'megahertz'],
+  torque: ['torque', 'tightening torque', 'lug nut', 'lug nuts', 'newton meter', 'foot pound', 'ft lb', 'inch pound', 'wrench', 'bolting', 'rotational force', 'wheel torque', 'bike torque'],
+  force: ['force', 'newton', 'newtons', 'lbf', 'thrust', 'kilonewton', 'pound force', 'kip', 'dyne', 'rocket thrust', 'climbing gear'],
+  flow_rate: ['flow rate', 'volumetric flow', 'flow', 'cfm', 'airflow', 'gpm', 'lps', 'lpm', 'ventilation', 'discharge', 'water flow', 'hvac airflow'],
+  typography: ['typography', 'type', 'font size', 'pixels', 'pixel', 'rem', 'em', 'pica', 'points', 'dpi', 'css units', 'css size', 'screen resolution'],
+  current: ['current', 'electric current', 'amperage', 'amps', 'amperes', 'milliamp', 'milliamps', 'battery capacity', 'mah', 'ah', 'power bank', 'charging current', 'coulombs'],
+  illuminance: ['illuminance', 'illumination', 'lighting', 'light level', 'lux', 'foot candle', 'foot candles', 'fc', 'lumens per square meter', 'photometry', 'brightness', 'phot', 'footcandle'],
 };
 
 // Popular preset conversions per category for instant quick-picks
@@ -98,6 +123,8 @@ export const POPULAR_CONVERSIONS = {
     { from: 'gal_us', to: 'l', val: 1 },
     { from: 'l', to: 'gal_us', val: 1 },
     { from: 'l', to: 'ml', val: 1 },
+    { from: 'cuyd', to: 'cuft', val: 1 },
+    { from: 'cuft', to: 'cuyd', val: 27 },
   ],
   speed: [
     { from: 'mph', to: 'kmh', val: 60 },
@@ -124,6 +151,48 @@ export const POPULAR_CONVERSIONS = {
   time: [
     { from: 'h', to: 'min', val: 1 },
     { from: 'd', to: 'h', val: 1 },
+  ],
+  frequency: [
+    { from: 'hz', to: 'rpm', val: 1 },
+    { from: 'rpm', to: 'hz', val: 1000 },
+    { from: 'ghz', to: 'mhz', val: 3.2 },
+    { from: 'khz', to: 'hz', val: 44.1 },
+  ],
+  torque: [
+    { from: 'nm', to: 'ftlb', val: 100 },
+    { from: 'ftlb', to: 'nm', val: 100 },
+    { from: 'ftlb', to: 'inlb', val: 15 },
+    { from: 'inlb', to: 'ftlb', val: 100 },
+  ],
+  force: [
+    { from: 'n', to: 'lbf', val: 100 },
+    { from: 'lbf', to: 'n', val: 50 },
+    { from: 'kn', to: 'lbf', val: 10 },
+    { from: 'kgf', to: 'n', val: 10 },
+  ],
+  flow_rate: [
+    { from: 'cfm', to: 'l_s', val: 100 },
+    { from: 'l_s', to: 'cfm', val: 50 },
+    { from: 'gpm_us', to: 'l_min', val: 20 },
+    { from: 'm3_h', to: 'cfm', val: 500 },
+  ],
+  typography: [
+    { from: 'px', to: 'rem', val: 16 },
+    { from: 'rem', to: 'px', val: 1 },
+    { from: 'pt', to: 'px', val: 12 },
+    { from: 'px', to: 'pt', val: 16 },
+  ],
+  current: [
+    { from: 'a', to: 'ma', val: 1 },
+    { from: 'ma', to: 'a', val: 500 },
+    { from: 'mah', to: 'ah', val: 5000 },
+    { from: 'ah', to: 'mah', val: 10 },
+  ],
+  illuminance: [
+    { from: 'lx', to: 'fc', val: 500 },
+    { from: 'fc', to: 'lx', val: 50 },
+    { from: 'klx', to: 'fc', val: 10 },
+    { from: 'lx', to: 'fc', val: 100 },
   ],
 };
 
@@ -265,13 +334,22 @@ export function findAllUnits(token, categoryHint = null) {
     if (categoryHint && LOOKUP_BY_CAT[categoryHint]) {
       const catMatches = findPrefixMatches(clean, ALL_UNITS_LIST.filter((i) => i.categoryId === categoryHint));
       if (catMatches.length > 0) {
-        return [{ categoryId: catMatches[0].categoryId, unit: catMatches[0].unit }];
+        return catMatches.map((m) => ({ categoryId: m.categoryId, unit: m.unit }));
       }
     }
 
     const globalMatches = findPrefixMatches(clean, ALL_UNITS_LIST);
     if (globalMatches.length > 0) {
-      return [{ categoryId: globalMatches[0].categoryId, unit: globalMatches[0].unit }];
+      const seen = new Set();
+      const unique = [];
+      for (const m of globalMatches) {
+        const key = `${m.categoryId}-${m.unit.id}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          unique.push({ categoryId: m.categoryId, unit: m.unit });
+        }
+      }
+      return unique;
     }
   }
 
@@ -348,13 +426,10 @@ export function findCategoryMatch(queryToken) {
     }
   }
 
-  // 4. Prefix match on synonyms (token >= 3 chars, e.g. "cook", "temp")
+  // 4. Prefix match on category names or IDs (token >= 3 chars, e.g. "cook", "temp", "speed")
   if (clean.length >= 3) {
-    for (const [catId, synonyms] of Object.entries(CATEGORY_SYNONYMS)) {
-      if (synonyms.some((s) => s.startsWith(clean))) {
-        return CATEGORIES.find((c) => c.id === catId);
-      }
-    }
+    const directPrefix = CATEGORIES.find((c) => c.id.startsWith(clean) || c.name.toLowerCase().startsWith(clean));
+    if (directPrefix) return directPrefix;
   }
 
   return null;
@@ -461,13 +536,13 @@ export function parseCompoundConversion(rawQuery) {
   let targetToken = null;
   let compoundStr = q;
 
-  const howManyMatch = q.match(/^(?:how many|how much)\s+([a-z0-9_°'"/²³µ\s]+?)\s+(?:in|are in|are there in)\s+(.+)$/i);
+  const howManyMatch = q.match(/^(?:how many|how much)\s+([a-z0-9_°'"/²³µ\s-]+?)\s+(?:in|are in|are there in)\s+(.+)$/i);
   if (howManyMatch) {
     targetToken = howManyMatch[1].trim();
     compoundStr = howManyMatch[2].trim();
   } else {
     // Check trailing target: "... (to|in|into|as|=|convert to) [targetUnit]"
-    const toMatch = q.match(/^(.*?)\s+(?:to|in|into|as|=|convert to)\s+([a-z0-9_°'"/²³µ]+)$/i);
+    const toMatch = q.match(/^(.*?)\s+(?:to|in|into|as|=|convert to)\s+([a-z0-9_°'"/²³µ-]+)$/i);
     if (toMatch) {
       targetToken = toMatch[2].trim();
       compoundStr = toMatch[1].trim();
@@ -649,6 +724,42 @@ export function parseCompoundConversion(rawQuery) {
  * @param {string} rawQuery
  * @returns {object|null}
  */
+/**
+ * Resolves a unit token in culinary context: checks mass units (g, oz, lb, kg) as well as cooking/volume units.
+ */
+function findCulinaryOrMassUnit(token) {
+  if (!token) return null;
+  const clean = token.trim().toLowerCase();
+  // 1. Check culinary mass units (g, oz, lb, kg)
+  const massMatch = CULINARY_MASS_UNITS.find(
+    (u) =>
+      u.id === clean ||
+      u.symbol.toLowerCase() === clean ||
+      u.name.toLowerCase() === clean ||
+      u.plural.toLowerCase() === clean ||
+      (clean.length > 2 && clean.endsWith('s') && u.name.toLowerCase() === clean.slice(0, -1))
+  );
+  if (massMatch) return massMatch;
+
+  // 2. Check cooking units
+  const cookUnit = findUnit(token, 'cooking');
+  if (cookUnit && (cookUnit.categoryId === 'cooking' || cookUnit.categoryId === 'volume')) {
+    return cookUnit.unit;
+  }
+
+  // 3. Check mass units globally
+  const globalMass = findUnit(token, 'mass');
+  if (globalMass && isCulinaryMassUnit(globalMass.unit.id)) {
+    return globalMass.unit;
+  }
+
+  // 4. Fallback: check any volume unit
+  const volUnit = findUnit(token, 'volume');
+  if (volUnit) return volUnit.unit;
+
+  return null;
+}
+
 export function parseConversionQuery(rawQuery) {
   if (!rawQuery || typeof rawQuery !== 'string') return null;
 
@@ -659,11 +770,145 @@ export function parseConversionQuery(rawQuery) {
   let query = sanitizeQuery(rawQuery);
   if (!query) return null;
 
-  const FRACTION_GLYPHS = '½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞';
-  const VALUE_REGEX = `(?:[+-]?\\d+\\s*[-+ ]\\s*\\d+\\/\\d+|[+-]?\\d+\\s*[${FRACTION_GLYPHS}]|[+-]?[${FRACTION_GLYPHS}]|[+-]?\\d+\\/\\d+|[+-]?[0-9]*\\.?[0-9]+(?:e[+-]?[0-9]+)?)`;
+  // Culinary Baking & Ingredient Density Resolution
+  const { ingredient: culinaryIng, cleanedText: culinaryCleaned } = extractCulinaryIngredient(query);
+  if (culinaryIng && culinaryIng.id !== 'liquid') {
+    // 1. Natural question with ingredient: e.g. "how many grams in 1 cup flour" -> "how many grams in 1 cup"
+    const matchIngHowMany = culinaryCleaned.match(
+      new RegExp('^(?:how many|how much)\\s+([a-z0-9_°\'"/²³µ\\s\\-]+?)\\s+(?:in|are in|are there in)\\s+(?:(' + VALUE_REGEX + ')\\s*)?(?:a\\s+|an\\s+)?([a-z0-9_°\'"/²³µ\\s\\-]+)$', 'i')
+    );
+    if (matchIngHowMany) {
+      const toToken = matchIngHowMany[1].trim();
+      const rawVal = matchIngHowMany[2]?.trim();
+      const val = rawVal ? parseFractionString(rawVal) : 1;
+      const fromToken = matchIngHowMany[3].trim();
+      if (!isNaN(val)) {
+        const uFrom = findCulinaryOrMassUnit(fromToken);
+        const uTo = findCulinaryOrMassUnit(toToken);
+        if (uFrom && uTo) {
+          const res = convertCulinary(val, uFrom.id, uTo.id, culinaryIng.id);
+          if (res !== null && !isNaN(res) && isFinite(res)) {
+            return {
+              success: true,
+              categoryId: 'cooking',
+              fromUnit: uFrom,
+              toUnit: uTo,
+              value: val,
+              displayValue: isFractionLike(rawVal) ? rawVal.trim() : undefined,
+              result: res,
+              formattedResult: formatNumber(res, 'auto', 'cooking'),
+              query: rawQuery,
+              hasExplicitValue: !!rawVal,
+              hasExplicitTo: true,
+              ingredient: culinaryIng.id,
+            };
+          }
+        }
+      }
+    }
+
+    // 2. Full directional with ingredient: e.g. "1 cup flour to grams" -> "1 cup to grams"
+    const matchIngFull = culinaryCleaned.match(
+      new RegExp('^(' + VALUE_REGEX + '\\s*)?([a-z0-9_°\'"/²³µ\\s\\-]+?)\\s+(?:to|in|into|as|=|convert to)\\s+([a-z0-9_°\'"/²³µ\\s\\-]+)$', 'i')
+    );
+    if (matchIngFull) {
+      const rawVal = matchIngFull[1]?.trim();
+      const val = rawVal ? parseFractionString(rawVal) : 1;
+      const fromToken = matchIngFull[2].trim();
+      const toToken = matchIngFull[3].trim();
+      if (!isNaN(val)) {
+        const uFrom = findCulinaryOrMassUnit(fromToken);
+        const uTo = findCulinaryOrMassUnit(toToken);
+        if (uFrom && uTo) {
+          const res = convertCulinary(val, uFrom.id, uTo.id, culinaryIng.id);
+          if (res !== null && !isNaN(res) && isFinite(res)) {
+            return {
+              success: true,
+              categoryId: 'cooking',
+              fromUnit: uFrom,
+              toUnit: uTo,
+              value: val,
+              displayValue: isFractionLike(rawVal) ? rawVal.trim() : undefined,
+              result: res,
+              formattedResult: formatNumber(res, 'auto', 'cooking'),
+              query: rawQuery,
+              hasExplicitValue: !!rawVal,
+              hasExplicitTo: true,
+              ingredient: culinaryIng.id,
+            };
+          }
+        }
+      }
+    }
+
+    // 3. Two units with ingredient: e.g. "1 cup flour grams" or "cup flour grams" -> "1 cup grams"
+    const matchIngTwo = culinaryCleaned.match(
+      new RegExp('^(' + VALUE_REGEX + '\\s+)?([a-z0-9_°\'"/²³µ\\-]+)\\s+([a-z0-9_°\'"/²³µ\\-]+)$', 'i')
+    );
+    if (matchIngTwo) {
+      const rawVal = matchIngTwo[1]?.trim();
+      const val = rawVal ? parseFractionString(rawVal) : 1;
+      const fromToken = matchIngTwo[2].trim();
+      const toToken = matchIngTwo[3].trim();
+      if (!isNaN(val)) {
+        const uFrom = findCulinaryOrMassUnit(fromToken);
+        const uTo = findCulinaryOrMassUnit(toToken);
+        if (uFrom && uTo) {
+          const res = convertCulinary(val, uFrom.id, uTo.id, culinaryIng.id);
+          if (res !== null && !isNaN(res) && isFinite(res)) {
+            return {
+              success: true,
+              categoryId: 'cooking',
+              fromUnit: uFrom,
+              toUnit: uTo,
+              value: val,
+              displayValue: isFractionLike(rawVal) ? rawVal.trim() : undefined,
+              result: res,
+              formattedResult: formatNumber(res, 'auto', 'cooking'),
+              query: rawQuery,
+              hasExplicitValue: !!rawVal,
+              hasExplicitTo: true,
+              ingredient: culinaryIng.id,
+            };
+          }
+        }
+      }
+    }
+
+    // 4. Single-unit with ingredient: e.g. "1 cup flour" -> "1 cup" or "flour" -> ""
+    const matchIngSingle = culinaryCleaned.match(
+      new RegExp('^(' + VALUE_REGEX + '\\s*)?([a-z0-9_°\'"/²³µ\\s\\-]+)?$', 'i')
+    );
+    if (matchIngSingle) {
+      const rawVal = matchIngSingle[1]?.trim();
+      const val = rawVal ? parseFractionString(rawVal) : 1;
+      const unitToken = matchIngSingle[2]?.trim();
+      let uFrom = unitToken ? findCulinaryOrMassUnit(unitToken) : getUnit('cooking', 'cup_us');
+      if (uFrom) {
+        const uTo = isCulinaryMassUnit(uFrom.id) ? getUnit('cooking', 'cup_us') : CULINARY_MASS_UNITS[0];
+        const res = convertCulinary(val, uFrom.id, uTo.id, culinaryIng.id);
+        if (res !== null && !isNaN(res) && isFinite(res)) {
+          return {
+            success: true,
+            categoryId: 'cooking',
+            fromUnit: uFrom,
+            toUnit: uTo,
+            value: val,
+            displayValue: isFractionLike(rawVal) ? rawVal.trim() : undefined,
+            result: res,
+            formattedResult: formatNumber(res, 'auto', 'cooking'),
+            query: rawQuery,
+            hasExplicitValue: !!rawVal,
+            hasExplicitTo: false,
+            ingredient: culinaryIng.id,
+          };
+        }
+      }
+    }
+  }
 
   // Pattern 0: Natural question format: "how many [toUnit] in [val]? [fromUnit]"
-  const patternHowMany = new RegExp('^(?:how many|how much)\\s+([a-z0-9_°\'"/²³µ\\s]+?)\\s+(?:in|are in|are there in)\\s+(?:(' + VALUE_REGEX + ')\\s*)?(?:a\\s+|an\\s+)?([a-z0-9_°\'"/²³µ\\s]+)$', 'i');
+  const patternHowMany = new RegExp('^(?:how many|how much)\\s+([a-z0-9_°\'"/²³µ\\s\\-]+?)\\s+(?:in|are in|are there in)\\s+(?:(' + VALUE_REGEX + ')\\s*)?(?:a\\s+|an\\s+)?([a-z0-9_°\'"/²³µ\\s\\-]+)$', 'i');
   const matchHowMany = query.match(patternHowMany);
   if (matchHowMany) {
     const toToken = matchHowMany[1].trim();
@@ -692,6 +937,7 @@ export function parseConversionQuery(rawQuery) {
               fromUnit: uFrom,
               toUnit: uTo,
               value: val,
+              displayValue: isFractionLike(rawVal) ? rawVal.trim() : undefined,
               result: converted,
               formattedResult: formatNumber(converted, 'auto', targetCat),
               query: rawQuery,
@@ -705,7 +951,7 @@ export function parseConversionQuery(rawQuery) {
   }
 
   // Pattern 1: [value]? [unitA] (to|in|into|as|=|convert to) [unitB]
-  const patternFull = new RegExp('^(' + VALUE_REGEX + '\\s*)?([a-z0-9_°\'"/²³µ\\s]+?)\\s+(?:to|in|into|as|=|convert to)\\s+([a-z0-9_°\'"/²³µ\\s]+)$', 'i');
+  const patternFull = new RegExp('^(' + VALUE_REGEX + '\\s*)?([a-z0-9_°\'"/²³µ\\s\\-]+?)\\s+(?:to|in|into|as|=|convert to)\\s+([a-z0-9_°\'"/²³µ\\s\\-]+)$', 'i');
   const matchFull = query.match(patternFull);
 
   if (matchFull) {
@@ -752,6 +998,7 @@ export function parseConversionQuery(rawQuery) {
               fromUnit: uFrom,
               toUnit: uTo,
               value: val,
+              displayValue: isFractionLike(rawVal) ? rawVal.trim() : undefined,
               result: converted,
               formattedResult: formatNumber(converted, 'auto', targetCat),
               query: rawQuery,
@@ -767,8 +1014,16 @@ export function parseConversionQuery(rawQuery) {
   }
 
   // Pattern 2: [value]? [unitA] [unitB] (e.g. "100 km miles", "km miles", "c f")
-  const patternTwoUnits = new RegExp('^(' + VALUE_REGEX + '\\s+)?([a-z°\'"/²³µ]+)\\s+([a-z°\'"/²³µ]+)$', 'i');
-  const matchTwo = query.match(patternTwoUnits);
+  // Only match if the query is NOT already an exact single unit expression (e.g. "gold oz", "metric ton", "square foot")
+  const matchSingleCandidate = query.match(new RegExp('^(' + VALUE_REGEX + '\\s*)?([a-z0-9_°\'"/²³µ\\s\\-]+)$', 'i'));
+  const phraseCandidate = matchSingleCandidate ? matchSingleCandidate[2].trim().toLowerCase().replace(/^°/, '') : null;
+  const isExactSingleUnit = phraseCandidate && (
+    (GLOBAL_EXACT[phraseCandidate] && GLOBAL_EXACT[phraseCandidate].length > 0) ||
+    (phraseCandidate.length > 2 && phraseCandidate.endsWith('s') && GLOBAL_EXACT[phraseCandidate.slice(0, -1)])
+  );
+
+  const patternTwoUnits = new RegExp('^(' + VALUE_REGEX + '\\s+)?([a-z0-9_°\'"/²³µ\\-]+)\\s+([a-z0-9_°\'"/²³µ\\-]+)$', 'i');
+  const matchTwo = isExactSingleUnit ? null : query.match(patternTwoUnits);
   if (matchTwo) {
     const rawVal = matchTwo[1]?.trim();
     const val = rawVal ? parseFractionString(rawVal) : 1;
@@ -804,6 +1059,7 @@ export function parseConversionQuery(rawQuery) {
               fromUnit: uFrom,
               toUnit: uTo,
               value: val,
+              displayValue: isFractionLike(rawVal) ? rawVal.trim() : undefined,
               result: converted,
               formattedResult: formatNumber(converted, 'auto', targetCat),
               query: rawQuery,
@@ -814,11 +1070,10 @@ export function parseConversionQuery(rawQuery) {
         }
       }
     }
-    return null;
   }
 
   // Pattern 3: [value]? [unitA] -> auto-convert to complementary target unit (e.g. "50 mph" -> km/h, "miles" -> km)
-  const patternSingle = new RegExp('^(' + VALUE_REGEX + '\\s*)?([a-z0-9_°\'"/²³µ\\s]+)$', 'i');
+  const patternSingle = new RegExp('^(' + VALUE_REGEX + '\\s*)?([a-z0-9_°\'"/²³µ\\s\\-]+)$', 'i');
   const matchSingle = query.match(patternSingle);
   if (matchSingle) {
     const rawVal = matchSingle[1]?.trim();
@@ -854,6 +1109,7 @@ export function parseConversionQuery(rawQuery) {
             fromUnit: match.unit,
             toUnit: targetUnit,
             value: val,
+            displayValue: isFractionLike(rawVal) ? rawVal.trim() : undefined,
             result: converted,
             formattedResult: formatNumber(converted, 'auto', catId),
             query: rawQuery,
@@ -866,6 +1122,130 @@ export function parseConversionQuery(rawQuery) {
   }
 
   return null;
+}
+
+/**
+ * Searches across all units using full semantic metadata:
+ * - Subtitle
+ * - Badge
+ * - Primary Name & Plural
+ * - Unit Aliases & Trade Terms
+ *
+ * Used by getSearchSuggestions to surface smart unit recommendation cards
+ * when the user types topic words or trade contexts (e.g. "hvac", "gold", "jewelry", "astronomy").
+ *
+ * @param {string} query
+ * @returns {Array<{ categoryId: string, unit: object, score: number, matchReason: string }>}
+ */
+export function findTopicUnits(query) {
+  if (!query || typeof query !== 'string') return [];
+  const clean = query.trim().toLowerCase().replace(/^°/, '');
+  if (clean.length < 2) return [];
+
+  // Exclude common grammatical filler words
+  const stopWords = new Set(['the', 'and', 'for', 'with', 'from', 'into', 'unit', 'units', 'convert', 'how', 'many', 'much', 'what', 'is', 'are']);
+  if (stopWords.has(clean)) return [];
+
+  const cleanRegex = new RegExp(`\\b${clean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
+  const results = [];
+  const seenUnits = new Set();
+
+  for (const item of ALL_UNITS_LIST) {
+    const { categoryId, unit } = item;
+    const unitKey = `${categoryId}-${unit.id}`;
+    if (seenUnits.has(unitKey)) continue;
+
+    const name = (unit.name || '').toLowerCase();
+    const plural = (unit.plural || '').toLowerCase();
+    const symbol = (unit.symbol || '').toLowerCase();
+    const subtitle = (unit.subtitle || '').toLowerCase();
+    const badge = (unit.badge || '').toLowerCase();
+    const aliases = (unit.aliases || []).map((a) => (a || '').toLowerCase().replace(/^°/, ''));
+
+    let score = 0;
+    let matchReason = '';
+
+    // 1. Badge exact or word-boundary match (e.g. badge: "Jewelry", query: "jewelry")
+    if (badge) {
+      if (badge === clean) {
+        score += 85;
+        matchReason = `${unit.badge} Standard`;
+      } else if (badge.startsWith(clean) || cleanRegex.test(badge)) {
+        score += 65;
+        matchReason = `${unit.badge} Context`;
+      }
+    }
+
+    // 2. Subtitle word match (e.g. "Gold, silver & bullion", query: "gold" or "bullion")
+    if (subtitle) {
+      if (cleanRegex.test(subtitle)) {
+        score += 80;
+        matchReason = unit.subtitle;
+      } else if (clean.length >= 3 && subtitle.includes(clean)) {
+        score += 45;
+        matchReason = unit.subtitle;
+      }
+    }
+
+    // 3. Trade / colloquial alias word match (e.g. "gold oz", "diamond carat")
+    for (const a of aliases) {
+      if (a === clean) {
+        score += 95;
+        matchReason = `Alias: ${a}`;
+        break;
+      } else if (cleanRegex.test(a)) {
+        score += 75;
+        matchReason = `Colloquial: ${a}`;
+        break;
+      } else if (clean.length >= 3 && a.includes(clean)) {
+        score += 40;
+        break;
+      }
+    }
+
+    // 4. Primary Name / Plural match
+    if (name === clean || plural === clean || symbol === clean) {
+      score += 100;
+      matchReason = unit.name;
+    } else if (cleanRegex.test(name) || cleanRegex.test(plural)) {
+      score += 60;
+      matchReason = unit.name;
+    }
+
+    // 5. Root / Stem match for longer topic terms (>= 5 chars, e.g. "astronomy" <-> "astronomical")
+    if (clean.length >= 5) {
+      const stem5 = clean.slice(0, 5);
+      const stem6 = clean.length >= 6 ? clean.slice(0, 6) : null;
+      const targetText = `${name} ${plural} ${subtitle} ${badge} ${aliases.join(' ')}`.toLowerCase();
+      if (stem6 && targetText.includes(stem6)) {
+        score += 65;
+        if (!matchReason) matchReason = unit.subtitle || unit.name;
+      } else if (targetText.includes(stem5)) {
+        score += 50;
+        if (!matchReason) matchReason = unit.subtitle || unit.name;
+      }
+    }
+
+    if (score > 0) {
+      seenUnits.add(unitKey);
+      results.push({
+        categoryId,
+        unit,
+        score,
+        matchReason: matchReason || unit.subtitle || unit.name,
+      });
+    }
+  }
+
+  // Sort by highest score first, then common units first
+  results.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    if (a.unit.tier === 'common' && b.unit.tier !== 'common') return -1;
+    if (b.unit.tier === 'common' && a.unit.tier !== 'common') return 1;
+    return 0;
+  });
+
+  return results;
 }
 
 /**
@@ -1022,21 +1402,26 @@ export function getSearchSuggestions(rawQuery, options = {}) {
     const toPlural = parsed.toUnit.plural || parsed.toUnit.name;
     const fromValFormatted = formatNumber(parsed.value, 'auto', parsed.categoryId);
 
+    const ingObj = parsed.ingredient ? getCulinaryIngredient(parsed.ingredient) : null;
+    const ingTitle = ingObj ? ` (${ingObj.shortName})` : '';
+
     const mainTitle = isCompound
       ? `${parsed.compoundDisplay} = ${parsed.formattedResult} ${toPlural}`
-      : `${fromValFormatted} ${fromPlural} = ${parsed.formattedResult} ${toPlural}`;
+      : `${fromValFormatted} ${fromPlural}${ingTitle} = ${parsed.formattedResult} ${toPlural}`;
 
     suggestions.push({
-      id: `conv-main-${parsed.categoryId}-${parsed.fromUnit.id}-${parsed.toUnit.id}`,
+      id: `conv-main-${parsed.categoryId}-${parsed.fromUnit.id}-${parsed.toUnit.id}${parsed.ingredient ? `-${parsed.ingredient}` : ''}`,
       type: isCompound ? 'compound' : 'conversion',
       categoryId: parsed.categoryId,
       title: mainTitle,
-      subtitle: `${catName} · ${parsed.fromUnit.symbol} → ${parsed.toUnit.symbol}`,
-      badge: isCompound ? (parsed.categoryId === 'length' ? 'Height Match' : 'Compound Match') : 'Instant Match',
-      icon: catIcon,
+      subtitle: parsed.ingredient
+        ? `Culinary Studio · ${ingObj?.name || 'Baking Standard'}`
+        : `${catName} · ${parsed.fromUnit.symbol} → ${parsed.toUnit.symbol}`,
+      badge: parsed.ingredient ? 'Baking Match' : (isCompound ? (parsed.categoryId === 'length' ? 'Height Match' : 'Compound Match') : 'Instant Match'),
+      icon: parsed.ingredient ? (ingObj?.icon || 'Wheat') : catIcon,
       equation: {
         fromVal: isCompound ? parsed.compoundDisplay : fromValFormatted,
-        fromUnit: isCompound ? '' : fromPlural,
+        fromUnit: isCompound ? '' : `${fromPlural}${ingTitle}`,
         fromSymbol: parsed.fromUnit.symbol,
         toVal: parsed.formattedResult,
         toUnit: toPlural,
@@ -1048,23 +1433,91 @@ export function getSearchSuggestions(rawQuery, options = {}) {
         fromUnitId: parsed.fromUnit.id,
         toUnitId: parsed.toUnit.id,
         value: parsed.value,
-        displayValue: isCompound ? parsed.compoundDisplay : undefined,
+        displayValue: isCompound ? parsed.compoundDisplay : (parsed.displayValue || undefined),
         formattedResult: parsed.formattedResult,
         hasExplicitValue: isCompound || !!parsed.hasExplicitValue,
         hasExplicitTo: parsed.hasExplicitTo !== false,
+        ingredient: parsed.ingredient,
       },
+    });
+
+    // If this was an explicit 2-unit conversion (e.g. "100 km to miles", "5'11 to cm"), return immediately
+    if (parsed.hasExplicitTo && parsed.hasExplicitValue) {
+      return suggestions;
+    }
+
+    // If single-unit exploration query (e.g. "gold", "gold oz", "horse"),
+    // also surface other relevant topic/unit suggestions if available
+    const relatedTopicUnits = findTopicUnits(query).filter(
+      (tu) => !(tu.categoryId === parsed.categoryId && tu.unit.id === parsed.fromUnit.id)
+    );
+
+    relatedTopicUnits.slice(0, 3).forEach((tu) => {
+      const catId = tu.categoryId;
+      const catDef = CATEGORIES.find((c) => c.id === catId);
+      const catName = catDef ? catDef.name : catId;
+      const compId = COMPLEMENTARY_PAIRS[catId]?.[tu.unit.id] || (catDef?.defaultTo !== tu.unit.id ? catDef?.defaultTo : catDef?.defaultFrom);
+      const targetUnit = getUnit(catId, compId) || UNIT_DEFINITIONS[catId].units.find((u) => u.id !== tu.unit.id);
+      if (targetUnit) {
+        const res = convertUnits(1, catId, tu.unit.id, targetUnit.id);
+        if (res !== null) {
+          const formatted = formatNumber(res, 'auto', catId);
+          const fName = tu.unit.name;
+          const tPlural = targetUnit.plural || targetUnit.name;
+          suggestions.push({
+            id: `topic-${catId}-${tu.unit.id}-${targetUnit.id}`,
+            type: 'conversion',
+            categoryId: catId,
+            title: `1 ${fName} = ${formatted} ${tPlural}`,
+            subtitle: `${catName} · ${tu.unit.subtitle || tu.unit.name}`,
+            badge: tu.unit.badge || 'Suggested',
+            icon: catDef ? catDef.icon : 'Sparkles',
+            equation: {
+              fromVal: 1,
+              fromUnit: fName,
+              fromSymbol: tu.unit.symbol,
+              toVal: formatted,
+              toUnit: tPlural,
+              toSymbol: targetUnit.symbol,
+            },
+            payload: {
+              action: 'convert',
+              categoryId: catId,
+              fromUnitId: tu.unit.id,
+              toUnitId: targetUnit.id,
+              value: 1,
+              hasExplicitValue: false,
+              hasExplicitTo: false,
+            },
+          });
+        }
+      }
     });
 
     return suggestions;
   }
 
-  // 4. Incomplete query matching (e.g. "100 km to ", "100 km", "50 miles in")
-  const incompleteRegex = /^(?:([+-]?[0-9]*\.?[0-9]+)\s*)?([a-z0-9_°'"/²³µ]+)(?:\s+(?:to|in|into|as|=|convert to)\s*)?$/i;
-  const matchInc = query.match(incompleteRegex);
-  if (matchInc) {
-    const rawVal = matchInc[1];
-    const val = rawVal ? parseFloat(rawVal) : 1;
-    const unitToken = matchInc[2]?.trim();
+  // 4. Incomplete query matching (e.g. "100 km to ", "100 km", "50 miles in", "1/8 in", "1 gold oz to ")
+  let rawVal = null;
+  let unitToken = null;
+  let hasIncompleteMatch = false;
+
+  const prepMatch = query.match(new RegExp(`^(?:(${VALUE_REGEX})\\s*)?([a-z0-9_°'"/²³µ\\s\\-]+?)\\s+(?:to|in|into|as|=|convert to)\\s*$`, 'i'));
+  if (prepMatch) {
+    rawVal = prepMatch[1]?.trim();
+    unitToken = prepMatch[2]?.trim();
+    hasIncompleteMatch = true;
+  } else {
+    const singleMatch = query.match(new RegExp(`^(?:(${VALUE_REGEX})\\s*)?([a-z0-9_°'"/²³µ\\-]+)$`, 'i'));
+    if (singleMatch) {
+      rawVal = singleMatch[1]?.trim();
+      unitToken = singleMatch[2]?.trim();
+      hasIncompleteMatch = true;
+    }
+  }
+
+  if (hasIncompleteMatch && unitToken) {
+    const val = rawVal ? parseFractionString(rawVal) : 1;
     const candidate = findUnit(unitToken);
 
     if (candidate) {
@@ -1078,7 +1531,7 @@ export function getSearchSuggestions(rawQuery, options = {}) {
         const res = convertUnits(val, catId, candidate.unit.id, tUnit.id);
         if (res !== null) {
           const formatted = formatNumber(res, 'auto', catId);
-          const valFormatted = formatNumber(val, 'auto', catId);
+          const valFormatted = isFractionLike(rawVal) ? rawVal : formatNumber(val, 'auto', catId);
           const candPlural = candidate.unit.plural || candidate.unit.name;
           const tPlural = tUnit.plural || tUnit.name;
 
@@ -1104,6 +1557,7 @@ export function getSearchSuggestions(rawQuery, options = {}) {
               fromUnitId: candidate.unit.id,
               toUnitId: tUnit.id,
               value: val,
+              displayValue: isFractionLike(rawVal) ? rawVal : undefined,
               hasExplicitValue: !!rawVal,
               hasExplicitTo: true,
             },
@@ -1117,7 +1571,57 @@ export function getSearchSuggestions(rawQuery, options = {}) {
     }
   }
 
-  // 5. Check for unsupported domain (Currency, Timezones)
+  // 5. Semantic Topic & Trade Keyword Discovery (e.g. "jewelry", "astronomy", "hvac", "diamond", "gold")
+  const topicMatches = findTopicUnits(query);
+  if (topicMatches.length > 0) {
+    topicMatches.slice(0, 4).forEach((tu) => {
+      const catId = tu.categoryId;
+      const catDef = CATEGORIES.find((c) => c.id === catId);
+      const catName = catDef ? catDef.name : catId;
+      const compId = COMPLEMENTARY_PAIRS[catId]?.[tu.unit.id] || (catDef?.defaultTo !== tu.unit.id ? catDef?.defaultTo : catDef?.defaultFrom);
+      const targetUnit = getUnit(catId, compId) || UNIT_DEFINITIONS[catId].units.find((u) => u.id !== tu.unit.id);
+      if (targetUnit) {
+        const res = convertUnits(1, catId, tu.unit.id, targetUnit.id);
+        if (res !== null) {
+          const formatted = formatNumber(res, 'auto', catId);
+          const fName = tu.unit.name;
+          const tPlural = targetUnit.plural || targetUnit.name;
+          suggestions.push({
+            id: `topic-${catId}-${tu.unit.id}-${targetUnit.id}`,
+            type: 'conversion',
+            categoryId: catId,
+            title: `1 ${fName} = ${formatted} ${tPlural}`,
+            subtitle: `${catName} · ${tu.unit.subtitle || tu.unit.name}`,
+            badge: tu.unit.badge || 'Topic Match',
+            icon: catDef ? catDef.icon : 'Sparkles',
+            equation: {
+              fromVal: 1,
+              fromUnit: fName,
+              fromSymbol: tu.unit.symbol,
+              toVal: formatted,
+              toUnit: tPlural,
+              toSymbol: targetUnit.symbol,
+            },
+            payload: {
+              action: 'convert',
+              categoryId: catId,
+              fromUnitId: tu.unit.id,
+              toUnitId: targetUnit.id,
+              value: 1,
+              hasExplicitValue: false,
+              hasExplicitTo: false,
+            },
+          });
+        }
+      }
+    });
+
+    if (suggestions.length > 0) {
+      return suggestions;
+    }
+  }
+
+  // 6. Check for unsupported domain (Currency, Timezones)
   const unsupp = checkUnsupportedDomain(query);
   if (unsupp) {
     suggestions.push({

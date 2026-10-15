@@ -32,13 +32,37 @@ describe('ConversionCard Component', () => {
     render(<ConversionCard {...defaultProps} />);
 
     const fromInput = screen.getByLabelText(/Enter value in/i);
-    expect(fromInput).toHaveValue(1);
+    expect(fromInput).toHaveValue('1');
 
     const toInput = screen.getByLabelText(/Converted value in/i);
-    expect(toInput).toHaveValue(3.28084);
+    expect(toInput).toHaveValue('3.28084');
 
     expect(screen.getByText('Meter')).toBeInTheDocument();
     expect(screen.getByText('Foot')).toBeInTheDocument();
+  });
+
+  test('accepts fraction input like 1/8 without browser blocking', () => {
+    render(<ConversionCard {...defaultProps} fromValue="1/8" toValue="0.0381" />);
+
+    const fromInput = screen.getByLabelText(/Enter value in/i);
+    expect(fromInput).toHaveValue('1/8');
+
+    fireEvent.change(fromInput, { target: { value: '3/16' } });
+    expect(defaultProps.onFromValueChange).toHaveBeenCalledWith('3/16');
+
+    // Test ArrowUp from fraction (1/8 = 0.125 -> steps to next integer 1)
+    fireEvent.keyDown(fromInput, { key: 'ArrowUp' });
+    expect(defaultProps.onFromValueChange).toHaveBeenCalledWith('1');
+  });
+
+  test('correctly resolves compound input like 5\'10" to full height without truncation to 5', () => {
+    render(<ConversionCard {...defaultProps} fromUnitId="ft" toUnitId="cm" fromValue="5'10&quot;" toValue="177.8" />);
+    const fromInput = screen.getByLabelText(/Enter value in/i);
+    expect(fromInput).toHaveValue("5'10\"");
+
+    // The hero equation should display the full 177.8 cm result, NOT 152.4 (which was the bug where 5 feet was taken)
+    const copyBtn = screen.getByRole('button', { name: /Copy result/i });
+    expect(copyBtn).toHaveTextContent('177.8');
   });
 
   test('calls onFromValueChange and onToValueChange on user input', () => {
@@ -207,34 +231,26 @@ describe('ConversionCard Component', () => {
     expect(handleShare).toHaveBeenCalledTimes(1);
   });
 
-  test('renders cooking kitchen mode shelf and allows copying measuring tools', () => {
-    const handleToggleKitchen = jest.fn();
+  test('renders kitchen drawer measuring tools in lower section and allows copying', () => {
     const handleCopy = jest.fn();
 
     const { container } = render(
       <ConversionCard
         {...defaultProps}
-        categoryId="cooking"
-        fromUnitId="cup"
-        toUnitId="ml"
+        categoryId="flour_ap"
+        fromUnitId="cup_us"
+        toUnitId="g"
         fromValue="2"
-        toValue="473.176"
-        kitchenMode={true}
-        onToggleKitchenMode={handleToggleKitchen}
+        toValue="240"
         onCopy={handleCopy}
       />
     );
 
-    expect(screen.getByText('Kitchen Mode')).toBeInTheDocument();
     expect(screen.getByText('Measuring Tools Needed')).toBeInTheDocument();
 
     const kitchenOutputBox = screen.getByRole('button', { name: /Kitchen measuring tools:/i });
     fireEvent.click(kitchenOutputBox);
     expect(handleCopy).toHaveBeenCalled();
-
-    const toggleBtn = screen.getByRole('button', { name: /Toggle Kitchen Mode/i });
-    fireEvent.click(toggleBtn);
-    expect(handleToggleKitchen).toHaveBeenCalledTimes(1);
 
     // Click individual kitchen tool pills
     const toolChips = container.querySelectorAll('.ct-kitchen-tool-chip');
@@ -353,5 +369,107 @@ describe('ConversionCard Component', () => {
 
     fireEvent.focus(fromInput);
     expect(fromInput.select).toHaveBeenCalled();
+  });
+
+  test('formats unspaced compound 4ft5in cleanly in equation without unit duplication', () => {
+    render(
+      <ConversionCard
+        {...defaultProps}
+        categoryId="length"
+        fromUnitId="ft"
+        toUnitId="in"
+        fromValue="4ft5in"
+        toValue="53"
+      />
+    );
+
+    // Equation must render "4 ft 5 in" on the left and "53" on the right
+    expect(screen.getByText('4 ft 5 in')).toBeInTheDocument();
+    expect(screen.getByText('53')).toBeInTheDocument();
+    // Must NOT have duplicated unit "4ft5in ft"
+    expect(screen.queryByText(/4ft5in ft/i)).not.toBeInTheDocument();
+
+    // From pod must not have warning
+    const fromPod = screen.getByLabelText(/Enter value in/i).closest('.ct-unit-block');
+    expect(fromPod).not.toHaveClass('ct-pod-warning');
+  });
+
+  test('displays gentle warning ring and micro-hint on invalid input 12..4', () => {
+    render(
+      <ConversionCard
+        {...defaultProps}
+        categoryId="length"
+        fromUnitId="m"
+        toUnitId="ft"
+        fromValue="12..4"
+        toValue=""
+      />
+    );
+
+    // Pod has warning accent
+    const fromPod = screen.getByLabelText(/Enter value in/i).closest('.ct-unit-block');
+    expect(fromPod).toHaveClass('ct-pod-warning');
+
+    // Micro-hint is visible
+    expect(screen.getByRole('alert')).toHaveTextContent(/Unrecognized format/i);
+
+    // Hero equation does NOT claim "= 0 ft"
+    expect(screen.queryByText(/= 0 ft/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Enter a valid number or expression/i)).toBeInTheDocument();
+
+    // To input placeholder shows dash
+    const toInput = screen.getByLabelText(/Converted value in/i);
+    expect(toInput).toHaveAttribute('placeholder', '—');
+  });
+
+  test('handles pending typing like 5/ without triggering error state', () => {
+    render(
+      <ConversionCard
+        {...defaultProps}
+        categoryId="length"
+        fromUnitId="m"
+        toUnitId="ft"
+        fromValue="5/"
+        toValue=""
+      />
+    );
+
+    // Pod does NOT have warning
+    const fromPod = screen.getByLabelText(/Enter value in/i).closest('.ct-unit-block');
+    expect(fromPod).not.toHaveClass('ct-pod-warning');
+
+    // No alert micro-hint
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    // Placeholder is a dash
+    const toInput = screen.getByLabelText(/Converted value in/i);
+    expect(toInput).toHaveAttribute('placeholder', '—');
+  });
+
+  test('renders progressive disclosure toggle for specialized units and expands on click', () => {
+    render(<ConversionCard {...defaultProps} categoryId="mass" fromUnitId="kg" toUnitId="lb" />);
+
+    const fromChip = screen.getByRole('button', { name: /Current unit: Kilogram/i });
+    fireEvent.click(fromChip);
+
+    // Common units should be immediately visible
+    expect(screen.getByText('Pounds')).toBeInTheDocument();
+
+    // Toggle for specialized units should be rendered
+    const toggleBtn = screen.getByRole('button', { name: /Show specialized and trade units/i });
+    expect(toggleBtn).toBeInTheDocument();
+
+    // Before clicking expand, specialized unit like Carats is not in document
+    expect(screen.queryByText('Carats')).not.toBeInTheDocument();
+
+    // Click to expand specialized units
+    fireEvent.click(toggleBtn);
+    expect(screen.getByText('Carats')).toBeInTheDocument();
+    expect(screen.getByText('Grains')).toBeInTheDocument();
+
+    // Click hide button to collapse
+    const hideBtn = screen.getByRole('button', { name: /Hide specialized units/i });
+    fireEvent.click(hideBtn);
+    expect(screen.queryByText('Carats')).not.toBeInTheDocument();
   });
 });

@@ -1,6 +1,6 @@
 # ConvertThings
 
-> High-precision, real-time unit conversion web platform and Model Context Protocol (MCP) server covering 15 measurement domains and 120+ standardized NIST/SI units.
+> High-precision, real-time unit conversion web platform and Model Context Protocol (MCP) server covering 22 measurement domains and 228 standardized NIST/SI units.
 
 ConvertThings provides instant bidirectional conversions, natural language query parsing, zero cumulative layout shift (CLS), a public REST API, and native AI agent tooling over MCP (JSON-RPC 2.0 and stdio).
 
@@ -9,7 +9,7 @@ ConvertThings provides instant bidirectional conversions, natural language query
 - [Model Context Protocol (MCP) Endpoint](https://www.convertthings.com/api/mcp): Remote HTTP JSON-RPC 2.0 MCP server exposing tools (`convert_units`, `parse_and_convert`, `list_units`, `get_reference_table`) for AI agents.
 - [Public REST Conversion API](https://www.convertthings.com/api/convert): Free, CORS-enabled REST API for natural language and structured unit queries. Example: `https://www.convertthings.com/api/convert?q=100+km+to+miles`.
 - [Units Directory API](https://www.convertthings.com/api/units): Machine-readable directory of all supported categories, units, symbols, and aliases.
-- [Sitemap](https://www.convertthings.com/sitemap.xml): Full XML sitemap indexing all 1,240+ unit pair routes.
+- [Sitemap](https://www.convertthings.com/sitemap.xml): Full XML sitemap indexing 2,648 unit pair routes.
 
 ## Supported Measurement Categories
 
@@ -17,7 +17,7 @@ ConvertThings provides instant bidirectional conversions, natural language query
 - [Weight & Mass](https://www.convertthings.com/mass): Kilogram, Pound, Gram, Ounce, Stone, Metric Ton, US Short Ton, Imperial Ton, Carat.
 - [Temperature](https://www.convertthings.com/temperature): Celsius, Fahrenheit, Kelvin, Rankine.
 - [Area](https://www.convertthings.com/area): Square Meter, Square Kilometer, Square Foot, Square Mile, Acre, Hectare, Square Yard.
-- [Volume & Capacity](https://www.convertthings.com/volume): Liter, Milliliter, US Gallon, US Quart, US Pint, US Cup, US Fluid Ounce, Imperial Gallon, Cubic Meter, Cubic Foot.
+- [Volume & Capacity](https://www.convertthings.com/volume): Liter, Milliliter, US Gallon, US Quart, US Pint, US Cup, US Fluid Ounce, Imperial Gallon, Cubic Meter, Cubic Foot, Cubic Yard.
 - [Speed](https://www.convertthings.com/speed): Meter per Second, Kilometer per Hour, Mile per Hour, Knot, Foot per Second, Mach.
 - [Time](https://www.convertthings.com/time): Second, Millisecond, Microsecond, Nanosecond, Minute, Hour, Day, Week, Month, Year, Decade, Century.
 - [Digital Storage](https://www.convertthings.com/digital): Bit, Byte, Kilobyte, Kibibyte, Megabyte, Mebibyte, Gigabyte, Gibibyte, Terabyte, Tebibyte, Petabyte.
@@ -28,6 +28,13 @@ ConvertThings provides instant bidirectional conversions, natural language query
 - [Angle](https://www.convertthings.com/angle): Degree, Radian, Gradian, Arcminute, Arcsecond, Revolution.
 - [Fuel Economy](https://www.convertthings.com/fuel): Liters per 100km, US MPG, UK Imperial MPG, km/L.
 - [Cooking & Kitchen](https://www.convertthings.com/cooking): US Cup, US Tablespoon, US Teaspoon, Fluid Ounce, Milliliter, Liter, Pinch, Dash, Drop, Stick of Butter.
+- [Frequency](https://www.convertthings.com/frequency): Hertz, Kilohertz, Megahertz, Gigahertz, Terahertz, Revolutions per Minute (RPM), Radians per Second, Degrees per Second.
+- [Torque](https://www.convertthings.com/torque): Newton-meter, Pound-foot (lb-ft), Pound-inch (lb-in), Kilogram-force Meter, Kilonewton-meter, Ounce-inch.
+- [Force](https://www.convertthings.com/force): Newton, Kilonewton, Meganewton, Pound-force (lbf), Kilogram-force (kgf), Dyne, Kip, Ounce-force.
+- [Volumetric Flow Rate](https://www.convertthings.com/flow_rate): Cubic Feet per Minute (CFM), Liter per Second, Liter per Minute, Cubic Meter per Hour, US Gallon per Minute (GPM), US Gallon per Hour (GPH).
+- [Typography](https://www.convertthings.com/typography): Pixel (px), Point (pt), Rem, Em, Pica, CSS Inch, CSS Millimeter.
+- [Electric Current](https://www.convertthings.com/current): Ampere (A), Milliampere (mA), Microampere (µA), Kiloampere (kA), Ampere-hour (Ah), Milliampere-hour (mAh).
+- [Illuminance](https://www.convertthings.com/illuminance): Lux (lx), Foot-candle (fc), Phot (ph), Nox, Kilolux (klx).
 
 ## Popular Conversions
 
@@ -39,3 +46,6 @@ ConvertThings provides instant bidirectional conversions, natural language query
 - [Fahrenheit to Celsius](https://www.convertthings.com/convert/f-to-c): Convert temperature (°C = (°F - 32) × 5/9).
 - [Feet to Meters](https://www.convertthings.com/convert/ft-to-m): Convert length (1 ft = 0.3048 m).
 - [Meters to Feet](https://www.convertthings.com/convert/m-to-ft): Convert length (1 m = 3.280839895 ft).
+- [Amperes to Milliamperes](https://www.convertthings.com/convert/a-to-ma): Convert electric current (1 A = 1,000 mA).
+- [Milliampere-hours to Ampere-hours](https://www.convertthings.com/convert/mah-to-ah): Convert battery capacity (1,000 mAh = 1 Ah).
+- [Lux to Foot-candles](https://www.convertthings.com/convert/lx-to-fc): Convert light intensity (1 lx ≈ 0.092903 fc).

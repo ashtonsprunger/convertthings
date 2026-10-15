@@ -1,1 +1,536 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"/><link rel="icon" type="image/svg+xml" href="/favicon.svg?v=5"/><link rel="alternate icon" href="/favicon.ico?v=5"/><link rel="icon" type="image/png" sizes="192x192" href="/logo192.png?v=5"/><link rel="icon" type="image/png" sizes="512x512" href="/logo512.png?v=5"/><link rel="apple-touch-icon" href="/logo192.png?v=5"/><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5"/><meta name="theme-color" content="#0f172a"/><meta name="description" content="ConvertThings is a fast, accurate online unit converter for length, weight, temperature, area, volume, speed, time, digital storage, and cooking measurements. Bidirectional, instant, and mobile-friendly."/><meta name="keywords" content="unit converter, metric to imperial, convert units, length converter, weight converter, temperature converter, celsius to fahrenheit, kg to lbs, km to miles, volume converter, conversion calculator"/><meta name="author" content="ConvertThings"/><meta name="robots" content="index, follow"/><link rel="canonical" href="https://www.convertthings.com/"/><meta property="og:type" content="website"/><meta property="og:url" content="https://www.convertthings.com/"/><meta property="og:site_name" content="ConvertThings"/><meta property="og:title" content="ConvertThings - Fast, Accurate Online Unit Converter"/><meta property="og:description" content="Instantly convert units across length, mass, temperature, area, volume, speed, digital storage, and more with exact precision."/><meta property="og:image" content="https://www.convertthings.com/logo512.png"/><meta name="twitter:card" content="summary"/><meta name="twitter:url" content="https://convertthings.com/"/><meta name="twitter:title" content="ConvertThings - Instant Unit Converter"/><meta name="twitter:description" content="Real-time, bidirectional unit conversions with high mathematical precision. Fast, clean, and free."/><meta name="twitter:image" content="https://www.convertthings.com/logo512.png"/><link rel="manifest" href="/manifest.json"/><title>ConvertThings - Instant, Accurate Unit Converter</title><link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/><link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"/><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" media="print" onload='this.media="all"'/><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"/></noscript><script>!function(){var e=!1;function n(){if(!e){e=!0;var n=document.createElement("script");n.async=!0,n.src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2469761428575146",n.crossOrigin="anonymous",document.head.appendChild(n)}}var o=["scroll","touchstart","mousemove","keydown","click"];function t(){n(),o.forEach((function(e){window.removeEventListener(e,t)}))}o.forEach((function(e){window.addEventListener(e,t,{passive:!0,once:!0})})),"requestIdleCallback"in window?window.addEventListener("load",(function(){requestIdleCallback((function(){setTimeout(n,2e3)}),{timeout:3500})})):window.addEventListener("load",(function(){setTimeout(n,2500)}))}()</script><link rel="dns-prefetch" href="https://pagead2.googlesyndication.com"/><script defer="defer" src="/static/js/main.fae261ec.js"></script><link href="/static/css/main.991d5ce0.css" rel="stylesheet"></head><body><noscript><div style="padding:2rem;text-align:center;font-family:sans-serif"><h2>JavaScript Required</h2><p>ConvertThings requires JavaScript to perform real-time, interactive unit conversions.</p></div></noscript><div id="root"></div></body></html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"/><link rel="icon" type="image/svg+xml" href="/favicon.svg?v=5"/><link rel="alternate icon" href="/favicon.ico?v=5"/><link rel="icon" type="image/png" sizes="192x192" href="/logo192.png?v=5"/><link rel="icon" type="image/png" sizes="512x512" href="/logo512.png?v=5"/><link rel="apple-touch-icon" href="/logo192.png?v=5"/><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5"/><meta name="theme-color" content="#0f172a"/><meta name="description" content="Convert units instantly across 22 domains: length, weight, temperature, area, volume, speed, force, flow rate, typography, electric current, illuminance, frequency, torque, digital storage, and cooking. Fast, free, and accurate." /><meta name="keywords" content="unit converter, metric to imperial, convert units, length converter, weight converter, temperature converter, celsius to fahrenheit, kg to lbs, km to miles, volume converter, conversion calculator"/><meta name="author" content="ConvertThings"/><meta name="robots" content="index, follow" /><link rel="canonical" href="https://www.convertthings.com/" /><meta property="og:type" content="website"/><meta property="og:url" content="https://www.convertthings.com/" /><meta property="og:site_name" content="ConvertThings"/><meta property="og:title" content="ConvertThings - Instant, Accurate Online Unit Converter" /><meta property="og:description" content="Bidirectional, high-precision unit conversions across 22 domains with exact formulas and comparison tables." /><meta property="og:image" content="https://www.convertthings.com/logo512.png"/><meta name="twitter:card" content="summary"/><meta name="twitter:url" content="https://convertthings.com/"/><meta name="twitter:title" content="ConvertThings - Instant, Accurate Online Unit Converter" /><meta name="twitter:description" content="Bidirectional, high-precision unit conversions across 22 domains with exact formulas and comparison tables." /><meta name="twitter:image" content="https://www.convertthings.com/logo512.png"/><link rel="manifest" href="/manifest.json"/><title>ConvertThings - Instant, Accurate Online Unit Converter</title><link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/><link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"/><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" media="print" onload='this.media="all"'/><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"/></noscript><link rel="dns-prefetch" href="https://pagead2.googlesyndication.com"/><script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2469761428575146" crossorigin="anonymous"></script><script defer="defer" src="/static/js/main.88425e14.js"></script><link href="/static/css/main.d49bedec.css" rel="stylesheet">  <script type="application/ld+json" id="ct-schema-faq">[{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"How accurate are the unit conversions on ConvertThings?","acceptedAnswer":{"@type":"Answer","text":"Every conversion factor on ConvertThings is calibrated against official NIST Special Publication 811 (National Institute of Standards and Technology) and ISO/IEC 80000 metrology constants. Our custom formatting engine also eliminates IEEE 754 binary floating-point rounding artifacts."}},{"@type":"Question","name":"How do I convert compound measurements like 5 ft 10 in or 2 lbs 4 oz?","acceptedAnswer":{"@type":"Answer","text":"You can type compound measurements directly into either the main input field or the universal search bar (press \"/\" to focus). For example, typing \"5'10\\\" to cm\" or \"2 lbs 4 oz to g\" resolves both components automatically."}},{"@type":"Question","name":"Why does Kitchen Studio convert cups to grams differently for each ingredient?","acceptedAnswer":{"@type":"Answer","text":"Cups measure volume while grams measure weight (mass). Because ingredients have different bulk densities—1 US cup of all-purpose flour weighs 120 grams, whereas 1 US cup of granulated sugar weighs 200 grams and honey weighs 340 grams—ConvertThings uses USDA and King Arthur Baking density tables for accurate culinary scaling."}},{"@type":"Question","name":"How do tape measure fraction conversions work?","acceptedAnswer":{"@type":"Answer","text":"When converting metric units (millimeters or centimeters) to inches, or when selecting Tape Measure mode (1/16\" ± 1/32\"), ConvertThings rounds to the nearest practical carpenter ruler mark and indicates any sub-32nd tolerance offset."}}]},{"@context":"https://schema.org","@type":"SoftwareApplication","name":"ConvertThings Unit Converter","applicationCategory":"UtilitiesApplication","operatingSystem":"All","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Convert units instantly across 22 domains: length, weight, temperature, area, volume, speed, force, flow rate, typography, electric current, illuminance, frequency, torque, digital storage, and cooking. Fast, free, and accurate."}]</script>
+</head><body><div id="root">
+      <div class="ct-app">
+        <header class="ct-header">
+          <div class="ct-header-inner">
+            <a class="ct-brand" href="/" aria-label="ConvertThings Home">
+              <div class="ct-brand-icon">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m16 3 4 4-4 4"/>
+                  <path d="M20 7H4"/>
+                  <path d="m8 21-4-4 4-4"/>
+                  <path d="M4 17h16"/>
+                </svg>
+              </div>
+              <span class="ct-wordmark"><span class="ct-wm-convert">Convert</span><span class="ct-wm-things">Things</span></span>
+            </a>
+          </div>
+        </header>
+        <main class="ct-main">
+          <div class="ct-card">
+        <div class="ct-footnote-card">
+          <div class="ct-footnote-row ct-footnote-row-hero">
+            <span class="ct-footnote-val ct-val-hero">
+              <span class="ct-fn-from"><span class="ct-fn-num">1</span> <span class="ct-fn-sym">m</span></span>
+              <span class="ct-fn-operator"> = </span>
+              <span class="ct-fn-to"><span class="ct-fn-num">3.28084</span> <span class="ct-fn-sym">ft</span></span>
+            </span>
+          </div>
+          <div class="ct-footnote-row ct-footnote-row-sub">
+            <span class="ct-footnote-val ct-val-sub">1 Meter equals 3.28084 Feet</span>
+          </div>
+        </div>
+      </div>
+
+      <section class="ct-table-card" aria-label="Meters to Feet Reference Table">
+      <header class="ct-table-header">
+        <h2 class="ct-card-heading">Meters to Feet Conversion Table</h2>
+        <p class="ct-card-subtitle">Standard benchmark values from 1 to 1,000 m in ft.</p>
+      </header>
+      <div class="ct-table-scroll">
+        <table class="ct-ref-table">
+          <thead>
+            <tr>
+              <th>Meters (m)</th>
+              <th>Feet (ft)</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+        <tr>
+          <td>1 m</td>
+          <td>3.2808 ft</td>
+        </tr>
+        <tr>
+          <td>2 m</td>
+          <td>6.5617 ft</td>
+        </tr>
+        <tr>
+          <td>5 m</td>
+          <td>16.4042 ft</td>
+        </tr>
+        <tr>
+          <td>10 m</td>
+          <td>32.8084 ft</td>
+        </tr>
+        <tr>
+          <td>25 m</td>
+          <td>82.021 ft</td>
+        </tr>
+        <tr>
+          <td>50 m</td>
+          <td>164.042 ft</td>
+        </tr>
+        <tr>
+          <td>100 m</td>
+          <td>328.084 ft</td>
+        </tr>
+        <tr>
+          <td>250 m</td>
+          <td>820.21 ft</td>
+        </tr>
+        <tr>
+          <td>500 m</td>
+          <td>1640.42 ft</td>
+        </tr>
+        <tr>
+          <td>1000 m</td>
+          <td>3280.84 ft</td>
+        </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+      <article class="ct-seo-section">
+        <section class="ct-seo-guide" aria-label="ConvertThings Universal Unit Conversion Guide">
+          <header class="ct-seo-header">
+            <h1 class="ct-seo-title">Instant, Accurate Unit Converter</h1>
+            <p class="ct-seo-lead">Convert units instantly across 22 domains: length, weight, temperature, area, volume, speed, force, flow rate, typography, electric current, illuminance, frequency, torque, digital storage, and cooking. Fast, free, and accurate.</p>
+          </header>
+          <div class="ct-guide-content">
+            <h2 class="ct-guide-heading">Scientific Precision Across 22 Measurement Domains</h2>
+            <p class="ct-guide-text">
+              ConvertThings is a comprehensive, real-time unit conversion platform built for engineers, scientists, students, tradespeople, and home bakers. Every conversion factor is calibrated against official <strong>NIST Special Publication 811</strong> (National Institute of Standards and Technology) and <strong>ISO/IEC 80000</strong> international metrology definitions, with custom IEEE 754 floating-point normalization that eliminates binary rounding errors.
+            </p>
+            <p class="ct-guide-text">
+              In addition to standard decimal conversions, ConvertThings supports <strong>compound measurements</strong> (such as <code>5 ft 10 in to cm</code> or <code>2 lbs 4 oz to g</code>), <strong>carpenter tape measure fractions</strong> (<code>1/16&Prime; &plusmn; 1/32&Prime;</code> ruler markings), and a dedicated <a href="/kitchen">Kitchen &amp; Baking Studio</a> that converts volume cups and spoons into exact gram weights using USDA and King Arthur Baking ingredient density standards.
+            </p>
+
+            <div class="ct-popular-pairs-section">
+              <h3 class="ct-pairs-heading">Most Popular Unit Conversions</h3>
+              <div class="ct-popular-pairs-grid">
+                
+        <a href="/convert/lb-to-kg" class="ct-pair-card">
+          <div class="ct-pair-header">
+            <span class="ct-pair-name">Pounds to Kilograms (lb to kg)</span>
+            <span class="ct-pair-arrow" aria-hidden="true">&rarr;</span>
+          </div>
+          <div class="ct-pair-tip">1 lb = 0.453592 kg</div>
+        </a>
+        <a href="/convert/kg-to-lb" class="ct-pair-card">
+          <div class="ct-pair-header">
+            <span class="ct-pair-name">Kilograms to Pounds (kg to lb)</span>
+            <span class="ct-pair-arrow" aria-hidden="true">&rarr;</span>
+          </div>
+          <div class="ct-pair-tip">1 kg = 2.204623 lb</div>
+        </a>
+        <a href="/convert/km-to-mi" class="ct-pair-card">
+          <div class="ct-pair-header">
+            <span class="ct-pair-name">Kilometers to Miles (km to mi)</span>
+            <span class="ct-pair-arrow" aria-hidden="true">&rarr;</span>
+          </div>
+          <div class="ct-pair-tip">1 km = 0.621371 mi</div>
+        </a>
+        <a href="/convert/c-to-f" class="ct-pair-card">
+          <div class="ct-pair-header">
+            <span class="ct-pair-name">Celsius to Fahrenheit (°C to °F)</span>
+            <span class="ct-pair-arrow" aria-hidden="true">&rarr;</span>
+          </div>
+          <div class="ct-pair-tip">°F = (°C × 9/5) + 32</div>
+        </a>
+        <a href="/convert/in-to-cm" class="ct-pair-card">
+          <div class="ct-pair-header">
+            <span class="ct-pair-name">Inches to Centimeters (in to cm)</span>
+            <span class="ct-pair-arrow" aria-hidden="true">&rarr;</span>
+          </div>
+          <div class="ct-pair-tip">1 in = 2.54 cm</div>
+        </a>
+        <a href="/convert/ft-to-m" class="ct-pair-card">
+          <div class="ct-pair-header">
+            <span class="ct-pair-name">Feet to Meters (ft to m)</span>
+            <span class="ct-pair-arrow" aria-hidden="true">&rarr;</span>
+          </div>
+          <div class="ct-pair-tip">1 ft = 0.3048 m</div>
+        </a>
+        <a href="/convert/cup_us-to-ml" class="ct-pair-card">
+          <div class="ct-pair-header">
+            <span class="ct-pair-name">US Cups to Milliliters (cup to mL)</span>
+            <span class="ct-pair-arrow" aria-hidden="true">&rarr;</span>
+          </div>
+          <div class="ct-pair-tip">1 cup = 236.588 mL</div>
+        </a>
+        <a href="/convert/gal_us-to-l" class="ct-pair-card">
+          <div class="ct-pair-header">
+            <span class="ct-pair-name">US Gallons to Liters (gal to L)</span>
+            <span class="ct-pair-arrow" aria-hidden="true">&rarr;</span>
+          </div>
+          <div class="ct-pair-tip">1 gal = 3.78541 L</div>
+        </a>
+        <a href="/convert/feet-inches-to-cm" class="ct-pair-card">
+          <div class="ct-pair-header">
+            <span class="ct-pair-name">Height Converter (Feet &amp; Inches to cm)</span>
+            <span class="ct-pair-arrow" aria-hidden="true">&rarr;</span>
+          </div>
+          <div class="ct-pair-tip">5'10&quot; = 177.8 cm</div>
+        </a>
+        <a href="/convert/fraction-inches-to-mm" class="ct-pair-card">
+          <div class="ct-pair-header">
+            <span class="ct-pair-name">Tape Measure Fractions to mm</span>
+            <span class="ct-pair-arrow" aria-hidden="true">&rarr;</span>
+          </div>
+          <div class="ct-pair-tip">13/16&quot; = 20.6375 mm</div>
+        </a>
+        <a href="/convert/baking-fractions" class="ct-pair-card">
+          <div class="ct-pair-header">
+            <span class="ct-pair-name">Baking Fractions &amp; Kitchen Spoons</span>
+            <span class="ct-pair-arrow" aria-hidden="true">&rarr;</span>
+          </div>
+          <div class="ct-pair-tip">1/3 cup = 5 tbsp + 1 tsp</div>
+        </a>
+        <a href="/convert/flour-cups-to-grams" class="ct-pair-card">
+          <div class="ct-pair-header">
+            <span class="ct-pair-name">Flour Cups to Grams Converter</span>
+            <span class="ct-pair-arrow" aria-hidden="true">&rarr;</span>
+          </div>
+          <div class="ct-pair-tip">1 cup flour = 120 g</div>
+        </a>
+              </div>
+            </div>
+
+            <div class="ct-popular-pairs-section">
+              <h3 class="ct-pairs-heading">All 22 Measurement Categories (228 Standardized Units)</h3>
+              <div class="ct-popular-pairs-grid">
+                
+        <div class="ct-pair-card">
+          <div class="ct-pair-header">
+            <a href="/length" class="ct-pair-name"><strong>Length &amp; Distance Converter</strong></a>
+          </div>
+          <p class="ct-pair-tip">Convert meters, kilometers, miles, feet, inches, yards, nautical miles, and more with exact precision.</p>
+          <p class="ct-pair-tip"><small>Key units: Meter (m), Kilometer (km), Centimeter (cm), Millimeter (mm), Micrometer (µm), Nanometer (nm)</small></p>
+        </div>
+      
+        <div class="ct-pair-card">
+          <div class="ct-pair-header">
+            <a href="/mass" class="ct-pair-name"><strong>Weight &amp; Mass Converter</strong></a>
+          </div>
+          <p class="ct-pair-tip">Convert kilograms, pounds, ounces, grams, stone, metric tons, carats, and more with scientific precision.</p>
+          <p class="ct-pair-tip"><small>Key units: Kilogram (kg), Gram (g), Milligram (mg), Microgram (µg), Metric Ton (t), Pound (lb)</small></p>
+        </div>
+      
+        <div class="ct-pair-card">
+          <div class="ct-pair-header">
+            <a href="/temperature" class="ct-pair-name"><strong>Temperature Converter</strong></a>
+          </div>
+          <p class="ct-pair-tip">Convert between Celsius (°C), Fahrenheit (°F), Kelvin (K), and Rankine (°R) using exact thermodynamic formulas.</p>
+          <p class="ct-pair-tip"><small>Key units: Celsius (°C), Fahrenheit (°F), Kelvin (K), Rankine (°R)</small></p>
+        </div>
+      
+        <div class="ct-pair-card">
+          <div class="ct-pair-header">
+            <a href="/area" class="ct-pair-name"><strong>Area Converter</strong></a>
+          </div>
+          <p class="ct-pair-tip">Convert square feet, square meters, acres, hectares, square miles, and square kilometers.</p>
+          <p class="ct-pair-tip"><small>Key units: Square Meter (m²), Square Kilometer (km²), Square Centimeter (cm²), Square Millimeter (mm²), Square Mile (mi²), Square Yard (yd²)</small></p>
+        </div>
+      
+        <div class="ct-pair-card">
+          <div class="ct-pair-header">
+            <a href="/volume" class="ct-pair-name"><strong>Volume &amp; Capacity Converter</strong></a>
+          </div>
+          <p class="ct-pair-tip">Convert liters, milliliters, US gallons, Imperial gallons, fluid ounces, cups, tablespoons, teaspoons, cubic feet, cubic yards, and cubic meters.</p>
+          <p class="ct-pair-tip"><small>Key units: Liter (L), Milliliter (mL), Centiliter (cL), Deciliter (dL), Cubic Meter (m³), Cubic Centimeter (cm³)</small></p>
+        </div>
+      
+        <div class="ct-pair-card">
+          <div class="ct-pair-header">
+            <a href="/speed" class="ct-pair-name"><strong>Speed Converter</strong></a>
+          </div>
+          <p class="ct-pair-tip">Convert miles per hour (mph), kilometers per hour (km/h), meters per second (m/s), knots, and Mach.</p>
+          <p class="ct-pair-tip"><small>Key units: Meter per Second (m/s), Kilometer per Hour (km/h), Mile per Hour (mph), Knot (kn), Foot per Second (ft/s), Mach (Standard Sea Level) (Ma)</small></p>
+        </div>
+      
+        <div class="ct-pair-card">
+          <div class="ct-pair-header">
+            <a href="/time" class="ct-pair-name"><strong>Time Converter</strong></a>
+          </div>
+          <p class="ct-pair-tip">Convert seconds, minutes, hours, days, weeks, months, years, decades, and centuries.</p>
+          <p class="ct-pair-tip"><small>Key units: Second (s), Millisecond (ms), Microsecond (µs), Nanosecond (ns), Minute (min), Hour (h)</small></p>
+        </div>
+      
+        <div class="ct-pair-card">
+          <div class="ct-pair-header">
+            <a href="/digital" class="ct-pair-name"><strong>Digital Storage Converter</strong></a>
+          </div>
+          <p class="ct-pair-tip">Convert bits, bytes, kilobytes, megabytes, gigabytes, terabytes, petabytes, and binary mebibytes/gibibytes.</p>
+          <p class="ct-pair-tip"><small>Key units: Bit (b), Nibble (nibble), Byte (B), Kilobyte (Decimal) (KB), Kibibyte (Binary) (KiB), Megabyte (Decimal) (MB)</small></p>
+        </div>
+      
+        <div class="ct-pair-card">
+          <div class="ct-pair-header">
+            <a href="/data_rate" class="ct-pair-name"><strong>Data Transfer Rate Converter</strong></a>
+          </div>
+          <p class="ct-pair-tip">Convert Mbps, Gbps, Kbps, MB/s, and KB/s for network bandwidth and download calculations.</p>
+          <p class="ct-pair-tip"><small>Key units: Bit per Second (bps), Kilobit per Second (Kbps), Megabit per Second (Mbps), Gigabit per Second (Gbps), Terabit per Second (Tbps), Byte per Second (B/s)</small></p>
+        </div>
+      
+        <div class="ct-pair-card">
+          <div class="ct-pair-header">
+            <a href="/pressure" class="ct-pair-name"><strong>Pressure Converter</strong></a>
+          </div>
+          <p class="ct-pair-tip">Convert PSI, bar, pascals (Pa), kilopascals (kPa), standard atmospheres (atm), and torr / mmHg.</p>
+          <p class="ct-pair-tip"><small>Key units: Pascal (Pa), Kilopascal (kPa), Megapascal (MPa), Bar (bar), Millibar (mbar), Pound per Square Inch (psi)</small></p>
+        </div>
+      
+        <div class="ct-pair-card">
+          <div class="ct-pair-header">
+            <a href="/energy" class="ct-pair-name"><strong>Energy Converter</strong></a>
+          </div>
+          <p class="ct-pair-tip">Convert joules, kilojoules, calories, food kilocalories, kilowatt-hours (kWh), and British thermal units (BTU).</p>
+          <p class="ct-pair-tip"><small>Key units: Joule (J), Kilojoule (kJ), Calorie (Gram/Small) (cal), Kilocalorie (Food Calorie) (kcal), Watt-hour (Wh), Kilowatt-hour (kWh)</small></p>
+        </div>
+      
+        <div class="ct-pair-card">
+          <div class="ct-pair-header">
+            <a href="/power" class="ct-pair-name"><strong>Power Converter</strong></a>
+          </div>
+          <p class="ct-pair-tip">Convert watts, kilowatts, megawatts, mechanical horsepower (hp), and metric horsepower (PS).</p>
+          <p class="ct-pair-tip"><small>Key units: Watt (W), Milliwatt (mW), Kilowatt (kW), Megawatt (MW), Horsepower (Mechanical/US) (hp), Metric Horsepower (PS) (PS)</small></p>
+        </div>
+      
+        <div class="ct-pair-card">
+          <div class="ct-pair-header">
+            <a href="/angle" class="ct-pair-name"><strong>Angle Converter</strong></a>
+          </div>
+          <p class="ct-pair-tip">Convert degrees, radians, gradians, arcminutes, arcseconds, and full revolutions.</p>
+          <p class="ct-pair-tip"><small>Key units: Degree (°), Radian (rad), Gradian (grad), Arcminute (arcmin), Arcsecond (arcsec), Revolution (Turn) (rev)</small></p>
+        </div>
+      
+        <div class="ct-pair-card">
+          <div class="ct-pair-header">
+            <a href="/fuel" class="ct-pair-name"><strong>Fuel Economy Converter</strong></a>
+          </div>
+          <p class="ct-pair-tip">Convert US miles per gallon (MPG), UK Imperial MPG, liters per 100km (L/100km), and km/L.</p>
+          <p class="ct-pair-tip"><small>Key units: Liters per 100 km (L/100km), Miles per Gallon (US) (mpg (US)), Miles per Gallon (UK) (mpg (UK)), Kilometers per Liter (km/L), Miles per Kilowatt-hour (mi/kWh), Kilowatt-hours per 100 km (kWh/100km)</small></p>
+        </div>
+      
+        <div class="ct-pair-card">
+          <div class="ct-pair-header">
+            <a href="/cooking" class="ct-pair-name"><strong>Kitchen Mode Converter</strong></a>
+          </div>
+          <p class="ct-pair-tip">Convert cups, tablespoons, teaspoons, fluid ounces, milliliters, pinches, dashes, and sticks of butter.</p>
+          <p class="ct-pair-tip"><small>Key units: Milliliter (mL), US Cup (cup), Metric Cup (cup (metric)), US Tablespoon (tbsp), Metric Tablespoon (tbsp (metric)), US Teaspoon (tsp)</small></p>
+        </div>
+      
+        <div class="ct-pair-card">
+          <div class="ct-pair-header">
+            <a href="/frequency" class="ct-pair-name"><strong>Frequency Converter</strong></a>
+          </div>
+          <p class="ct-pair-tip">Convert hertz (Hz), kilohertz (kHz), megahertz (MHz), gigahertz (GHz), RPM, radians per second, and degrees per second with exact precision.</p>
+          <p class="ct-pair-tip"><small>Key units: Hertz (Hz), Kilohertz (kHz), Megahertz (MHz), Gigahertz (GHz), Terahertz (THz), Revolutions per Minute (RPM)</small></p>
+        </div>
+      
+        <div class="ct-pair-card">
+          <div class="ct-pair-header">
+            <a href="/torque" class="ct-pair-name"><strong>Torque Converter</strong></a>
+          </div>
+          <p class="ct-pair-tip">Convert newton-meters (N·m), foot-pounds (lb-ft), inch-pounds (lb-in), kilogram-force meters (kgf·m), and ounce-inches with exact NIST standards.</p>
+          <p class="ct-pair-tip"><small>Key units: Newton-meter (N·m), Pound-foot (lb-ft), Pound-inch (lb-in), Kilogram-force Meter (kgf·m), Kilonewton-meter (kN·m), Ounce-force Inch (oz-in)</small></p>
+        </div>
+      
+        <div class="ct-pair-card">
+          <div class="ct-pair-header">
+            <a href="/force" class="ct-pair-name"><strong>Force Converter</strong></a>
+          </div>
+          <p class="ct-pair-tip">Convert newtons (N), kilonewtons (kN), pounds-force (lbf), kilograms-force (kgf), dynes, and kips with exact NIST physical constants.</p>
+          <p class="ct-pair-tip"><small>Key units: Newton (N), Kilonewton (kN), Meganewton (MN), Pound-force (lbf), Kilogram-force (kgf), Dyne (dyn)</small></p>
+        </div>
+      
+        <div class="ct-pair-card">
+          <div class="ct-pair-header">
+            <a href="/flow_rate" class="ct-pair-name"><strong>Volumetric Flow Rate Converter</strong></a>
+          </div>
+          <p class="ct-pair-tip">Convert cubic feet per minute (CFM), liters per second (L/s), liters per minute (L/min), cubic meters per hour (m³/h), and gallons per minute (GPM) with precision.</p>
+          <p class="ct-pair-tip"><small>Key units: Cubic Feet per Minute (CFM), Liter per Second (L/s), Liter per Minute (L/min), Cubic Meter per Hour (m³/h), Cubic Meter per Second (m³/s), US Gallon per Minute (GPM)</small></p>
+        </div>
+      
+        <div class="ct-pair-card">
+          <div class="ct-pair-header">
+            <a href="/typography" class="ct-pair-name"><strong>Typography Converter</strong></a>
+          </div>
+          <p class="ct-pair-tip">Convert pixels (px), points (pt), rems, ems, picas, CSS inches, and millimeters based on standard W3C 96 DPI digital baseline specifications.</p>
+          <p class="ct-pair-tip"><small>Key units: Pixel (px), Point (pt), Rem (rem), Em (em), Pica (pc), CSS Inch (in (CSS))</small></p>
+        </div>
+      
+        <div class="ct-pair-card">
+          <div class="ct-pair-header">
+            <a href="/current" class="ct-pair-name"><strong>Electric Current Converter</strong></a>
+          </div>
+          <p class="ct-pair-tip">Convert amperes (A), milliamperes (mA), microamperes (µA), kiloamperes (kA), ampere-hours (Ah), and milliampere-hours (mAh) with precision.</p>
+          <p class="ct-pair-tip"><small>Key units: Ampere (A), Milliampere (mA), Microampere (µA), Kiloampere (kA), Ampere-hour (Ah), Milliampere-hour (mAh)</small></p>
+        </div>
+      
+        <div class="ct-pair-card">
+          <div class="ct-pair-header">
+            <a href="/illuminance" class="ct-pair-name"><strong>Illuminance Converter</strong></a>
+          </div>
+          <p class="ct-pair-tip">Convert lux (lx), foot-candles (fc), phots (ph), and kilolux (klx) with standard photometric SI constants.</p>
+          <p class="ct-pair-tip"><small>Key units: Lux (lx), Foot-candle (fc), Phot (ph), Nox (nox), Kilolux (klx)</small></p>
+        </div>
+      
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="ct-faq-card" aria-label="Frequently Asked Questions">
+      <header class="ct-faq-header">
+        <h3 class="ct-faq-heading ct-card-heading">Frequently Asked Questions</h3>
+        <p class="ct-faq-lead ct-card-subtitle">Verified metrology standards, fraction handling, and culinary density calculations.</p>
+      </header>
+      <div class="ct-faq-list">
+        
+          <div class="ct-faq-item open">
+            <div class="ct-faq-question-btn">
+              <span class="ct-faq-question-text">How accurate are the unit conversions on ConvertThings?</span>
+            </div>
+            <div class="ct-faq-answer">
+              <p>Every conversion factor on ConvertThings is calibrated against official NIST Special Publication 811 (National Institute of Standards and Technology) and ISO/IEC 80000 metrology constants. Our custom formatting engine also eliminates IEEE 754 binary floating-point rounding artifacts.</p>
+            </div>
+          </div>
+        
+          <div class="ct-faq-item open">
+            <div class="ct-faq-question-btn">
+              <span class="ct-faq-question-text">How do I convert compound measurements like 5 ft 10 in or 2 lbs 4 oz?</span>
+            </div>
+            <div class="ct-faq-answer">
+              <p>You can type compound measurements directly into either the main input field or the universal search bar (press &quot;/&quot; to focus). For example, typing &quot;5'10\&quot; to cm&quot; or &quot;2 lbs 4 oz to g&quot; resolves both components automatically.</p>
+            </div>
+          </div>
+        
+          <div class="ct-faq-item open">
+            <div class="ct-faq-question-btn">
+              <span class="ct-faq-question-text">Why does Kitchen Studio convert cups to grams differently for each ingredient?</span>
+            </div>
+            <div class="ct-faq-answer">
+              <p>Cups measure volume while grams measure weight (mass). Because ingredients have different bulk densities—1 US cup of all-purpose flour weighs 120 grams, whereas 1 US cup of granulated sugar weighs 200 grams and honey weighs 340 grams—ConvertThings uses USDA and King Arthur Baking density tables for accurate culinary scaling.</p>
+            </div>
+          </div>
+        
+          <div class="ct-faq-item open">
+            <div class="ct-faq-question-btn">
+              <span class="ct-faq-question-text">How do tape measure fraction conversions work?</span>
+            </div>
+            <div class="ct-faq-answer">
+              <p>When converting metric units (millimeters or centimeters) to inches, or when selecting Tape Measure mode (1/16&quot; ± 1/32&quot;), ConvertThings rounds to the nearest practical carpenter ruler mark and indicates any sub-32nd tolerance offset.</p>
+            </div>
+          </div>
+        
+      </div>
+    </section>
+      </article>
+        </main>
+        <footer class="ct-footer">
+      <div class="ct-footer-inner">
+        <div class="ct-footer-main">
+          <div class="ct-footer-brand-col">
+            <a href="/" class="ct-footer-logo" aria-label="ConvertThings Home (Footer)">
+              <span class="ct-brand-title">
+                <span class="ct-brand-name">Convert</span><span class="ct-brand-accent">Things</span>
+              </span>
+            </a>
+            <p class="ct-footer-desc">
+              Fast, high-precision unit conversions for engineering, science, culinary arts, and everyday measurement tasks.
+            </p>
+            <div class="ct-footer-standards">
+              <span>NIST &amp; ISO 80000 Precision Verified</span>
+            </div>
+          </div>
+          <div class="ct-footer-links-col">
+            <h4 class="ct-footer-heading">Conversion Categories</h4>
+            <div class="ct-footer-category-grid">
+              
+      <a href="/length" class="ct-footer-cat-link ct-cat-length">
+        <span>Length &amp; Distance</span>
+      </a>
+      <a href="/mass" class="ct-footer-cat-link ct-cat-mass">
+        <span>Weight &amp; Mass</span>
+      </a>
+      <a href="/temperature" class="ct-footer-cat-link ct-cat-temperature">
+        <span>Temperature</span>
+      </a>
+      <a href="/area" class="ct-footer-cat-link ct-cat-area">
+        <span>Area</span>
+      </a>
+      <a href="/volume" class="ct-footer-cat-link ct-cat-volume">
+        <span>Volume &amp; Capacity</span>
+      </a>
+      <a href="/speed" class="ct-footer-cat-link ct-cat-speed">
+        <span>Speed</span>
+      </a>
+      <a href="/time" class="ct-footer-cat-link ct-cat-time">
+        <span>Time</span>
+      </a>
+      <a href="/digital" class="ct-footer-cat-link ct-cat-digital">
+        <span>Digital Storage</span>
+      </a>
+      <a href="/data_rate" class="ct-footer-cat-link ct-cat-data_rate">
+        <span>Data Transfer Rate</span>
+      </a>
+      <a href="/pressure" class="ct-footer-cat-link ct-cat-pressure">
+        <span>Pressure</span>
+      </a>
+      <a href="/energy" class="ct-footer-cat-link ct-cat-energy">
+        <span>Energy</span>
+      </a>
+      <a href="/power" class="ct-footer-cat-link ct-cat-power">
+        <span>Power</span>
+      </a>
+      <a href="/angle" class="ct-footer-cat-link ct-cat-angle">
+        <span>Angle</span>
+      </a>
+      <a href="/fuel" class="ct-footer-cat-link ct-cat-fuel">
+        <span>Fuel Economy</span>
+      </a>
+      <a href="/cooking" class="ct-footer-cat-link ct-cat-cooking">
+        <span>Kitchen Mode</span>
+      </a>
+      <a href="/frequency" class="ct-footer-cat-link ct-cat-frequency">
+        <span>Frequency</span>
+      </a>
+      <a href="/torque" class="ct-footer-cat-link ct-cat-torque">
+        <span>Torque</span>
+      </a>
+      <a href="/force" class="ct-footer-cat-link ct-cat-force">
+        <span>Force</span>
+      </a>
+      <a href="/flow_rate" class="ct-footer-cat-link ct-cat-flow_rate">
+        <span>Volumetric Flow Rate</span>
+      </a>
+      <a href="/typography" class="ct-footer-cat-link ct-cat-typography">
+        <span>Typography</span>
+      </a>
+      <a href="/current" class="ct-footer-cat-link ct-cat-current">
+        <span>Electric Current</span>
+      </a>
+      <a href="/illuminance" class="ct-footer-cat-link ct-cat-illuminance">
+        <span>Illuminance</span>
+      </a>
+            </div>
+          </div>
+        </div>
+        <div class="ct-footer-bottom">
+          <p class="ct-footer-copy">&copy; 2026 ConvertThings. All rights reserved.</p>
+          <div class="ct-footer-legal-links">
+            <a href="/kitchen" class="ct-footer-legal-link">Kitchen Studio</a>
+            <a href="/api/mcp" class="ct-footer-legal-link">AI &amp; Developer API</a>
+            <a href="/about.html" class="ct-footer-legal-link">About &amp; Contact</a>
+            <a href="/privacy.html" class="ct-footer-legal-link">Privacy Policy</a>
+            <a href="/terms.html" class="ct-footer-legal-link">Terms of Service</a>
+            <a href="https://github.com/ashtonsprunger/convertthings" target="_blank" rel="noopener noreferrer" class="ct-footer-legal-link">GitHub</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+      </div>
+    </div></body></html>

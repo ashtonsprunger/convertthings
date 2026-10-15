@@ -15,7 +15,9 @@ export function FavoritesBar({
   return (
     <div className="ct-favorites-bar" aria-label="Favorite Conversions">
       <div className="ct-favorites-label">
-        <Icon name="Star" size={13} fill="currentColor" />
+        <span className="ct-favorites-label-icon" aria-hidden="true">
+          <Icon name="Star" size={13} fill="currentColor" />
+        </span>
         <span>Favorites</span>
       </div>
       <div className="ct-favorites-list">
@@ -47,9 +49,9 @@ export function FavoritesBar({
                 aria-pressed={isActive}
               >
                 <span className="ct-fav-dot" aria-hidden="true" />
-                <span>{fromUnit.symbol}</span>
+                <span className="ct-fav-unit">{fromUnit.symbol}</span>
                 <span className="ct-fav-arrow">⇄</span>
-                <span>{toUnit.symbol}</span>
+                <span className="ct-fav-unit">{toUnit.symbol}</span>
               </button>
               <button
                 type="button"

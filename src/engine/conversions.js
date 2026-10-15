@@ -1,8 +1,10 @@
-/**
- * ConvertThings Core Conversion Engine
- * High-precision, zero-dependency unit conversion system.
- * Uses exact NIST/SI definitions where applicable.
- */
+import {
+  KITCHEN_CATEGORIES,
+  KITCHEN_UNIT_DEFINITIONS,
+  PANTRY_GROUPS,
+  isKitchenCategory,
+  getKitchenCategory,
+} from './kitchenDataset.js';
 
 export const CATEGORIES = [
   { id: 'length', name: 'Length & Distance', icon: 'Ruler', defaultFrom: 'm', defaultTo: 'ft' },
@@ -20,6 +22,13 @@ export const CATEGORIES = [
   { id: 'angle', name: 'Angle', icon: 'RotateCw', defaultFrom: 'deg', defaultTo: 'rad' },
   { id: 'fuel', name: 'Fuel Economy', icon: 'Fuel', defaultFrom: 'mpg_us', defaultTo: 'l100km' },
   { id: 'cooking', name: 'Kitchen Mode', icon: 'ChefHat', defaultFrom: 'cup_us', defaultTo: 'tbsp_us' },
+  { id: 'frequency', name: 'Frequency', icon: 'Waveform', defaultFrom: 'hz', defaultTo: 'khz' },
+  { id: 'torque', name: 'Torque', icon: 'Wrench', defaultFrom: 'nm', defaultTo: 'ftlb' },
+  { id: 'force', name: 'Force', icon: 'Crosshair', defaultFrom: 'n', defaultTo: 'lbf' },
+  { id: 'flow_rate', name: 'Volumetric Flow Rate', icon: 'Waves', defaultFrom: 'cfm', defaultTo: 'l_s' },
+  { id: 'typography', name: 'Typography', icon: 'Type', defaultFrom: 'px', defaultTo: 'rem' },
+  { id: 'current', name: 'Electric Current', icon: 'BatteryCharging', defaultFrom: 'a', defaultTo: 'ma' },
+  { id: 'illuminance', name: 'Illuminance', icon: 'Sun', defaultFrom: 'lx', defaultTo: 'fc' },
 ];
 
 /**
@@ -37,35 +46,46 @@ export const UNIT_DEFINITIONS = {
   length: {
     baseUnit: 'm',
     units: [
-      { id: 'm', name: 'Meter', plural: 'Meters', symbol: 'm', factor: 1, aliases: ['meter', 'meters', 'metre', 'metres'] },
-      { id: 'km', name: 'Kilometer', plural: 'Kilometers', symbol: 'km', factor: 1000, aliases: ['kilometer', 'kilometers', 'kilometre', 'kilo', 'km'] },
-      { id: 'cm', name: 'Centimeter', plural: 'Centimeters', symbol: 'cm', factor: 0.01, aliases: ['centimeter', 'centimeters', 'centimetre', 'cm'] },
-      { id: 'mm', name: 'Millimeter', plural: 'Millimeters', symbol: 'mm', factor: 0.001, aliases: ['millimeter', 'millimeters', 'millimetre', 'mm'] },
-      { id: 'um', name: 'Micrometer', plural: 'Micrometers', symbol: 'µm', factor: 1e-6, aliases: ['micrometer', 'micrometers', 'micron', 'microns', 'um', 'µm'] },
-      { id: 'nm', name: 'Nanometer', plural: 'Nanometers', symbol: 'nm', factor: 1e-9, aliases: ['nanometer', 'nanometers', 'nm'] },
-      { id: 'mi', name: 'Mile', plural: 'Miles', symbol: 'mi', factor: 1609.344, aliases: ['mile', 'miles', 'mi'] },
-      { id: 'yd', name: 'Yard', plural: 'Yards', symbol: 'yd', factor: 0.9144, aliases: ['yard', 'yards', 'yd'] },
-      { id: 'ft', name: 'Foot', plural: 'Feet', symbol: 'ft', factor: 0.3048, aliases: ['foot', 'feet', 'ft', "'"] },
-      { id: 'in', name: 'Inch', plural: 'Inches', symbol: 'in', factor: 0.0254, aliases: ['inch', 'inches', 'in', '"'] },
-      { id: 'nmi', name: 'Nautical Mile', plural: 'Nautical Miles', symbol: 'nmi', factor: 1852, aliases: ['nautical mile', 'nautical miles', 'nmi', 'nmile'] },
-      { id: 'ly', name: 'Light-Year', plural: 'Light-Years', symbol: 'ly', factor: 9.4607304725808e15, aliases: ['light year', 'light-year', 'light years', 'ly'] },
+      { id: 'm', name: 'Meter', plural: 'Meters', symbol: 'm', factor: 1, tier: 'common', aliases: ['meter', 'meters', 'metre', 'metres'] },
+      { id: 'km', name: 'Kilometer', plural: 'Kilometers', symbol: 'km', factor: 1000, tier: 'common', aliases: ['kilometer', 'kilometers', 'kilometre', 'kilo', 'km'] },
+      { id: 'cm', name: 'Centimeter', plural: 'Centimeters', symbol: 'cm', factor: 0.01, tier: 'common', aliases: ['centimeter', 'centimeters', 'centimetre', 'cm'] },
+      { id: 'mm', name: 'Millimeter', plural: 'Millimeters', symbol: 'mm', factor: 0.001, tier: 'common', aliases: ['millimeter', 'millimeters', 'millimetre', 'mm'] },
+      { id: 'um', name: 'Micrometer', plural: 'Micrometers', symbol: 'µm', factor: 1e-6, tier: 'specialized', subtitle: 'Microns (cells, fibers)', aliases: ['micrometer', 'micrometers', 'micron', 'microns', 'um', 'µm'] },
+      { id: 'nm', name: 'Nanometer', plural: 'Nanometers', symbol: 'nm', factor: 1e-9, tier: 'specialized', subtitle: 'Nanotechnology & light wavelengths', aliases: ['nanometer', 'nanometers', 'nm'] },
+      { id: 'mi', name: 'Mile', plural: 'Miles', symbol: 'mi', factor: 1609.344, tier: 'common', aliases: ['mile', 'miles', 'mi'] },
+      { id: 'yd', name: 'Yard', plural: 'Yards', symbol: 'yd', factor: 0.9144, tier: 'common', aliases: ['yard', 'yards', 'yd'] },
+      { id: 'ft', name: 'Foot', plural: 'Feet', symbol: 'ft', factor: 0.3048, tier: 'common', aliases: ['foot', 'feet', 'ft', "'"] },
+      { id: 'in', name: 'Inch', plural: 'Inches', symbol: 'in', factor: 0.0254, tier: 'common', aliases: ['inch', 'inches', 'in', '"'] },
+      { id: 'nmi', name: 'Nautical Mile', plural: 'Nautical Miles', symbol: 'nmi', factor: 1852, tier: 'specialized', subtitle: 'Maritime & aviation navigation', badge: 'Nautical', aliases: ['nautical mile', 'nautical miles', 'nmi', 'nmile'] },
+      { id: 'ly', name: 'Light-Year', plural: 'Light-Years', symbol: 'ly', factor: 9.4607304725808e15, tier: 'specialized', subtitle: 'Interstellar astronomical distance', badge: 'Space', aliases: ['light year', 'light-year', 'light years', 'ly', 'space distance', 'astronomy'] },
+      { id: 'au', name: 'Astronomical Unit', plural: 'Astronomical Units', symbol: 'AU', factor: 149597870700, tier: 'specialized', subtitle: 'Earth-Sun distance (Solar system)', badge: 'Space', aliases: ['astronomical unit', 'astronomical units', 'au', 'earth sun distance', 'astronomy'] },
+      { id: 'pc', name: 'Parsec', plural: 'Parsecs', symbol: 'pc', factor: 3.0856775814913673e16, tier: 'specialized', subtitle: 'Astrophysics (~3.26 light-years)', badge: 'Space', aliases: ['parsec', 'parsecs', 'pc', 'astrophysics', 'astronomy'] },
+      { id: 'angstrom', name: 'Ångström', plural: 'Ångströms', symbol: 'Å', factor: 1e-10, tier: 'specialized', subtitle: '0.1 nm (Crystallography & semiconductors)', aliases: ['angstrom', 'angstroms', 'ångström', 'ångströms', 'å'] },
+      { id: 'mil', name: 'Mil (Thou)', plural: 'Mils', symbol: 'mil', factor: 0.0000254, tier: 'specialized', subtitle: '0.001 in (PCB traces, sheet metal, paint)', badge: 'Machining', aliases: ['mil', 'mils', 'thou', 'paint mil', 'coating mil', 'pcb mil'] },
+      { id: 'fathom', name: 'Fathom', plural: 'Fathoms', symbol: 'ftm', factor: 1.8288, tier: 'specialized', subtitle: '6 feet (Nautical depth)', badge: 'Maritime', aliases: ['fathom', 'fathoms', 'ftm', 'fthm', 'water depth', 'nautical fathom'] },
+      { id: 'hand', name: 'Hand', plural: 'Hands', symbol: 'hh', factor: 0.1016, tier: 'specialized', subtitle: '4 inches (Equine horse height)', badge: 'Equestrian', aliases: ['hand', 'hands', 'hh', 'horse hand', 'horse hands', 'hands high', 'equine hand'] },
     ]
   },
   mass: {
     baseUnit: 'kg',
     units: [
-      { id: 'kg', name: 'Kilogram', plural: 'Kilograms', symbol: 'kg', factor: 1, aliases: ['kilogram', 'kilograms', 'kilo', 'kilos', 'kg'] },
-      { id: 'g', name: 'Gram', plural: 'Grams', symbol: 'g', factor: 0.001, aliases: ['gram', 'grams', 'g'] },
-      { id: 'mg', name: 'Milligram', plural: 'Milligrams', symbol: 'mg', factor: 1e-6, aliases: ['milligram', 'milligrams', 'mg'] },
-      { id: 'ug', name: 'Microgram', plural: 'Micrograms', symbol: 'µg', factor: 1e-9, aliases: ['microgram', 'micrograms', 'ug', 'µg'] },
-      { id: 't', name: 'Metric Ton', plural: 'Metric Tons', symbol: 't', factor: 1000, aliases: ['metric ton', 'tonne', 'tonnes', 'metric tonnes', 't'] },
-      { id: 'lb', name: 'Pound', plural: 'Pounds', symbol: 'lb', factor: 0.45359237, aliases: ['pound', 'pounds', 'lb', 'lbs'] },
-      { id: 'oz', name: 'Ounce', plural: 'Ounces', symbol: 'oz', factor: 0.028349523125, aliases: ['ounce', 'ounces', 'oz'] },
-      { id: 'st', name: 'Stone', plural: 'Stone', symbol: 'st', factor: 6.35029318, aliases: ['stone', 'stones', 'st'] },
-      { id: 'ton_us', name: 'US Short Ton', plural: 'US Short Tons', symbol: 'ton (US)', factor: 907.18474, aliases: ['short ton', 'us ton', 'ton'] },
-      { id: 'ton_uk', name: 'Imperial Long Ton', plural: 'Imperial Long Tons', symbol: 'ton (UK)', factor: 1016.0469088, aliases: ['long ton', 'imperial ton', 'uk ton'] },
-      { id: 'ct', name: 'Carat', plural: 'Carats', symbol: 'ct', factor: 0.0002, aliases: ['carat', 'carats', 'ct'] },
-      { id: 'gr', name: 'Grain', plural: 'Grains', symbol: 'gr', factor: 0.00006479891, aliases: ['grain', 'grains', 'gr'] },
+      { id: 'kg', name: 'Kilogram', plural: 'Kilograms', symbol: 'kg', factor: 1, tier: 'common', aliases: ['kilogram', 'kilograms', 'kilo', 'kilos', 'kg'] },
+      { id: 'g', name: 'Gram', plural: 'Grams', symbol: 'g', factor: 0.001, tier: 'common', aliases: ['gram', 'grams', 'g'] },
+      { id: 'mg', name: 'Milligram', plural: 'Milligrams', symbol: 'mg', factor: 1e-6, tier: 'common', aliases: ['milligram', 'milligrams', 'mg'] },
+      { id: 'ug', name: 'Microgram', plural: 'Micrograms', symbol: 'µg', factor: 1e-9, tier: 'specialized', subtitle: 'Microscopic & clinical doses', aliases: ['microgram', 'micrograms', 'ug', 'µg'] },
+      { id: 't', name: 'Metric Ton', plural: 'Metric Tons', symbol: 't', factor: 1000, tier: 'common', subtitle: '1,000 kg (Tonne)', aliases: ['metric ton', 'tonne', 'tonnes', 'metric tonnes', 't'] },
+      { id: 'lb', name: 'Pound', plural: 'Pounds', symbol: 'lb', factor: 0.45359237, tier: 'common', aliases: ['pound', 'pounds', 'lb', 'lbs'] },
+      { id: 'oz', name: 'Ounce', plural: 'Ounces', symbol: 'oz', factor: 0.028349523125, tier: 'common', subtitle: 'Everyday weight (16 oz = 1 lb)', aliases: ['ounce', 'ounces', 'oz'] },
+      { id: 'st', name: 'Stone', plural: 'Stone', symbol: 'st', factor: 6.35029318, tier: 'common', subtitle: '14 lbs (UK body weight)', badge: 'UK', aliases: ['stone', 'stones', 'st', 'uk stone', 'body weight stone'] },
+      { id: 'ton_us', name: 'US Short Ton', plural: 'US Short Tons', symbol: 'ton (US)', factor: 907.18474, tier: 'common', subtitle: '2,000 lbs (US short ton)', badge: 'US', aliases: ['short ton', 'us ton', 'ton'] },
+      { id: 'ton_uk', name: 'Imperial Long Ton', plural: 'Imperial Long Tons', symbol: 'ton (UK)', factor: 1016.0469088, tier: 'specialized', subtitle: '2,240 lbs (UK long ton)', badge: 'UK', aliases: ['long ton', 'imperial ton', 'uk ton'] },
+      { id: 'ct', name: 'Carat', plural: 'Carats', symbol: 'ct', factor: 0.0002, tier: 'specialized', subtitle: 'Diamonds & gemstones', badge: 'Jewelry', aliases: ['carat', 'carats', 'ct', 'diamond carat', 'gemstone carat', 'diamond weight'] },
+      { id: 'gr', name: 'Grain', plural: 'Grains', symbol: 'gr', factor: 0.00006479891, tier: 'specialized', subtitle: 'Gunpowder, arrows & pharmacy', aliases: ['grain', 'grains', 'gr'] },
+      { id: 'oz_t', name: 'Troy Ounce', plural: 'Troy Ounces', symbol: 'oz t', factor: 0.0311034768, tier: 'specialized', subtitle: 'Gold, silver & bullion (31.1 g)', badge: 'Jewelry', aliases: ['troy ounce', 'troy ounces', 'oz t', 'ozt', 'troy oz', 'gold oz', 'gold ounce', 'gold ounces', 'silver ounce', 'bullion ounce'] },
+      { id: 'dwt', name: 'Pennyweight', plural: 'Pennyweights', symbol: 'dwt', factor: 0.00155517384, tier: 'specialized', subtitle: 'Scrap gold & dental alloys (1.555 g)', badge: 'Jewelry', aliases: ['pennyweight', 'pennyweights', 'dwt', 'scrap gold', 'gold dwt', 'dental alloy', 'dental gold'] },
+      { id: 'da', name: 'Dalton (Atomic Mass Unit)', plural: 'Daltons', symbol: 'Da', factor: 1.66053906660e-27, tier: 'specialized', subtitle: 'Chemistry & molecular biology', badge: 'Science', aliases: ['dalton', 'daltons', 'da', 'atomic mass unit', 'atomic mass units', 'amu', 'molecular weight'] },
+      { id: 'slug', name: 'Slug', plural: 'Slugs', symbol: 'slug', factor: 14.5939029, tier: 'specialized', subtitle: 'Aerospace & mechanics (lbf·s²/ft)', aliases: ['slug', 'slugs'] },
+      { id: 'q', name: 'Metric Quintal', plural: 'Metric Quintals', symbol: 'q', factor: 100, tier: 'specialized', subtitle: 'Agricultural grain standard (100 kg)', badge: 'Agri', aliases: ['quintal', 'quintals', 'metric quintal', 'q'] },
     ]
   },
   temperature: {
@@ -76,6 +96,7 @@ export const UNIT_DEFINITIONS = {
         name: 'Celsius',
         plural: 'Celsius',
         symbol: '°C',
+        tier: 'common',
         toBase: (v) => v,
         fromBase: (v) => v,
         aliases: ['celsius', 'centigrade', 'c', '°c', 'degrees c']
@@ -85,6 +106,7 @@ export const UNIT_DEFINITIONS = {
         name: 'Fahrenheit',
         plural: 'Fahrenheit',
         symbol: '°F',
+        tier: 'common',
         toBase: (v) => ((v - 32) * 5) / 9,
         fromBase: (v) => (v * 9) / 5 + 32,
         aliases: ['fahrenheit', 'f', '°f', 'degrees f']
@@ -94,6 +116,7 @@ export const UNIT_DEFINITIONS = {
         name: 'Kelvin',
         plural: 'Kelvin',
         symbol: 'K',
+        tier: 'common',
         toBase: (v) => v - 273.15,
         fromBase: (v) => v + 273.15,
         aliases: ['kelvin', 'k', 'degrees kelvin']
@@ -103,6 +126,8 @@ export const UNIT_DEFINITIONS = {
         name: 'Rankine',
         plural: 'Rankine',
         symbol: '°R',
+        tier: 'specialized',
+        subtitle: 'Thermodynamics (Absolute °F)',
         toBase: (v) => ((v - 491.67) * 5) / 9,
         fromBase: (v) => (v * 9) / 5 + 491.67,
         aliases: ['rankine', 'r', '°r']
@@ -112,144 +137,166 @@ export const UNIT_DEFINITIONS = {
   area: {
     baseUnit: 'sqm',
     units: [
-      { id: 'sqm', name: 'Square Meter', plural: 'Square Meters', symbol: 'm²', factor: 1, aliases: ['square meter', 'square meters', 'sq meter', 'sq meters', 'sq m', 'sqm', 'm2', 'm²', 'sq metre', 'sq metres'] },
-      { id: 'sqkm', name: 'Square Kilometer', plural: 'Square Kilometers', symbol: 'km²', factor: 1e6, aliases: ['square kilometer', 'square kilometers', 'sq km', 'sqkm', 'km2', 'km²'] },
-      { id: 'sqcm', name: 'Square Centimeter', plural: 'Square Centimeters', symbol: 'cm²', factor: 0.0001, aliases: ['square centimeter', 'square centimeters', 'sq cm', 'sqcm', 'cm2', 'cm²'] },
-      { id: 'sqmm', name: 'Square Millimeter', plural: 'Square Millimeters', symbol: 'mm²', factor: 1e-6, aliases: ['square millimeter', 'sq mm', 'sqmm', 'mm2', 'mm²'] },
-      { id: 'sqmi', name: 'Square Mile', plural: 'Square Miles', symbol: 'mi²', factor: 2589988.110336, aliases: ['square mile', 'square miles', 'sq mi', 'sqmi', 'mi2', 'mi²'] },
-      { id: 'sqyd', name: 'Square Yard', plural: 'Square Yards', symbol: 'yd²', factor: 0.83612736, aliases: ['square yard', 'square yards', 'sq yd', 'sqyd', 'yd2', 'yd²'] },
-      { id: 'sqft', name: 'Square Foot', plural: 'Square Feet', symbol: 'ft²', factor: 0.09290304, aliases: ['square foot', 'square feet', 'sq ft', 'sqft', 'ft2', 'ft²'] },
-      { id: 'sqin', name: 'Square Inch', plural: 'Square Inches', symbol: 'in²', factor: 0.00064516, aliases: ['square inch', 'square inches', 'sq in', 'sqin', 'in2', 'in²'] },
-      { id: 'ac', name: 'Acre', plural: 'Acres', symbol: 'ac', factor: 4046.8564224, aliases: ['acre', 'acres', 'ac'] },
-      { id: 'ha', name: 'Hectare', plural: 'Hectares', symbol: 'ha', factor: 10000, aliases: ['hectare', 'hectares', 'ha'] },
+      { id: 'sqm', name: 'Square Meter', plural: 'Square Meters', symbol: 'm²', factor: 1, tier: 'common', aliases: ['square meter', 'square meters', 'sq meter', 'sq meters', 'sq m', 'sqm', 'm2', 'm²', 'sq metre', 'sq metres'] },
+      { id: 'sqkm', name: 'Square Kilometer', plural: 'Square Kilometers', symbol: 'km²', factor: 1e6, tier: 'common', aliases: ['square kilometer', 'square kilometers', 'sq km', 'sqkm', 'km2', 'km²'] },
+      { id: 'sqcm', name: 'Square Centimeter', plural: 'Square Centimeters', symbol: 'cm²', factor: 0.0001, tier: 'specialized', subtitle: 'Square centimeters', aliases: ['square centimeter', 'square centimeters', 'sq cm', 'sqcm', 'cm2', 'cm²'] },
+      { id: 'sqmm', name: 'Square Millimeter', plural: 'Square Millimeters', symbol: 'mm²', factor: 1e-6, tier: 'specialized', subtitle: 'Square millimeters', aliases: ['square millimeter', 'sq mm', 'sqmm', 'mm2', 'mm²'] },
+      { id: 'sqmi', name: 'Square Mile', plural: 'Square Miles', symbol: 'mi²', factor: 2589988.110336, tier: 'common', aliases: ['square mile', 'square miles', 'sq mi', 'sqmi', 'mi2', 'mi²'] },
+      { id: 'sqyd', name: 'Square Yard', plural: 'Square Yards', symbol: 'yd²', factor: 0.83612736, tier: 'common', aliases: ['square yard', 'square yards', 'sq yd', 'sqyd', 'yd2', 'yd²'] },
+      { id: 'sqft', name: 'Square Foot', plural: 'Square Feet', symbol: 'ft²', factor: 0.09290304, tier: 'common', aliases: ['square foot', 'square feet', 'sq ft', 'sqft', 'ft2', 'ft²'] },
+      { id: 'sqin', name: 'Square Inch', plural: 'Square Inches', symbol: 'in²', factor: 0.00064516, tier: 'common', aliases: ['square inch', 'square inches', 'sq in', 'sqin', 'in2', 'in²'] },
+      { id: 'ac', name: 'Acre', plural: 'Acres', symbol: 'ac', factor: 4046.8564224, tier: 'common', aliases: ['acre', 'acres', 'ac'] },
+      { id: 'ha', name: 'Hectare', plural: 'Hectares', symbol: 'ha', factor: 10000, tier: 'common', aliases: ['hectare', 'hectares', 'ha'] },
     ]
   },
   volume: {
     baseUnit: 'l',
     units: [
-      { id: 'l', name: 'Liter', plural: 'Liters', symbol: 'L', factor: 1, aliases: ['liter', 'liters', 'litre', 'litres', 'l'] },
-      { id: 'ml', name: 'Milliliter', plural: 'Milliliters', symbol: 'mL', factor: 0.001, aliases: ['milliliter', 'milliliters', 'millilitre', 'ml'] },
-      { id: 'cum', name: 'Cubic Meter', plural: 'Cubic Meters', symbol: 'm³', factor: 1000, aliases: ['cubic meter', 'cubic meters', 'm3', 'm³'] },
-      { id: 'cucm', name: 'Cubic Centimeter', plural: 'Cubic Centimeters', symbol: 'cm³', factor: 0.001, aliases: ['cubic centimeter', 'cubic centimeters', 'cc', 'cm3', 'cm³'] },
-      { id: 'gal_us', name: 'US Gallon', plural: 'US Gallons', symbol: 'gal (US)', factor: 3.785411784, aliases: ['gallon', 'gallons', 'gal', 'us gallon'] },
-      { id: 'qt_us', name: 'US Quart', plural: 'US Quarts', symbol: 'qt (US)', factor: 0.946352946, aliases: ['quart', 'quarts', 'qt'] },
-      { id: 'pt_us', name: 'US Pint', plural: 'US Pints', symbol: 'pt (US)', factor: 0.473176473, aliases: ['pint', 'pints', 'pt'] },
-      { id: 'cup_us', name: 'US Cup', plural: 'US Cups', symbol: 'cup', factor: 0.2365882365, aliases: ['cup', 'cups'] },
-      { id: 'floz_us', name: 'US Fluid Ounce', plural: 'US Fluid Ounces', symbol: 'fl oz (US)', factor: 0.0295735295625, aliases: ['fluid ounce', 'fluid ounces', 'fl oz', 'floz', 'oz', 'ounce', 'ounces', 'fl. oz'] },
-      { id: 'tbsp_us', name: 'US Tablespoon', plural: 'US Tablespoons', symbol: 'tbsp', factor: 0.01478676478125, aliases: ['tablespoon', 'tablespoons', 'tbsp', 'tbs'] },
-      { id: 'tsp_us', name: 'US Teaspoon', plural: 'US Teaspoons', symbol: 'tsp', factor: 0.00492892159375, aliases: ['teaspoon', 'teaspoons', 'tsp'] },
-      { id: 'gal_uk', name: 'Imperial Gallon', plural: 'Imperial Gallons', symbol: 'gal (UK)', factor: 4.54609, aliases: ['imperial gallon', 'uk gallon', 'gal uk'] },
-      { id: 'floz_uk', name: 'Imperial Fluid Ounce', plural: 'Imperial Fluid Ounces', symbol: 'fl oz (UK)', factor: 0.0284130625, aliases: ['imperial fluid ounce', 'fl oz uk'] },
-      { id: 'cuft', name: 'Cubic Foot', plural: 'Cubic Feet', symbol: 'ft³', factor: 28.316846592, aliases: ['cubic foot', 'cubic feet', 'cu ft', 'ft3'] },
-      { id: 'cuin', name: 'Cubic Inch', plural: 'Cubic Inches', symbol: 'in³', factor: 0.016387064, aliases: ['cubic inch', 'cubic inches', 'cu in', 'in3'] },
+      { id: 'l', name: 'Liter', plural: 'Liters', symbol: 'L', factor: 1, tier: 'common', aliases: ['liter', 'liters', 'litre', 'litres', 'l'] },
+      { id: 'ml', name: 'Milliliter', plural: 'Milliliters', symbol: 'mL', factor: 0.001, tier: 'common', aliases: ['milliliter', 'milliliters', 'millilitre', 'ml'] },
+      { id: 'cl', name: 'Centiliter', plural: 'Centiliters', symbol: 'cL', factor: 0.01, tier: 'common', subtitle: 'European beverage & wine bottles (75 cL)', aliases: ['centiliter', 'centiliters', 'centilitre', 'centilitres', 'cl'] },
+      { id: 'dl', name: 'Deciliter', plural: 'Deciliters', symbol: 'dL', factor: 0.1, tier: 'common', subtitle: 'Nordic & European recipe standard (100 mL)', aliases: ['deciliter', 'deciliters', 'decilitre', 'decilitres', 'dl'] },
+      { id: 'cum', name: 'Cubic Meter', plural: 'Cubic Meters', symbol: 'm³', factor: 1000, tier: 'specialized', subtitle: '1,000 liters (Bulk cargo & shipping)', aliases: ['cubic meter', 'cubic meters', 'm3', 'm³'] },
+      { id: 'cucm', name: 'Cubic Centimeter', plural: 'Cubic Centimeters', symbol: 'cm³', factor: 0.001, tier: 'specialized', subtitle: '1 mL / 1 cc (Engine displacement)', aliases: ['cubic centimeter', 'cubic centimeters', 'cc', 'cm3', 'cm³'] },
+      { id: 'gal_us', name: 'US Gallon', plural: 'US Gallons', symbol: 'gal (US)', factor: 3.785411784, tier: 'common', aliases: ['gallon', 'gallons', 'gal', 'us gallon'] },
+      { id: 'qt_us', name: 'US Quart', plural: 'US Quarts', symbol: 'qt (US)', factor: 0.946352946, tier: 'common', aliases: ['quart', 'quarts', 'qt'] },
+      { id: 'pt_us', name: 'US Pint', plural: 'US Pints', symbol: 'pt (US)', factor: 0.473176473, tier: 'common', aliases: ['pint', 'pints', 'pt'] },
+      { id: 'pt_uk', name: 'Imperial Pint', plural: 'Imperial Pints', symbol: 'pt (UK)', factor: 0.56826125, tier: 'common', subtitle: '20 fl oz (British pub pint)', badge: 'UK', aliases: ['imperial pint', 'imperial pints', 'uk pint', 'uk pints', 'pt uk', 'pt imp'] },
+      { id: 'qt_uk', name: 'Imperial Quart', plural: 'Imperial Quarts', symbol: 'qt (UK)', factor: 1.1365225, tier: 'specialized', subtitle: '40 fl oz (British imperial quart)', badge: 'UK', aliases: ['imperial quart', 'imperial quarts', 'uk quart', 'uk quarts', 'qt uk', 'qt imp'] },
+      { id: 'cup_us', name: 'US Cup', plural: 'US Cups', symbol: 'cup', factor: 0.2365882365, tier: 'common', aliases: ['cup', 'cups'] },
+      { id: 'floz_us', name: 'US Fluid Ounce', plural: 'US Fluid Ounces', symbol: 'fl oz (US)', factor: 0.0295735295625, tier: 'common', subtitle: 'Liquid ounces (drinks & recipes)', aliases: ['fluid ounce', 'fluid ounces', 'fl oz', 'floz', 'oz', 'ounce', 'ounces', 'fl. oz'] },
+      { id: 'tbsp_us', name: 'US Tablespoon', plural: 'US Tablespoons', symbol: 'tbsp', factor: 0.01478676478125, tier: 'common', aliases: ['tablespoon', 'tablespoons', 'tbsp', 'tbs'] },
+      { id: 'tsp_us', name: 'US Teaspoon', plural: 'US Teaspoons', symbol: 'tsp', factor: 0.00492892159375, tier: 'common', aliases: ['teaspoon', 'teaspoons', 'tsp'] },
+      { id: 'gal_uk', name: 'Imperial Gallon', plural: 'Imperial Gallons', symbol: 'gal (UK)', factor: 4.54609, tier: 'specialized', subtitle: '4.546 L (UK imperial gallon)', badge: 'UK', aliases: ['imperial gallon', 'uk gallon', 'gal uk'] },
+      { id: 'floz_uk', name: 'Imperial Fluid Ounce', plural: 'Imperial Fluid Ounces', symbol: 'fl oz (UK)', factor: 0.0284130625, tier: 'specialized', subtitle: '28.41 mL (UK imperial fluid ounce)', badge: 'UK', aliases: ['imperial fluid ounce', 'fl oz uk'] },
+      { id: 'bbl_oil', name: 'Oil Barrel', plural: 'Oil Barrels', symbol: 'bbl', factor: 158.987294928, tier: 'specialized', subtitle: '42 US gallons (Crude oil benchmark)', badge: 'Commodities', aliases: ['oil barrel', 'oil barrels', 'barrel of oil', 'bbl', 'bbls', 'crude oil barrel', 'oil bbl', 'barrel of crude'] },
+      { id: 'cuft', name: 'Cubic Foot', plural: 'Cubic Feet', symbol: 'ft³', factor: 28.316846592, tier: 'specialized', subtitle: 'Refrigerators & storage', aliases: ['cubic foot', 'cubic feet', 'cu ft', 'cu. ft.', 'ft3', 'ft³'] },
+      { id: 'cuyd', name: 'Cubic Yard', plural: 'Cubic Yards', symbol: 'yd³', factor: 764.554857984, tier: 'specialized', subtitle: 'Mulch, concrete & soil', aliases: ['cubic yard', 'cubic yards', 'cu yd', 'cu yds', 'cu. yd.', 'cu. yds.', 'cuyd', 'yd3', 'yd³', 'cubic yd', 'cubic yds'] },
+      { id: 'cuin', name: 'Cubic Inch', plural: 'Cubic Inches', symbol: 'in³', factor: 0.016387064, tier: 'specialized', subtitle: 'Engine displacement', aliases: ['cubic inch', 'cubic inches', 'cu in', 'cu. in.', 'in3', 'in³'] },
+      { id: 'ul', name: 'Microliter', plural: 'Microliters', symbol: 'µL', factor: 1e-6, tier: 'specialized', subtitle: 'Laboratory pipetting & biology (1 mm³)', badge: 'Lab', aliases: ['microliter', 'microliters', 'microlitre', 'microlitres', 'ul', 'µl'] },
+      { id: 'bu', name: 'Bushel (US Dry)', plural: 'Bushels (US Dry)', symbol: 'bu', factor: 35.23907016688, tier: 'specialized', subtitle: 'Agricultural grain trade (wheat, corn)', badge: 'Agri', aliases: ['bushel', 'bushels', 'bu', 'us bushel'] },
     ]
   },
   speed: {
     baseUnit: 'mps',
     units: [
-      { id: 'mps', name: 'Meter per Second', plural: 'Meters per Second', symbol: 'm/s', factor: 1, aliases: ['meter per second', 'meters per second', 'mps', 'm/s'] },
-      { id: 'kmh', name: 'Kilometer per Hour', plural: 'Kilometers per Hour', symbol: 'km/h', factor: 1 / 3.6, aliases: ['kilometer per hour', 'km/h', 'kmh', 'kph'] },
-      { id: 'mph', name: 'Mile per Hour', plural: 'Miles per Hour', symbol: 'mph', factor: 0.44704, aliases: ['mile per hour', 'miles per hour', 'mph'] },
-      { id: 'knot', name: 'Knot', plural: 'Knots', symbol: 'kn', factor: 1852 / 3600, aliases: ['knot', 'knots', 'kn', 'kt'] },
-      { id: 'fps', name: 'Foot per Second', plural: 'Feet per Second', symbol: 'ft/s', factor: 0.3048, aliases: ['foot per second', 'feet per second', 'fps', 'ft/s'] },
-      { id: 'mach', name: 'Mach (Standard Sea Level)', plural: 'Mach', symbol: 'Ma', factor: 340.29, aliases: ['mach', 'ma'] },
+      { id: 'mps', name: 'Meter per Second', plural: 'Meters per Second', symbol: 'm/s', factor: 1, tier: 'common', aliases: ['meter per second', 'meters per second', 'mps', 'm/s'] },
+      { id: 'kmh', name: 'Kilometer per Hour', plural: 'Kilometers per Hour', symbol: 'km/h', factor: 1 / 3.6, tier: 'common', aliases: ['kilometer per hour', 'km/h', 'kmh', 'kph'] },
+      { id: 'mph', name: 'Mile per Hour', plural: 'Miles per Hour', symbol: 'mph', factor: 0.44704, tier: 'common', aliases: ['mile per hour', 'miles per hour', 'mph'] },
+      { id: 'knot', name: 'Knot', plural: 'Knots', symbol: 'kn', factor: 1852 / 3600, tier: 'specialized', subtitle: 'Nautical & aviation speed', badge: 'Maritime', aliases: ['knot', 'knots', 'kn', 'kt'] },
+      { id: 'fps', name: 'Foot per Second', plural: 'Feet per Second', symbol: 'ft/s', factor: 0.3048, tier: 'specialized', subtitle: 'Ballistics & projectile motion', aliases: ['foot per second', 'feet per second', 'fps', 'ft/s'] },
+      { id: 'mach', name: 'Mach (Standard Sea Level)', plural: 'Mach', symbol: 'Ma', factor: 340.29, tier: 'specialized', subtitle: 'Speed of sound (Sea level)', badge: 'Aero', aliases: ['mach', 'ma'] },
     ]
   },
   time: {
     baseUnit: 's',
     units: [
-      { id: 's', name: 'Second', plural: 'Seconds', symbol: 's', factor: 1, aliases: ['second', 'seconds', 'sec', 's'] },
-      { id: 'ms', name: 'Millisecond', plural: 'Milliseconds', symbol: 'ms', factor: 0.001, aliases: ['millisecond', 'milliseconds', 'ms'] },
-      { id: 'us', name: 'Microsecond', plural: 'Microseconds', symbol: 'µs', factor: 1e-6, aliases: ['microsecond', 'microseconds', 'us', 'µs'] },
-      { id: 'ns', name: 'Nanosecond', plural: 'Nanoseconds', symbol: 'ns', factor: 1e-9, aliases: ['nanosecond', 'nanoseconds', 'ns'] },
-      { id: 'min', name: 'Minute', plural: 'Minutes', symbol: 'min', factor: 60, aliases: ['minute', 'minutes', 'min', 'm'] },
-      { id: 'h', name: 'Hour', plural: 'Hours', symbol: 'h', factor: 3600, aliases: ['hour', 'hours', 'hr', 'hrs', 'h'] },
-      { id: 'd', name: 'Day', plural: 'Days', symbol: 'd', factor: 86400, aliases: ['day', 'days', 'd'] },
-      { id: 'wk', name: 'Week', plural: 'Weeks', symbol: 'wk', factor: 604800, aliases: ['week', 'weeks', 'wk', 'wks'] },
-      { id: 'mo', name: 'Month (Average)', plural: 'Months', symbol: 'mo', factor: 2629800, aliases: ['month', 'months', 'mo'] },
-      { id: 'yr', name: 'Year (365.25 days)', plural: 'Years', symbol: 'yr', factor: 31557600, aliases: ['year', 'years', 'yr', 'yrs'] },
-      { id: 'dec', name: 'Decade', plural: 'Decades', symbol: 'decade', factor: 315576000, aliases: ['decade', 'decades'] },
-      { id: 'cent', name: 'Century', plural: 'Centuries', symbol: 'century', factor: 3155760000, aliases: ['century', 'centuries'] },
+      { id: 's', name: 'Second', plural: 'Seconds', symbol: 's', factor: 1, tier: 'common', aliases: ['second', 'seconds', 'sec', 's'] },
+      { id: 'ms', name: 'Millisecond', plural: 'Milliseconds', symbol: 'ms', factor: 0.001, tier: 'common', aliases: ['millisecond', 'milliseconds', 'ms'] },
+      { id: 'us', name: 'Microsecond', plural: 'Microseconds', symbol: 'µs', factor: 1e-6, tier: 'specialized', subtitle: 'Microseconds', aliases: ['microsecond', 'microseconds', 'us', 'µs'] },
+      { id: 'ns', name: 'Nanosecond', plural: 'Nanoseconds', symbol: 'ns', factor: 1e-9, tier: 'specialized', subtitle: 'Nanoseconds', aliases: ['nanosecond', 'nanoseconds', 'ns'] },
+      { id: 'min', name: 'Minute', plural: 'Minutes', symbol: 'min', factor: 60, tier: 'common', aliases: ['minute', 'minutes', 'min', 'm'] },
+      { id: 'h', name: 'Hour', plural: 'Hours', symbol: 'h', factor: 3600, tier: 'common', aliases: ['hour', 'hours', 'hr', 'hrs', 'h'] },
+      { id: 'd', name: 'Day', plural: 'Days', symbol: 'd', factor: 86400, tier: 'common', aliases: ['day', 'days', 'd'] },
+      { id: 'wk', name: 'Week', plural: 'Weeks', symbol: 'wk', factor: 604800, tier: 'common', aliases: ['week', 'weeks', 'wk', 'wks'] },
+      { id: 'mo', name: 'Month (Average)', plural: 'Months', symbol: 'mo', factor: 2629800, tier: 'common', aliases: ['month', 'months', 'mo'] },
+      { id: 'yr', name: 'Year (365.25 days)', plural: 'Years', symbol: 'yr', factor: 31557600, tier: 'common', aliases: ['year', 'years', 'yr', 'yrs'] },
+      { id: 'dec', name: 'Decade', plural: 'Decades', symbol: 'decade', factor: 315576000, tier: 'specialized', subtitle: 'Decades (10 years)', aliases: ['decade', 'decades'] },
+      { id: 'cent', name: 'Century', plural: 'Centuries', symbol: 'century', factor: 3155760000, tier: 'specialized', subtitle: 'Centuries (100 years)', aliases: ['century', 'centuries'] },
     ]
   },
   digital: {
     baseUnit: 'b',
     units: [
-      { id: 'b', name: 'Bit', plural: 'Bits', symbol: 'b', factor: 1, aliases: ['bit', 'bits', 'b'] },
-      { id: 'byte', name: 'Byte', plural: 'Bytes', symbol: 'B', factor: 8, aliases: ['byte', 'bytes', 'B'] },
-      { id: 'kb', name: 'Kilobyte (Decimal)', plural: 'Kilobytes', symbol: 'KB', factor: 8 * 1e3, aliases: ['kilobyte', 'kilobytes', 'kb'] },
-      { id: 'kib', name: 'Kibibyte (Binary)', plural: 'Kibibytes', symbol: 'KiB', factor: 8 * 1024, aliases: ['kibibyte', 'kibibytes', 'kib'] },
-      { id: 'mb', name: 'Megabyte (Decimal)', plural: 'Megabytes', symbol: 'MB', factor: 8 * 1e6, aliases: ['megabyte', 'megabytes', 'mb'] },
-      { id: 'mib', name: 'Mebibyte (Binary)', plural: 'Mebibytes', symbol: 'MiB', factor: 8 * (1024 ** 2), aliases: ['mebibyte', 'mebibytes', 'mib'] },
-      { id: 'gb', name: 'Gigabyte (Decimal)', plural: 'Gigabytes', symbol: 'GB', factor: 8 * 1e9, aliases: ['gigabyte', 'gigabytes', 'gb'] },
-      { id: 'gib', name: 'Gibibyte (Binary)', plural: 'Gibibytes', symbol: 'GiB', factor: 8 * (1024 ** 3), aliases: ['gibibyte', 'gibibytes', 'gib'] },
-      { id: 'tb', name: 'Terabyte (Decimal)', plural: 'Terabytes', symbol: 'TB', factor: 8 * 1e12, aliases: ['terabyte', 'terabytes', 'tb'] },
-      { id: 'tib', name: 'Tebibyte (Binary)', plural: 'Tebibytes', symbol: 'TiB', factor: 8 * (1024 ** 4), aliases: ['tebibyte', 'tebibytes', 'tib'] },
-      { id: 'pb', name: 'Petabyte (Decimal)', plural: 'Petabytes', symbol: 'PB', factor: 8 * 1e15, aliases: ['petabyte', 'petabytes', 'pb'] },
+      { id: 'b', name: 'Bit', plural: 'Bits', symbol: 'b', factor: 1, tier: 'common', aliases: ['bit', 'bits', 'b'] },
+      { id: 'nibble', name: 'Nibble', plural: 'Nibbles', symbol: 'nibble', factor: 4, tier: 'specialized', subtitle: '4 bits / 0.5 byte (Hexadecimal digit)', aliases: ['nibble', 'nibbles', 'nybble', 'nybbles'] },
+      { id: 'byte', name: 'Byte', plural: 'Bytes', symbol: 'B', factor: 8, tier: 'common', aliases: ['byte', 'bytes', 'B'] },
+      { id: 'kb', name: 'Kilobyte (Decimal)', plural: 'Kilobytes', symbol: 'KB', factor: 8 * 1e3, tier: 'common', aliases: ['kilobyte', 'kilobytes', 'kb'] },
+      { id: 'kib', name: 'Kibibyte (Binary)', plural: 'Kibibytes', symbol: 'KiB', factor: 8 * 1024, tier: 'specialized', subtitle: 'Binary standard (Base-2 / 1024)', aliases: ['kibibyte', 'kibibytes', 'kib'] },
+      { id: 'mb', name: 'Megabyte (Decimal)', plural: 'Megabytes', symbol: 'MB', factor: 8 * 1e6, tier: 'common', aliases: ['megabyte', 'megabytes', 'mb'] },
+      { id: 'mib', name: 'Mebibyte (Binary)', plural: 'Mebibytes', symbol: 'MiB', factor: 8 * (1024 ** 2), tier: 'specialized', subtitle: 'Binary standard (Base-2 / 1024)', aliases: ['mebibyte', 'mebibytes', 'mib'] },
+      { id: 'gb', name: 'Gigabyte (Decimal)', plural: 'Gigabytes', symbol: 'GB', factor: 8 * 1e9, tier: 'common', aliases: ['gigabyte', 'gigabytes', 'gb'] },
+      { id: 'gib', name: 'Gibibyte (Binary)', plural: 'Gibibytes', symbol: 'GiB', factor: 8 * (1024 ** 3), tier: 'specialized', subtitle: 'Binary standard (Base-2 / 1024)', aliases: ['gibibyte', 'gibibytes', 'gib'] },
+      { id: 'tb', name: 'Terabyte (Decimal)', plural: 'Terabytes', symbol: 'TB', factor: 8 * 1e12, tier: 'common', aliases: ['terabyte', 'terabytes', 'tb'] },
+      { id: 'tib', name: 'Tebibyte (Binary)', plural: 'Tebibytes', symbol: 'TiB', factor: 8 * (1024 ** 4), tier: 'specialized', subtitle: 'Binary standard (Base-2 / 1024)', aliases: ['tebibyte', 'tebibytes', 'tib'] },
+      { id: 'pb', name: 'Petabyte (Decimal)', plural: 'Petabytes', symbol: 'PB', factor: 8 * 1e15, tier: 'specialized', subtitle: 'Petabytes (1,000 TB)', aliases: ['petabyte', 'petabytes', 'pb'] },
+      { id: 'pib', name: 'Pebibyte (Binary)', plural: 'Pebibytes', symbol: 'PiB', factor: 8 * (1024 ** 5), tier: 'specialized', subtitle: '1,024 TiB (Binary IEC standard)', aliases: ['pebibyte', 'pebibytes', 'pib'] },
+      { id: 'eb', name: 'Exabyte (Decimal)', plural: 'Exabytes', symbol: 'EB', factor: 8 * 1e18, tier: 'specialized', subtitle: '1,000 PB (Cloud & data center scale)', aliases: ['exabyte', 'exabytes', 'eb'] },
+      { id: 'eib', name: 'Exbibyte (Binary)', plural: 'Exbibytes', symbol: 'EiB', factor: 8 * (1024 ** 6), tier: 'specialized', subtitle: '1,024 PiB (Binary IEC standard)', aliases: ['exbibyte', 'exbibytes', 'eib'] },
     ]
   },
   data_rate: {
     baseUnit: 'bps',
     units: [
-      { id: 'bps', name: 'Bit per Second', plural: 'Bits per Second', symbol: 'bps', factor: 1, aliases: ['bps', 'bit/s', 'bits per second'] },
-      { id: 'kbps', name: 'Kilobit per Second', plural: 'Kilobits per Second', symbol: 'Kbps', factor: 1e3, aliases: ['kbps', 'kbit/s', 'kilobits per second'] },
-      { id: 'mbps', name: 'Megabit per Second', plural: 'Megabits per Second', symbol: 'Mbps', factor: 1e6, aliases: ['mbps', 'mbit/s', 'megabits per second'] },
-      { id: 'gbps', name: 'Gigabit per Second', plural: 'Gigabits per Second', symbol: 'Gbps', factor: 1e9, aliases: ['gbps', 'gbit/s', 'gigabits per second'] },
-      { id: 'byps', name: 'Byte per Second', plural: 'Bytes per Second', symbol: 'B/s', factor: 8, aliases: ['byte per second', 'bytes per second', 'b/s'] },
-      { id: 'kbs', name: 'Kilobyte per Second', plural: 'Kilobytes per Second', symbol: 'KB/s', factor: 8 * 1e3, aliases: ['kb/s', 'kbs', 'kilobytes per second'] },
-      { id: 'mbs', name: 'Megabyte per Second', plural: 'Megabytes per Second', symbol: 'MB/s', factor: 8 * 1e6, aliases: ['mb/s', 'mbs', 'megabytes per second'] },
-      { id: 'gbs', name: 'Gigabyte per Second', plural: 'Gigabytes per Second', symbol: 'GB/s', factor: 8 * 1e9, aliases: ['gb/s', 'gbs', 'gigabytes per second'] },
+      { id: 'bps', name: 'Bit per Second', plural: 'Bits per Second', symbol: 'bps', factor: 1, tier: 'common', aliases: ['bps', 'bit/s', 'bits per second'] },
+      { id: 'kbps', name: 'Kilobit per Second', plural: 'Kilobits per Second', symbol: 'Kbps', factor: 1e3, tier: 'common', aliases: ['kbps', 'kbit/s', 'kilobits per second'] },
+      { id: 'mbps', name: 'Megabit per Second', plural: 'Megabits per Second', symbol: 'Mbps', factor: 1e6, tier: 'common', aliases: ['mbps', 'mbit/s', 'megabits per second'] },
+      { id: 'gbps', name: 'Gigabit per Second', plural: 'Gigabits per Second', symbol: 'Gbps', factor: 1e9, tier: 'common', aliases: ['gbps', 'gbit/s', 'gigabits per second'] },
+      { id: 'tbps', name: 'Terabit per Second', plural: 'Terabits per Second', symbol: 'Tbps', factor: 1e12, tier: 'specialized', subtitle: 'Fiber optic & datacenter backbones', aliases: ['terabit per second', 'terabits per second', 'tbps', 'tbit/s'] },
+      { id: 'byps', name: 'Byte per Second', plural: 'Bytes per Second', symbol: 'B/s', factor: 8, tier: 'specialized', subtitle: 'Bytes per second (File transfer rate)', aliases: ['byte per second', 'bytes per second', 'b/s'] },
+      { id: 'kbs', name: 'Kilobyte per Second', plural: 'Kilobytes per Second', symbol: 'KB/s', factor: 8 * 1e3, tier: 'specialized', subtitle: 'Kilobytes per second', aliases: ['kb/s', 'kbs', 'kilobytes per second'] },
+      { id: 'mbs', name: 'Megabyte per Second', plural: 'Megabytes per Second', symbol: 'MB/s', factor: 8 * 1e6, tier: 'specialized', subtitle: 'Megabytes per second', aliases: ['mb/s', 'mbs', 'megabytes per second'] },
+      { id: 'mibs', name: 'Mebibyte per Second', plural: 'Mebibytes per Second', symbol: 'MiB/s', factor: 8 * 1048576, tier: 'specialized', subtitle: 'File copy dialogs & torrent clients', aliases: ['mebibyte per second', 'mebibytes per second', 'mib/s', 'mibs'] },
+      { id: 'gbs', name: 'Gigabyte per Second', plural: 'Gigabytes per Second', symbol: 'GB/s', factor: 8 * 1e9, tier: 'specialized', subtitle: 'Gigabytes per second', aliases: ['gb/s', 'gbs', 'gigabytes per second'] },
+      { id: 'tbs', name: 'Terabyte per Second', plural: 'Terabytes per Second', symbol: 'TB/s', factor: 8 * 1e12, tier: 'specialized', subtitle: 'GPU memory bandwidth (HBM3e)', aliases: ['terabyte per second', 'terabytes per second', 'tb/s', 'tbs'] },
     ]
   },
   pressure: {
     baseUnit: 'pa',
     units: [
-      { id: 'pa', name: 'Pascal', plural: 'Pascals', symbol: 'Pa', factor: 1, aliases: ['pascal', 'pascals', 'pa'] },
-      { id: 'kpa', name: 'Kilopascal', plural: 'Kilopascals', symbol: 'kPa', factor: 1000, aliases: ['kilopascal', 'kilopascals', 'kpa'] },
-      { id: 'mpa', name: 'Megapascal', plural: 'Megapascals', symbol: 'MPa', factor: 1e6, aliases: ['megapascal', 'megapascals', 'mpa'] },
-      { id: 'bar', name: 'Bar', plural: 'Bars', symbol: 'bar', factor: 100000, aliases: ['bar', 'bars'] },
-      { id: 'mbar', name: 'Millibar', plural: 'Millibars', symbol: 'mbar', factor: 100, aliases: ['millibar', 'millibars', 'mbar'] },
-      { id: 'psi', name: 'Pound per Square Inch', plural: 'Pounds per Square Inch', symbol: 'psi', factor: 6894.757293168, aliases: ['psi', 'lb/in2', 'pounds per square inch'] },
-      { id: 'atm', name: 'Standard Atmosphere', plural: 'Standard Atmospheres', symbol: 'atm', factor: 101325, aliases: ['atmosphere', 'atmospheres', 'atm'] },
-      { id: 'torr', name: 'Torr / mmHg', plural: 'Torr', symbol: 'Torr', factor: 133.322368421, aliases: ['torr', 'mmhg', 'millimeter of mercury'] },
-      { id: 'inhg', name: 'Inch of Mercury', plural: 'Inches of Mercury', symbol: 'inHg', factor: 3386.389, aliases: ['inhg', 'inch of mercury'] },
-      { id: 'hpa', name: 'Hectopascal', plural: 'Hectopascals', symbol: 'hPa', factor: 100, aliases: ['hectopascal', 'hectopascals', 'hpa'] },
+      { id: 'pa', name: 'Pascal', plural: 'Pascals', symbol: 'Pa', factor: 1, tier: 'specialized', subtitle: 'Base SI unit (N/m²)', aliases: ['pascal', 'pascals', 'pa'] },
+      { id: 'kpa', name: 'Kilopascal', plural: 'Kilopascals', symbol: 'kPa', factor: 1000, tier: 'common', aliases: ['kilopascal', 'kilopascals', 'kpa'] },
+      { id: 'mpa', name: 'Megapascal', plural: 'Megapascals', symbol: 'MPa', factor: 1e6, tier: 'specialized', subtitle: 'Megapascals (Materials engineering)', aliases: ['megapascal', 'megapascals', 'mpa'] },
+      { id: 'bar', name: 'Bar', plural: 'Bars', symbol: 'bar', factor: 100000, tier: 'common', aliases: ['bar', 'bars'] },
+      { id: 'mbar', name: 'Millibar', plural: 'Millibars', symbol: 'mbar', factor: 100, tier: 'specialized', subtitle: 'Millibars (Barometric pressure)', aliases: ['millibar', 'millibars', 'mbar'] },
+      { id: 'psi', name: 'Pound per Square Inch', plural: 'Pounds per Square Inch', symbol: 'psi', factor: 6894.757293168, tier: 'common', aliases: ['psi', 'lb/in2', 'pounds per square inch', 'tire psi', 'tire pressure'] },
+      { id: 'ksi', name: 'Kilopound per Square Inch', plural: 'Kilopounds per Square Inch', symbol: 'ksi', factor: 6894757.293168, tier: 'specialized', subtitle: '1,000 psi (Steel tensile strength)', aliases: ['kilopound per square inch', 'ksi', 'kips per square inch', 'kpsi'] },
+      { id: 'atm', name: 'Standard Atmosphere', plural: 'Standard Atmospheres', symbol: 'atm', factor: 101325, tier: 'common', aliases: ['atmosphere', 'atmospheres', 'atm'] },
+      { id: 'torr', name: 'Torr / mmHg', plural: 'Torr', symbol: 'Torr', factor: 133.322368421, tier: 'specialized', subtitle: 'Torr / mmHg (Vacuum & blood pressure)', aliases: ['torr', 'mmhg', 'millimeter of mercury'] },
+      { id: 'inhg', name: 'Inch of Mercury', plural: 'Inches of Mercury', symbol: 'inHg', factor: 3386.389, tier: 'specialized', subtitle: 'Inches of Mercury (Aviation altimeters)', aliases: ['inhg', 'inch of mercury'] },
+      { id: 'hpa', name: 'Hectopascal', plural: 'Hectopascals', symbol: 'hPa', factor: 100, tier: 'specialized', subtitle: 'Hectopascals (Meteorology)', aliases: ['hectopascal', 'hectopascals', 'hpa'] },
+      { id: 'inh2o', name: 'Inch of Water', plural: 'Inches of Water', symbol: 'inH₂O', factor: 249.08891, tier: 'specialized', subtitle: 'HVAC duct & fan static pressure', badge: 'HVAC', aliases: ['inch of water', 'inches of water', 'inh2o', 'in h2o', 'in wc', 'inwg'] },
+      { id: 'cmh2o', name: 'Centimeter of Water', plural: 'Centimeters of Water', symbol: 'cmH₂O', factor: 98.0665, tier: 'specialized', subtitle: 'CPAP & medical respiratory pressure', badge: 'Medical', aliases: ['centimeter of water', 'centimeters of water', 'cmh2o', 'cm h2o', 'cm wc', 'cmwg'] },
     ]
   },
   energy: {
     baseUnit: 'j',
     units: [
-      { id: 'j', name: 'Joule', plural: 'Joules', symbol: 'J', factor: 1, aliases: ['joule', 'joules', 'j'] },
-      { id: 'kj', name: 'Kilojoule', plural: 'Kilojoules', symbol: 'kJ', factor: 1000, aliases: ['kilojoule', 'kilojoules', 'kj'] },
-      { id: 'cal', name: 'Calorie (Gram/Small)', plural: 'Calories', symbol: 'cal', factor: 4.184, aliases: ['calorie', 'calories', 'cal'] },
-      { id: 'kcal', name: 'Kilocalorie (Food Calorie)', plural: 'Kilocalories', symbol: 'kcal', factor: 4184, aliases: ['kilocalorie', 'kilocalories', 'kcal', 'food calorie', 'cal'] },
-      { id: 'wh', name: 'Watt-hour', plural: 'Watt-hours', symbol: 'Wh', factor: 3600, aliases: ['watt-hour', 'watt hour', 'wh'] },
-      { id: 'kwh', name: 'Kilowatt-hour', plural: 'Kilowatt-hours', symbol: 'kWh', factor: 3.6e6, aliases: ['kilowatt-hour', 'kilowatt hour', 'kwh'] },
-      { id: 'ev', name: 'Electronvolt', plural: 'Electronvolts', symbol: 'eV', factor: 1.602176634e-19, aliases: ['electronvolt', 'electronvolts', 'ev'] },
-      { id: 'btu', name: 'British Thermal Unit', plural: 'BTU', symbol: 'BTU', factor: 1055.05585262, aliases: ['btu', 'british thermal unit'] },
-      { id: 'ftlb', name: 'Foot-pound', plural: 'Foot-pounds', symbol: 'ft⋅lb', factor: 1.3558179483314, aliases: ['foot pound', 'ft lb', 'ft-lb'] },
+      { id: 'j', name: 'Joule', plural: 'Joules', symbol: 'J', factor: 1, tier: 'common', aliases: ['joule', 'joules', 'j'] },
+      { id: 'kj', name: 'Kilojoule', plural: 'Kilojoules', symbol: 'kJ', factor: 1000, tier: 'specialized', subtitle: 'Kilojoules', aliases: ['kilojoule', 'kilojoules', 'kj'] },
+      { id: 'cal', name: 'Calorie (Gram/Small)', plural: 'Calories', symbol: 'cal', factor: 4.184, tier: 'common', aliases: ['calorie', 'calories', 'cal'] },
+      { id: 'kcal', name: 'Kilocalorie (Food Calorie)', plural: 'Kilocalories', symbol: 'kcal', factor: 4184, tier: 'common', aliases: ['kilocalorie', 'kilocalories', 'kcal', 'food calorie', 'food calories', 'diet calorie', 'dietary calorie', 'large calorie', 'cal'] },
+      { id: 'wh', name: 'Watt-hour', plural: 'Watt-hours', symbol: 'Wh', factor: 3600, tier: 'common', aliases: ['watt-hour', 'watt hour', 'wh'] },
+      { id: 'kwh', name: 'Kilowatt-hour', plural: 'Kilowatt-hours', symbol: 'kWh', factor: 3.6e6, tier: 'common', aliases: ['kilowatt-hour', 'kilowatt hour', 'kwh'] },
+      { id: 'mwh', name: 'Megawatt-hour', plural: 'Megawatt-hours', symbol: 'MWh', factor: 3.6e9, tier: 'specialized', subtitle: 'Commercial battery & grid storage (1,000 kWh)', aliases: ['megawatt-hour', 'megawatt-hours', 'megawatthour', 'mwh'] },
+      { id: 'ev', name: 'Electronvolt', plural: 'Electronvolts', symbol: 'eV', factor: 1.602176634e-19, tier: 'specialized', subtitle: 'Electronvolts (Particle physics)', aliases: ['electronvolt', 'electronvolts', 'ev'] },
+      { id: 'btu', name: 'British Thermal Unit', plural: 'BTU', symbol: 'BTU', factor: 1055.05585262, tier: 'common', aliases: ['btu', 'british thermal unit'] },
+      { id: 'therm', name: 'Therm', plural: 'Therms', symbol: 'thm', factor: 105505585.262, tier: 'specialized', subtitle: 'US natural gas utility billing (100,000 BTU)', badge: 'Utilities', aliases: ['therm', 'therms', 'thm', 'us therm', 'gas therm', 'natural gas therm', 'utility therm'] },
+      { id: 'ftlb', name: 'Foot-pound', plural: 'Foot-pounds', symbol: 'ft⋅lb', factor: 1.3558179483314, tier: 'specialized', subtitle: 'Foot-pounds (Mechanical work)', aliases: ['foot pound', 'ft lb', 'ft-lb'] },
     ]
   },
   power: {
     baseUnit: 'w',
     units: [
-      { id: 'w', name: 'Watt', plural: 'Watts', symbol: 'W', factor: 1, aliases: ['watt', 'watts', 'w'] },
-      { id: 'kw', name: 'Kilowatt', plural: 'Kilowatts', symbol: 'kW', factor: 1000, aliases: ['kilowatt', 'kilowatts', 'kw'] },
-      { id: 'mw', name: 'Megawatt', plural: 'Megawatts', symbol: 'MW', factor: 1e6, aliases: ['megawatt', 'megawatts', 'mw'] },
-      { id: 'hp', name: 'Horsepower (Mechanical/US)', plural: 'Horsepower', symbol: 'hp', factor: 745.69987158227022, aliases: ['horsepower', 'hp'] },
-      { id: 'hp_metric', name: 'Metric Horsepower (PS)', plural: 'Metric Horsepower', symbol: 'PS', factor: 735.49875, aliases: ['metric horsepower', 'ps', 'cv'] },
-      { id: 'btu_h', name: 'BTU per Hour', plural: 'BTU per Hour', symbol: 'BTU/h', factor: 0.29307107, aliases: ['btu per hour', 'btu/h', 'btuh'] },
+      { id: 'w', name: 'Watt', plural: 'Watts', symbol: 'W', factor: 1, tier: 'common', aliases: ['watt', 'watts', 'w'] },
+      { id: 'mw_milli', name: 'Milliwatt', plural: 'Milliwatts', symbol: 'mW', factor: 0.001, tier: 'specialized', subtitle: 'RF transmitters, Wi-Fi & laser output', aliases: ['milliwatt', 'milliwatts', 'mw'] },
+      { id: 'kw', name: 'Kilowatt', plural: 'Kilowatts', symbol: 'kW', factor: 1000, tier: 'common', aliases: ['kilowatt', 'kilowatts', 'kw'] },
+      { id: 'mw', name: 'Megawatt', plural: 'Megawatts', symbol: 'MW', factor: 1e6, tier: 'specialized', subtitle: 'Megawatts (Power generation)', aliases: ['megawatt', 'megawatts', 'mw'] },
+      { id: 'hp', name: 'Horsepower (Mechanical/US)', plural: 'Horsepower', symbol: 'hp', factor: 745.69987158227022, tier: 'common', aliases: ['horsepower', 'hp'] },
+      { id: 'hp_metric', name: 'Metric Horsepower (PS)', plural: 'Metric Horsepower', symbol: 'PS', factor: 735.49875, tier: 'specialized', subtitle: 'Metric Horsepower (PS / DIN)', aliases: ['metric horsepower', 'ps', 'cv'] },
+      { id: 'btu_h', name: 'BTU per Hour', plural: 'BTU per Hour', symbol: 'BTU/h', factor: 0.29307107, tier: 'specialized', subtitle: 'BTU per hour (Heating / cooling)', aliases: ['btu per hour', 'btu/h', 'btuh'] },
+      { id: 'ton_ref', name: 'Ton of Refrigeration', plural: 'Tons of Refrigeration', symbol: 'TR', factor: 3516.8528420667, tier: 'specialized', subtitle: '12,000 BTU/h (AC & heat pump cooling)', badge: 'HVAC', aliases: ['ton of refrigeration', 'tons of refrigeration', 'refrigeration ton', 'refrigeration tons', 'ton ref', 'tr', 'ac ton', 'cooling ton'] },
     ]
   },
   angle: {
     baseUnit: 'deg',
     units: [
-      { id: 'deg', name: 'Degree', plural: 'Degrees', symbol: '°', factor: 1, aliases: ['degree', 'degrees', 'deg', '°'] },
-      { id: 'rad', name: 'Radian', plural: 'Radians', symbol: 'rad', factor: 180 / Math.PI, aliases: ['radian', 'radians', 'rad'] },
-      { id: 'grad', name: 'Gradian', plural: 'Gradians', symbol: 'grad', factor: 0.9, aliases: ['gradian', 'gradians', 'grad'] },
-      { id: 'arcmin', name: 'Arcminute', plural: 'Arcminutes', symbol: 'arcmin', factor: 1 / 60, aliases: ['arcminute', 'arcminutes', 'arcmin', "'"] },
-      { id: 'arcsec', name: 'Arcsecond', plural: 'Arcseconds', symbol: 'arcsec', factor: 1 / 3600, aliases: ['arcsecond', 'arcseconds', 'arcsec', '"'] },
-      { id: 'rev', name: 'Revolution (Turn)', plural: 'Revolutions', symbol: 'rev', factor: 360, aliases: ['revolution', 'revolutions', 'turn', 'turns', 'rev'] },
+      { id: 'deg', name: 'Degree', plural: 'Degrees', symbol: '°', factor: 1, tier: 'common', aliases: ['degree', 'degrees', 'deg', '°'] },
+      { id: 'rad', name: 'Radian', plural: 'Radians', symbol: 'rad', factor: 180 / Math.PI, tier: 'common', aliases: ['radian', 'radians', 'rad'] },
+      { id: 'grad', name: 'Gradian', plural: 'Gradians', symbol: 'grad', factor: 0.9, tier: 'specialized', subtitle: 'Gradians (100 per right angle)', aliases: ['gradian', 'gradians', 'grad'] },
+      { id: 'arcmin', name: 'Arcminute', plural: 'Arcminutes', symbol: 'arcmin', factor: 1 / 60, tier: 'specialized', subtitle: 'Arcminutes (1/60th of a degree)', aliases: ['arcminute', 'arcminutes', 'arcmin', "'"] },
+      { id: 'arcsec', name: 'Arcsecond', plural: 'Arcseconds', symbol: 'arcsec', factor: 1 / 3600, tier: 'specialized', subtitle: 'Arcseconds (1/3600th of a degree)', aliases: ['arcsecond', 'arcseconds', 'arcsec', '"'] },
+      { id: 'rev', name: 'Revolution (Turn)', plural: 'Revolutions', symbol: 'rev', factor: 360, tier: 'specialized', subtitle: 'Full revolutions (Turns)', aliases: ['revolution', 'revolutions', 'turn', 'turns', 'rev'] },
     ]
   },
   fuel: {
@@ -260,6 +307,7 @@ export const UNIT_DEFINITIONS = {
         name: 'Liters per 100 km',
         plural: 'Liters per 100 km',
         symbol: 'L/100km',
+        tier: 'common',
         toBase: (v) => v,
         fromBase: (v) => v,
         aliases: ['l/100km', 'liters per 100 km', 'litres per 100km']
@@ -269,6 +317,7 @@ export const UNIT_DEFINITIONS = {
         name: 'Miles per Gallon (US)',
         plural: 'Miles per Gallon (US)',
         symbol: 'mpg (US)',
+        tier: 'common',
         toBase: (v) => (v > 0 ? 235.214583 / v : 0),
         fromBase: (v) => (v > 0 ? 235.214583 / v : 0),
         aliases: ['mpg', 'mpg us', 'miles per gallon']
@@ -278,56 +327,217 @@ export const UNIT_DEFINITIONS = {
         name: 'Miles per Gallon (UK)',
         plural: 'Miles per Gallon (UK)',
         symbol: 'mpg (UK)',
+        tier: 'common',
         toBase: (v) => (v > 0 ? 282.4809363 / v : 0),
         fromBase: (v) => (v > 0 ? 282.4809363 / v : 0),
-        aliases: ['mpg uk', 'imperial mpg']
+        aliases: ['mpg uk', 'imperial mpg', 'mpg imp']
       },
       {
         id: 'kml',
         name: 'Kilometers per Liter',
         plural: 'Kilometers per Liter',
         symbol: 'km/L',
+        tier: 'common',
         toBase: (v) => (v > 0 ? 100 / v : 0),
         fromBase: (v) => (v > 0 ? 100 / v : 0),
         aliases: ['km/l', 'kml', 'kilometers per liter']
+      },
+      {
+        id: 'mi_kwh',
+        name: 'Miles per Kilowatt-hour',
+        plural: 'Miles per Kilowatt-hour',
+        symbol: 'mi/kWh',
+        tier: 'common',
+        subtitle: 'US electric vehicle efficiency',
+        badge: 'EV',
+        toBase: (v) => (v > 0 ? 6.9786258 / v : 0),
+        fromBase: (v) => (v > 0 ? 6.9786258 / v : 0),
+        aliases: ['miles per kwh', 'miles per kilowatt-hour', 'mi/kwh', 'mpkwh', 'mi per kwh', 'ev efficiency', 'electric car mileage']
+      },
+      {
+        id: 'kwh_100km',
+        name: 'Kilowatt-hours per 100 km',
+        plural: 'Kilowatt-hours per 100 km',
+        symbol: 'kWh/100km',
+        tier: 'common',
+        subtitle: 'European electric vehicle consumption',
+        badge: 'EV',
+        toBase: (v) => v * 0.1123098,
+        fromBase: (v) => (v > 0 ? v / 0.1123098 : 0),
+        aliases: ['kwh/100km', 'kwh per 100 km', 'kilowatt-hours per 100 km', 'kwh per 100km', 'ev consumption']
       }
     ]
   },
   cooking: {
     baseUnit: 'ml',
     units: [
-      { id: 'ml', name: 'Milliliter', plural: 'Milliliters', symbol: 'mL', factor: 1, aliases: ['ml', 'milliliter', 'milliliters'] },
-      { id: 'cup_us', name: 'US Cup', plural: 'US Cups', symbol: 'cup', factor: 236.5882365, aliases: ['cup', 'cups', 'c'] },
-      { id: 'tbsp_us', name: 'US Tablespoon', plural: 'US Tablespoons', symbol: 'tbsp', factor: 14.78676478125, aliases: ['tablespoon', 'tablespoons', 'tbsp', 'tbs', 'tb'] },
-      { id: 'tsp_us', name: 'US Teaspoon', plural: 'US Teaspoons', symbol: 'tsp', factor: 4.92892159375, aliases: ['teaspoon', 'teaspoons', 'tsp', 't'] },
-      { id: 'floz_us', name: 'Fluid Ounce', plural: 'Fluid Ounces', symbol: 'fl oz', factor: 29.5735295625, aliases: ['fluid ounce', 'fluid ounces', 'fl oz', 'floz', 'oz', 'ounce', 'ounces', 'fl. oz', 'fluid oz'] },
-      { id: 'pinch', name: 'Pinch', plural: 'Pinches', symbol: 'pinch', factor: 0.3080575996, aliases: ['pinch', 'pinches'] },
-      { id: 'dash', name: 'Dash', plural: 'Dashes', symbol: 'dash', factor: 0.6161151992, aliases: ['dash', 'dashes'] },
-      { id: 'drop', name: 'Drop', plural: 'Drops', symbol: 'drop', factor: 0.05, aliases: ['drop', 'drops', 'gtt'] },
-      { id: 'stick_butter', name: 'Stick of Butter (US)', plural: 'Sticks of Butter', symbol: 'stick', factor: 118.29411825, aliases: ['stick of butter', 'stick butter', 'butter stick', 'sticks'] },
-      { id: 'l', name: 'Liter', plural: 'Liters', symbol: 'L', factor: 1000, aliases: ['liter', 'liters', 'l'] },
-      { id: 'pt_us', name: 'US Pint', plural: 'US Pints', symbol: 'pt', factor: 473.176473, aliases: ['pint', 'pints', 'pt'] },
-      { id: 'qt_us', name: 'US Quart', plural: 'US Quarts', symbol: 'qt', factor: 946.352946, aliases: ['quart', 'quarts', 'qt'] },
-      { id: 'gal_us', name: 'US Gallon', plural: 'US Gallons', symbol: 'gal', factor: 3785.411784, aliases: ['gallon', 'gallons', 'gal'] },
+      { id: 'ml', name: 'Milliliter', plural: 'Milliliters', symbol: 'mL', factor: 1, tier: 'common', aliases: ['ml', 'milliliter', 'milliliters'] },
+      { id: 'cup_us', name: 'US Cup', plural: 'US Cups', symbol: 'cup', factor: 236.5882365, tier: 'common', aliases: ['cup', 'cups', 'c'] },
+      { id: 'cup_metric', name: 'Metric Cup', plural: 'Metric Cups', symbol: 'cup (metric)', factor: 250, tier: 'common', subtitle: 'Australia, NZ, UK, Canada (250 mL)', badge: 'Metric', aliases: ['metric cup', 'metric cups'] },
+      { id: 'tbsp_us', name: 'US Tablespoon', plural: 'US Tablespoons', symbol: 'tbsp', factor: 14.78676478125, tier: 'common', aliases: ['tablespoon', 'tablespoons', 'tbsp', 'tbs', 'tb'] },
+      { id: 'tbsp_metric', name: 'Metric Tablespoon', plural: 'Metric Tablespoons', symbol: 'tbsp (metric)', factor: 15, tier: 'common', subtitle: 'International metric tablespoon (15 mL)', badge: 'Metric', aliases: ['metric tablespoon', 'metric tablespoons', 'metric tbsp'] },
+      { id: 'tsp_us', name: 'US Teaspoon', plural: 'US Teaspoons', symbol: 'tsp', factor: 4.92892159375, tier: 'common', aliases: ['teaspoon', 'teaspoons', 'tsp', 't'] },
+      { id: 'dsp', name: 'Dessertspoon', plural: 'Dessertspoons', symbol: 'dsp', factor: 10, tier: 'specialized', subtitle: 'British & Commonwealth recipes (2 tsp / 10 mL)', badge: 'UK', aliases: ['dessertspoon', 'dessertspoons', 'dsp', 'dstspn'] },
+      { id: 'floz_us', name: 'Fluid Ounce', plural: 'Fluid Ounces', symbol: 'fl oz', factor: 29.5735295625, tier: 'common', subtitle: 'Liquid ounces', aliases: ['fluid ounce', 'fluid ounces', 'fl oz', 'floz', 'oz', 'ounce', 'ounces', 'fl. oz', 'fluid oz'] },
+      { id: 'shot', name: 'Standard Shot (Jigger)', plural: 'Standard Shots', symbol: 'shot', factor: 44.36029434375, tier: 'specialized', subtitle: '1.5 US fl oz (Bartending & cocktails)', badge: 'Bar', aliases: ['shot', 'shots', 'jigger', 'jiggers'] },
+      { id: 'pinch', name: 'Pinch', plural: 'Pinches', symbol: 'pinch', factor: 0.3080575996, tier: 'specialized', subtitle: '1/16 tsp (Kitchen pinch)', aliases: ['pinch', 'pinches'] },
+      { id: 'dash', name: 'Dash', plural: 'Dashes', symbol: 'dash', factor: 0.6161151992, tier: 'specialized', subtitle: '1/8 tsp (Kitchen dash)', aliases: ['dash', 'dashes'] },
+      { id: 'tad', name: 'Tad', plural: 'Tads', symbol: 'tad', factor: 1.2322303984, tier: 'specialized', subtitle: '1/4 tsp (Kitchen tad)', aliases: ['tad', 'tads'] },
+      { id: 'smidgen', name: 'Smidgen', plural: 'Smidgens', symbol: 'smdg', factor: 0.1540287998, tier: 'specialized', subtitle: '1/32 tsp (0.15 mL)', aliases: ['smidgen', 'smidgens', 'smdg'] },
+      { id: 'drop', name: 'Drop', plural: 'Drops', symbol: 'drop', factor: 0.05, tier: 'specialized', subtitle: '0.05 mL (Liquid droplet)', aliases: ['drop', 'drops', 'gtt'] },
+      { id: 'stick_butter', name: 'Stick of Butter (US)', plural: 'Sticks of Butter', symbol: 'stick', factor: 118.29411825, tier: 'common', subtitle: '1/2 cup (US butter stick)', aliases: ['stick of butter', 'stick butter', 'butter stick', 'sticks'] },
+      { id: 'l', name: 'Liter', plural: 'Liters', symbol: 'L', factor: 1000, tier: 'specialized', subtitle: '1,000 mL', aliases: ['liter', 'liters', 'l'] },
+      { id: 'pt_us', name: 'US Pint', plural: 'US Pints', symbol: 'pt', factor: 473.176473, tier: 'specialized', subtitle: 'US Pints (16 fl oz)', aliases: ['pint', 'pints', 'pt'] },
+      { id: 'qt_us', name: 'US Quart', plural: 'US Quarts', symbol: 'qt', factor: 946.352946, tier: 'specialized', subtitle: 'US Quarts (32 fl oz)', aliases: ['quart', 'quarts', 'qt'] },
+      { id: 'gal_us', name: 'US Gallon', plural: 'US Gallons', symbol: 'gal', factor: 3785.411784, tier: 'specialized', subtitle: 'US Gallons (128 fl oz)', aliases: ['gallon', 'gallons', 'gal'] },
+    ]
+  },
+  frequency: {
+    baseUnit: 'hz',
+    units: [
+      { id: 'hz', name: 'Hertz', plural: 'Hertz', symbol: 'Hz', factor: 1, tier: 'common', subtitle: 'Base SI unit (1 cycle/sec)', aliases: ['hertz', 'hz', 'cycle per second', 'cycles per second', 'cps'] },
+      { id: 'khz', name: 'Kilohertz', plural: 'Kilohertz', symbol: 'kHz', factor: 1e3, tier: 'common', subtitle: 'Audio & AM radio (1,000 Hz)', aliases: ['kilohertz', 'khz'] },
+      { id: 'mhz', name: 'Megahertz', plural: 'Megahertz', symbol: 'MHz', factor: 1e6, tier: 'common', subtitle: 'FM radio, clock frequencies (10^6 Hz)', aliases: ['megahertz', 'mhz'] },
+      { id: 'ghz', name: 'Gigahertz', plural: 'Gigahertz', symbol: 'GHz', factor: 1e9, tier: 'common', subtitle: 'CPUs, Wi-Fi & 5G cellular (10^9 Hz)', badge: 'Computing', aliases: ['gigahertz', 'ghz'] },
+      { id: 'thz', name: 'Terahertz', plural: 'Terahertz', symbol: 'THz', factor: 1e12, tier: 'specialized', subtitle: 'Infrared & spectroscopy (10^12 Hz)', badge: 'Optics', aliases: ['terahertz', 'thz'] },
+      { id: 'rpm', name: 'Revolutions per Minute', plural: 'Revolutions per Minute', symbol: 'RPM', factor: 1 / 60, tier: 'common', subtitle: 'Motor & engine rotation', badge: 'Automotive', aliases: ['revolutions per minute', 'revolution per minute', 'rpm', 'rev/min', 'rotations per minute', 'motor rpm', 'engine rpm'] },
+      { id: 'rad_s', name: 'Radians per Second', plural: 'Radians per Second', symbol: 'rad/s', factor: 1 / (2 * Math.PI), tier: 'specialized', subtitle: 'Angular velocity (ω = 2πf)', badge: 'Physics', aliases: ['radians per second', 'radian per second', 'rad/s', 'rad per sec', 'rad/sec', 'angular velocity'] },
+      { id: 'deg_s', name: 'Degrees per Second', plural: 'Degrees per Second', symbol: '°/s', factor: 1 / 360, tier: 'specialized', subtitle: 'Gyroscopes & rotational tracking', badge: 'Sensors', aliases: ['degrees per second', 'degree per second', 'deg/s', 'deg per sec', 'deg/sec', 'rotational rate'] },
+    ]
+  },
+  torque: {
+    baseUnit: 'nm',
+    units: [
+      { id: 'nm', name: 'Newton-meter', plural: 'Newton-meters', symbol: 'N·m', factor: 1, tier: 'common', subtitle: 'SI metric standard', badge: 'Metric', aliases: ['newton meter', 'newton meters', 'newton-meter', 'newton-meters', 'newton metre', 'newton metres', 'nm', 'n*m', 'n-m', 'n.m'] },
+      { id: 'ftlb', name: 'Pound-foot', plural: 'Pound-feet', symbol: 'lb-ft', factor: 1.3558179483314004, tier: 'common', subtitle: 'US automotive lug nuts & engine specs', badge: 'Automotive', aliases: ['pound foot', 'pound feet', 'pound-foot', 'pound-feet', 'foot pound', 'foot pounds', 'foot-pound', 'foot-pounds', 'ft lb', 'ft-lb', 'ftlb', 'ft-lbs', 'ft lbs', 'lbf ft', 'lbf-ft', 'lb ft', 'lb-ft', 'lug nut torque', 'wheel torque'] },
+      { id: 'inlb', name: 'Pound-inch', plural: 'Pound-inches', symbol: 'lb-in', factor: 0.1129848290276167, tier: 'common', subtitle: 'Bicycle torque & small fasteners', badge: 'Bicycle', aliases: ['pound inch', 'pound inches', 'pound-inch', 'pound-inches', 'inch pound', 'inch pounds', 'inch-pound', 'inch-pounds', 'in lb', 'in-lb', 'inlb', 'in-lbs', 'in lbs', 'lbf in', 'lbf-in', 'lb in', 'lb-in', 'bike torque'] },
+      { id: 'kgfm', name: 'Kilogram-force Meter', plural: 'Kilogram-force Meters', symbol: 'kgf·m', factor: 9.80665, tier: 'specialized', subtitle: 'European & Japanese legacy specs (9.807 N·m)', aliases: ['kilogram-force meter', 'kilogram force meter', 'kilogram-force meters', 'kilogram force meters', 'kgf m', 'kgf-m', 'kgfm', 'kg-m', 'kg m'] },
+      { id: 'knm', name: 'Kilonewton-meter', plural: 'Kilonewton-meters', symbol: 'kN·m', factor: 1000, tier: 'specialized', subtitle: 'Heavy industrial, wind turbines & structural', badge: 'Heavy Industry', aliases: ['kilonewton meter', 'kilonewton meters', 'kilonewton-meter', 'kilonewton-meters', 'knm', 'kn-m', 'kn m', 'kn*m'] },
+      { id: 'ozin', name: 'Ounce-force Inch', plural: 'Ounce-force Inches', symbol: 'oz-in', factor: 0.007061551814226044, tier: 'specialized', subtitle: 'Stepper motors, RC servos & robotics', badge: 'Robotics', aliases: ['ounce-force inch', 'ounce force inch', 'ounce-force inches', 'ounce force inches', 'inch ounce', 'inch ounces', 'oz in', 'oz-in', 'ozin', 'ozf in', 'ozf-in', 'servo torque', 'stepper torque'] },
+    ]
+  },
+  force: {
+    baseUnit: 'n',
+    units: [
+      { id: 'n', name: 'Newton', plural: 'Newtons', symbol: 'N', factor: 1, tier: 'common', subtitle: 'SI metric standard (1 kg⋅m/s²)', aliases: ['newton', 'newtons', 'n'] },
+      { id: 'kn', name: 'Kilonewton', plural: 'Kilonewtons', symbol: 'kN', factor: 1000, tier: 'common', subtitle: 'Climbing gear & aerospace rocketry', badge: 'Engineering', aliases: ['kilonewton', 'kilonewtons', 'kn'] },
+      { id: 'mn', name: 'Meganewton', plural: 'Meganewtons', symbol: 'MN', factor: 1e6, tier: 'specialized', subtitle: 'Rocket thrust & mega-structures', badge: 'Aerospace', aliases: ['meganewton', 'meganewtons', 'mn'] },
+      { id: 'lbf', name: 'Pound-force', plural: 'Pounds-force', symbol: 'lbf', factor: 4.4482216152605, tier: 'common', subtitle: 'US engineering standard (1 lb × g)', aliases: ['pound force', 'pounds force', 'pound-force', 'pounds-force', 'lbf', 'lbs force', 'lb force'] },
+      { id: 'kgf', name: 'Kilogram-force', plural: 'Kilograms-force', symbol: 'kgf', factor: 9.80665, tier: 'common', subtitle: 'Metric technical unit (kilopond)', aliases: ['kilogram-force', 'kilogram force', 'kilograms-force', 'kilograms force', 'kgf', 'kp', 'kilopond', 'kiloponds'] },
+      { id: 'dyn', name: 'Dyne', plural: 'Dynes', symbol: 'dyn', factor: 1e-5, tier: 'specialized', subtitle: 'CGS physics standard (1 g⋅cm/s²)', aliases: ['dyne', 'dynes', 'dyn'] },
+      { id: 'kip', name: 'Kip', plural: 'Kips', symbol: 'kip', factor: 4448.2216152605, tier: 'specialized', subtitle: '1,000 lbf (Civil & structural engineering)', badge: 'Engineering', aliases: ['kip', 'kips', 'kilopound force'] },
+      { id: 'ozf', name: 'Ounce-force', plural: 'Ounces-force', symbol: 'ozf', factor: 0.27801385095378125, tier: 'specialized', subtitle: 'Precision small mechanisms & springs', aliases: ['ounce-force', 'ounce force', 'ounces-force', 'ounces force', 'ozf'] },
+    ]
+  },
+  flow_rate: {
+    baseUnit: 'm3_s',
+    units: [
+      { id: 'cfm', name: 'Cubic Feet per Minute', plural: 'Cubic Feet per Minute', symbol: 'CFM', factor: 0.0004719474432, tier: 'common', subtitle: 'HVAC airflow & PC cooling fans', badge: 'HVAC', aliases: ['cubic feet per minute', 'cubic foot per minute', 'cfm', 'cu ft/min', 'cu ft per min', 'airflow cfm'] },
+      { id: 'l_s', name: 'Liter per Second', plural: 'Liters per Second', symbol: 'L/s', factor: 0.001, tier: 'common', subtitle: 'Plumbing & hydraulic flows', aliases: ['liter per second', 'liters per second', 'litre per second', 'litres per second', 'l/s', 'lps'] },
+      { id: 'l_min', name: 'Liter per Minute', plural: 'Liters per Minute', symbol: 'L/min', factor: 0.001 / 60, tier: 'common', subtitle: 'Medical oxygen & tap water flow', aliases: ['liter per minute', 'liters per minute', 'litre per minute', 'litres per minute', 'l/min', 'lpm'] },
+      { id: 'm3_h', name: 'Cubic Meter per Hour', plural: 'Cubic Meters per Hour', symbol: 'm³/h', factor: 1 / 3600, tier: 'common', subtitle: 'Industrial ventilation & pumps', aliases: ['cubic meter per hour', 'cubic meters per hour', 'cubic metre per hour', 'cubic metres per hour', 'm3/h', 'm3h', 'm³/h'] },
+      { id: 'm3_s', name: 'Cubic Meter per Second', plural: 'Cubic Meters per Second', symbol: 'm³/s', factor: 1, tier: 'specialized', subtitle: 'SI base unit (Hydroelectric & river discharge)', aliases: ['cubic meter per second', 'cubic meters per second', 'cubic metre per second', 'cubic metres per second', 'm3/s', 'm3s', 'm³/s'] },
+      { id: 'gpm_us', name: 'US Gallon per Minute', plural: 'US Gallons per Minute', symbol: 'GPM', factor: 0.003785411784 / 60, tier: 'common', subtitle: 'US plumbing, pumps & fire hydrants', badge: 'Plumbing', aliases: ['gallons per minute', 'gallon per minute', 'gpm', 'gpm_us', 'us gpm', 'water gpm'] },
+      { id: 'gph_us', name: 'US Gallon per Hour', plural: 'US Gallons per Hour', symbol: 'GPH', factor: 0.003785411784 / 3600, tier: 'specialized', subtitle: 'Fuel consumption & aquarium filtration', aliases: ['gallons per hour', 'gallon per hour', 'gph', 'gph_us', 'us gph'] },
+    ]
+  },
+  typography: {
+    baseUnit: 'px',
+    units: [
+      { id: 'px', name: 'Pixel', plural: 'Pixels', symbol: 'px', factor: 1, tier: 'common', subtitle: 'CSS digital display baseline (96 DPI)', aliases: ['pixel', 'pixels', 'px'] },
+      { id: 'pt', name: 'Point', plural: 'Points', symbol: 'pt', factor: 96 / 72, tier: 'common', subtitle: '1/72 inch (Print, typography & iOS font size)', badge: 'Print', aliases: ['point', 'points', 'pt', 'font point', 'font points'] },
+      { id: 'rem', name: 'Rem', plural: 'Rems', symbol: 'rem', factor: 16, tier: 'common', subtitle: 'Root em (16 px browser standard)', badge: 'Web', aliases: ['rem', 'rems', 'root em', 'root rem'] },
+      { id: 'em', name: 'Em', plural: 'Ems', symbol: 'em', factor: 16, tier: 'common', subtitle: 'Relative font size (16 px standard)', badge: 'Web', aliases: ['em', 'ems'] },
+      { id: 'pc', name: 'Pica', plural: 'Picas', symbol: 'pc', factor: 16, tier: 'specialized', subtitle: '12 points / 16 px (Book & editorial typesetting)', badge: 'Print', aliases: ['pica', 'picas', 'pc'] },
+      { id: 'in_css', name: 'CSS Inch', plural: 'CSS Inches', symbol: 'in (CSS)', factor: 96, tier: 'specialized', subtitle: '96 CSS pixels (CSS Print spec)', aliases: ['css inch', 'css inches', 'css in', 'in css'] },
+      { id: 'mm_css', name: 'CSS Millimeter', plural: 'CSS Millimeters', symbol: 'mm (CSS)', factor: 96 / 25.4, tier: 'specialized', subtitle: '3.78 px (CSS Print spec)', aliases: ['css mm', 'css millimeter', 'css millimeters', 'mm css'] },
+    ]
+  },
+  current: {
+    baseUnit: 'a',
+    units: [
+      { id: 'a', name: 'Ampere', plural: 'Amperes', symbol: 'A', factor: 1, tier: 'common', subtitle: 'Base SI unit of electric current (1 C/s)', aliases: ['ampere', 'amperes', 'amp', 'amps', 'a'] },
+      { id: 'ma', name: 'Milliampere', plural: 'Milliamperes', symbol: 'mA', factor: 0.001, tier: 'common', subtitle: 'Electronics & microcontroller circuits', badge: 'Electronics', aliases: ['milliampere', 'milliamperes', 'milliamp', 'milliamps', 'ma'] },
+      { id: 'ua', name: 'Microampere', plural: 'Microamperes', symbol: 'µA', factor: 1e-6, tier: 'specialized', subtitle: 'Low-power standby & IoT sensors (10⁻⁶ A)', badge: 'IoT', aliases: ['microampere', 'microamperes', 'microamp', 'microamps', 'ua', 'µa', 'uA', 'µA'] },
+      { id: 'ka', name: 'Kiloampere', plural: 'Kiloamperes', symbol: 'kA', factor: 1000, tier: 'specialized', subtitle: 'Power grids & lightning discharges', badge: 'Power Grid', aliases: ['kiloampere', 'kiloamperes', 'kiloamp', 'kiloamps', 'ka'] },
+      { id: 'ah', name: 'Ampere-hour', plural: 'Ampere-hours', symbol: 'Ah', factor: 1, tier: 'common', subtitle: 'Battery capacity over 1 hour (3,600 C)', badge: 'Battery', aliases: ['ampere hour', 'ampere hours', 'ampere-hour', 'ampere-hours', 'amp hour', 'amp hours', 'ah'] },
+      { id: 'mah', name: 'Milliampere-hour', plural: 'Milliampere-hours', symbol: 'mAh', factor: 0.001, tier: 'common', subtitle: 'Phone, laptop & power bank battery capacity', badge: 'Battery', aliases: ['milliampere hour', 'milliampere hours', 'milliampere-hour', 'milliampere-hours', 'milliamp hour', 'milliamp hours', 'mah'] },
+      { id: 'ab_a', name: 'Abampere (Biot)', plural: 'Abamperes', symbol: 'abA', factor: 10, tier: 'specialized', subtitle: '10 Amperes (Electromagnetic CGS unit)', aliases: ['abampere', 'abamperes', 'biot', 'aba'] },
+      { id: 'stat_a', name: 'Statampere', plural: 'Statamperes', symbol: 'statA', factor: 1 / 2997924580, tier: 'specialized', subtitle: 'Electrostatic CGS unit (~0.334 nA)', aliases: ['statampere', 'statamperes', 'stata'] },
+    ]
+  },
+  illuminance: {
+    baseUnit: 'lx',
+    units: [
+      { id: 'lx', name: 'Lux', plural: 'Lux', symbol: 'lx', factor: 1, tier: 'common', subtitle: 'SI standard illuminance (1 lumen/m²)', aliases: ['lux', 'lx', 'lumen per square meter', 'lumens per square meter'] },
+      { id: 'fc', name: 'Foot-candle', plural: 'Foot-candles', symbol: 'fc', factor: 1 / 0.09290304, tier: 'common', subtitle: 'US architectural & photography lighting (1 lm/ft²)', badge: 'Lighting', aliases: ['foot candle', 'foot candles', 'foot-candle', 'foot-candles', 'fc', 'ft-c', 'ftc'] },
+      { id: 'ph', name: 'Phot', plural: 'Phots', symbol: 'ph', factor: 10000, tier: 'specialized', subtitle: 'CGS optical standard (10,000 lux / 1 lm/cm²)', aliases: ['phot', 'phots', 'ph'] },
+      { id: 'nox', name: 'Nox', plural: 'Nox', symbol: 'nox', factor: 0.001, tier: 'specialized', subtitle: 'Night vision & astronomy optics (1 millilux)', badge: 'Optics', aliases: ['nox', 'millilux'] },
+      { id: 'klx', name: 'Kilolux', plural: 'Kilolux', symbol: 'klx', factor: 1000, tier: 'specialized', subtitle: 'Direct sunlight & greenhouse horticulture', badge: 'Solar', aliases: ['kilolux', 'klx', 'kilo lux'] },
     ]
   }
 };
 
 /**
+ * Retrieves category definition across standard engineering domains and kitchen studio staples.
+ */
+export function getCategory(categoryId) {
+  if (!categoryId) return null;
+  const clean = String(categoryId).trim().toLowerCase();
+  return (
+    CATEGORIES.find((c) => c.id === clean) ||
+    KITCHEN_CATEGORIES.find((c) => c.id === clean) ||
+    null
+  );
+}
+
+/**
  * Returns the unit definition object by category and unit ID.
+ * Natively resolves units across both Standard Engineering domains and Kitchen Studio ingredients.
  */
 export function getUnit(categoryId, unitId) {
-  const cat = UNIT_DEFINITIONS[categoryId];
+  const cat = UNIT_DEFINITIONS[categoryId] || KITCHEN_UNIT_DEFINITIONS[categoryId];
   if (!cat) return null;
   return cat.units.find((u) => u.id === unitId) || null;
 }
 
 /**
- * Returns all units for a category.
+ * Returns all units for a category (Standard domain or Kitchen ingredient).
  */
 export function getUnitsForCategory(categoryId) {
-  const cat = UNIT_DEFINITIONS[categoryId];
+  const cat = UNIT_DEFINITIONS[categoryId] || KITCHEN_UNIT_DEFINITIONS[categoryId];
   return cat ? cat.units : [];
+}
+
+export {
+  KITCHEN_CATEGORIES,
+  KITCHEN_UNIT_DEFINITIONS,
+  PANTRY_GROUPS,
+  isKitchenCategory,
+  getKitchenCategory,
+};
+
+/**
+ * Returns whether a unit belongs to the specialized/trade tier.
+ */
+export function isSpecializedUnit(unit) {
+  return unit?.tier === 'specialized';
+}
+
+/**
+ * Returns all common/everyday units for a category (tier !== 'specialized').
+ */
+export function getCommonUnitsForCategory(categoryId) {
+  const units = getUnitsForCategory(categoryId);
+  return units.filter((u) => u.tier !== 'specialized');
+}
+
+/**
+ * Returns all specialized/trade units for a category (tier === 'specialized').
+ */
+export function getSpecializedUnitsForCategory(categoryId) {
+  const units = getUnitsForCategory(categoryId);
+  return units.filter((u) => u.tier === 'specialized');
 }
 
 /**
@@ -683,16 +893,51 @@ export function isFractionLike(val) {
 }
 
 /**
- * Check if a string represents a compound measurement (e.g. "5 ft 10 in", "5'11\"", "2 lbs 4 oz", "1 hr 30 min").
+ * Check if a string represents a compound measurement (e.g. "5 ft 10 in", "4ft5in", "5'11\"", "2 lbs 4 oz", "1 hr 30 min").
  */
 export function isCompoundLike(val) {
   if (val === null || val === undefined || val === '') return false;
   const s = String(val).trim();
+  if (!s) return false;
+  if (/'|"/.test(s)) return true;
+
+  // Separate stuck digits and letters/symbols so word boundaries match:
+  // e.g. "4ft5in" -> "4 ft 5 in", "2lbs4oz" -> "2 lbs 4 oz", "1hr30m" -> "1 hr 30 m"
+  const normalized = s
+    .replace(/(\d)([a-zµ°'"])/gi, '$1 $2')
+    .replace(/([a-zµ°'"])([-+]?\d)/gi, '$1 $2');
+
   return (
-    /'|"/.test(s) ||
-    /\b(?:ft|feet|foot|in|inch|inches|yd|yard|yards|mi|mile|miles|lb|lbs|pound|pounds|oz|ounce|ounces|st|stone|stones|ton|tons|hr|hrs|hour|hours|min|mins|minute|minutes|sec|secs|second|seconds|gal|gallon|gallons|qt|quart|quarts|pt|pint|pints|cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons)\b/i.test(s) ||
-    /\d+[hmsd]\s*\d+[hmsd]/i.test(s)
+    /'|"/.test(normalized) ||
+    /\b(?:ft|feet|foot|in|inch|inches|yd|yard|yards|mi|mile|miles|lb|lbs|pound|pounds|oz|ounce|ounces|st|stone|stones|ton|tons|hr|hrs|hour|hours|min|mins|minute|minutes|sec|secs|second|seconds|gal|gallon|gallons|qt|quart|quarts|pt|pint|pints|cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|cm|mm|km|meter|meters)\b/i.test(normalized) ||
+    /\d+\s*[hmsd]\s*\d+\s*[hmsd]/i.test(normalized)
   );
+}
+
+/**
+ * Format a compound measurement string cleanly for display in equations and labels.
+ * Formats unspaced "4ft5in" -> "4 ft 5 in", "2lbs4oz" -> "2 lbs 4 oz", "5'10\"" -> "5 ft 10 in".
+ *
+ * @param {string} val
+ * @returns {string}
+ */
+export function formatCompoundForDisplay(val) {
+  if (val === null || val === undefined || val === '') return '';
+  let s = String(val).trim();
+  if (!s) return '';
+
+  // Normalize quotes: 5'10" or 5' 10" -> 5 ft 10 in
+  s = s.replace(/(\d+)\s*'\s*(\d+)\s*(?:"|''|in|inches|inch)?/gi, (m, f, i) => `${f} ft ${i ? `${i} in` : ''}`);
+  s = s.replace(/(\d+)\s*'\s*$/g, '$1 ft');
+  s = s.replace(/(\d+)\s*(?:"|'')$/g, '$1 in');
+
+  // Separate stuck digits and letters/symbols
+  s = s
+    .replace(/(\d)([a-zµ°])/gi, '$1 $2')
+    .replace(/([a-zµ°])([-+]?\d)/gi, '$1 $2');
+
+  s = s.replace(/\s+/g, ' ').trim();
+  return s;
 }
 
 /**
@@ -964,8 +1209,9 @@ export function parseCompoundValue(str, categoryId, targetUnitId) {
     '$1 ft $2 in '
   );
 
-  // Compact letters stuck to digits: 5ft10in -> 5 ft 10 in
-  s = s.replace(/(\d)([a-zµ°])/gi, '$1 $2');
+  // Compact letters stuck to digits: 5ft10in -> 5 ft 10 in, 4ft5in -> 4 ft 5 in
+  s = s.replace(/(\d)([a-zµ°'"])/gi, '$1 $2');
+  s = s.replace(/([a-zµ°'"])([-+]?\d)/gi, '$1 $2');
   s = s.replace(/\s+/g, ' ').trim();
 
   const partRegex = new RegExp(`(${VALUE_REGEX_STR})\\s*([a-z°'"/²³µ]+)`, 'gi');
@@ -980,7 +1226,12 @@ export function parseCompoundValue(str, categoryId, targetUnitId) {
     }
   }
 
-  if (parts.length < 2) return null;
+  if (parts.length < 1) return null;
+
+  const cleanRemainder = s
+    .replace(new RegExp(`(${VALUE_REGEX_STR})\\s*([a-z°'"/²³µ]+)`, 'gi'), '')
+    .replace(/[\s,+]/g, '');
+  if (cleanRemainder.length > 0) return null;
 
   let totalBase = 0;
   for (const p of parts) {
@@ -1003,6 +1254,88 @@ export function parseCompoundValue(str, categoryId, targetUnitId) {
     return Math.round(targetDef.fromBase(totalBase) * 1e10) / 1e10;
   }
   return Math.round((totalBase / targetDef.factor) * 1e10) / 1e10;
+}
+
+/**
+ * Evaluates the status of user input in the conversion workbench.
+ * Differentiates between valid inputs, incomplete/pending typing, and truly invalid expressions.
+ *
+ * @param {string|number} val
+ * @param {string} categoryId
+ * @param {string} unitId
+ * @returns {{ isValid: boolean, isPending: boolean, isInvalid: boolean, isCompound: boolean, parsedValue: number|null }}
+ */
+export function evaluateInputStatus(val, categoryId, unitId) {
+  if (val === null || val === undefined || val === '') {
+    return { isValid: true, isPending: false, isInvalid: false, isCompound: false, parsedValue: 0 };
+  }
+  const s = String(val).trim();
+  if (s === '') {
+    return { isValid: true, isPending: false, isInvalid: false, isCompound: false, parsedValue: 0 };
+  }
+
+  // 1. Pending prefixes while typing
+  if (s === '-' || s === '+' || s === '.') {
+    return { isValid: false, isPending: true, isInvalid: false, isCompound: false, parsedValue: null };
+  }
+  // Trailing decimal without fractional part: e.g. "12."
+  if (/^[+-]?\d+\.$/.test(s)) {
+    return { isValid: true, isPending: false, isInvalid: false, isCompound: false, parsedValue: parseFloat(s) };
+  }
+  // Trailing fraction slash: e.g. "1/", "1 1/", "3/8 +"
+  if (/^[+-]?\d*\s*\d*\s*[/⁄]$/.test(s) || /[+-]\s*$/.test(s)) {
+    return { isValid: false, isPending: true, isInvalid: false, isCompound: false, parsedValue: null };
+  }
+  // Incomplete quotes or unit suffix while typing compound: e.g. "5'", "5ft ", "4 ft "
+  if (/^\d+\s*['"]$/.test(s) || /^\d+\s*[a-z]+(?:\s+|$)$/i.test(s)) {
+    const compVal = parseCompoundValue(s, categoryId, unitId);
+    if (compVal !== null && !isNaN(compVal)) {
+      return { isValid: true, isPending: false, isInvalid: false, isCompound: true, parsedValue: compVal };
+    }
+    return { isValid: false, isPending: true, isInvalid: false, isCompound: true, parsedValue: null };
+  }
+
+  // 2. Compound measurements (spaced or compact: 4ft5in, 5'10", 2 lbs 4 oz, etc.)
+  if (isCompoundLike(s)) {
+    const compVal = parseCompoundValue(s, categoryId, unitId);
+    if (compVal !== null && !isNaN(compVal)) {
+      return { isValid: true, isPending: false, isInvalid: false, isCompound: true, parsedValue: compVal };
+    }
+    // If it looked compound-like but ended in an unfinished token (e.g. typing "5 ft 1"), check pending
+    if (/[a-z0-9]$/i.test(s) && (/'|"$/.test(s) || /\d+$/.test(s))) {
+      const tryLenient = parseCompoundValue(s, categoryId, unitId);
+      if (tryLenient !== null && !isNaN(tryLenient)) {
+        return { isValid: true, isPending: false, isInvalid: false, isCompound: true, parsedValue: tryLenient };
+      }
+    }
+    return { isValid: false, isPending: false, isInvalid: true, isCompound: true, parsedValue: null };
+  }
+
+  // 3. Fraction expressions (1/8, 1 3/8, 3 3/8 +1/32, ½, etc.)
+  if (isFractionLike(s)) {
+    // Check for division by zero: e.g. "/0"
+    if (/\/0(?:\D|$)/.test(s)) {
+      return { isValid: false, isPending: false, isInvalid: true, isCompound: false, parsedValue: null };
+    }
+    const fracVal = parseFractionString(s);
+    if (!isNaN(fracVal) && isFinite(fracVal)) {
+      return { isValid: true, isPending: false, isInvalid: false, isCompound: false, parsedValue: fracVal };
+    }
+    return { isValid: false, isPending: false, isInvalid: true, isCompound: false, parsedValue: null };
+  }
+
+  // 4. Standard numbers (integer, decimal, scientific notation)
+  // Check for invalid multiple decimals: "12..4" or "1.2.3"
+  if ((s.match(/\./g) || []).length > 1) {
+    return { isValid: false, isPending: false, isInvalid: true, isCompound: false, parsedValue: null };
+  }
+  const num = Number(s);
+  if (!isNaN(num) && isFinite(num)) {
+    return { isValid: true, isPending: false, isInvalid: false, isCompound: false, parsedValue: num };
+  }
+
+  // 5. Unrecognized input (e.g. "abc", "foo", "hello")
+  return { isValid: false, isPending: false, isInvalid: true, isCompound: false, parsedValue: null };
 }
 
 /**
@@ -1724,7 +2057,7 @@ export function getSmartEquationDisplay(categoryId, fromUnit, toUnit, fromValue,
     if (fracStr && fracStr.includes('/')) {
       const fracVal = parseFractionString(fracStr);
       const isExact = Math.abs(fracVal - rawTargetNum) < 1e-5;
-      if (isExact && /\/(?:2|3|4|6|8|12|16|24|32|64|128)\b/.test(fracStr)) {
+      if (isExact && /\/(?:2|3|4|6|8|12|16|24|27|32|64|128)\b/.test(fracStr)) {
         return {
           value: fracStr,
           unit: toUnit.symbol,
@@ -1780,6 +2113,11 @@ export function formatDisplayNumber(val) {
   // Format fractions cleanly for human display
   if (s.includes('/') || s.includes('⁄') || Object.keys(VULGAR_FRACTIONS).some((g) => s.includes(g))) {
     return formatFractionForDisplay(s);
+  }
+
+  // Format compound measurements cleanly for human display
+  if (isCompoundLike(s)) {
+    return formatCompoundForDisplay(s);
   }
 
   const isNegative = s.startsWith('-');
@@ -1880,15 +2218,15 @@ export function getFormulaDetails(categoryId, fromUnitId, toUnitId) {
         instruction: 'Divide 235.215 by the L/100km value',
       };
     }
-    if (from.id === 'mpg_imp' && to.id === 'l100km') {
+    if ((from.id === 'mpg_uk' || from.id === 'mpg_imp') && to.id === 'l100km') {
       return {
-        equation: 'L/100km = 282.481 / mpg (Imp)',
+        equation: 'L/100km = 282.481 / mpg (UK)',
         instruction: 'Divide 282.481 by the Imperial mpg value',
       };
     }
-    if (from.id === 'l100km' && to.id === 'mpg_imp') {
+    if (from.id === 'l100km' && (to.id === 'mpg_uk' || to.id === 'mpg_imp')) {
       return {
-        equation: 'mpg (Imp) = 282.481 / (L/100km)',
+        equation: 'mpg (UK) = 282.481 / (L/100km)',
         instruction: 'Divide 282.481 by the L/100km value',
       };
     }
@@ -1902,6 +2240,18 @@ export function getFormulaDetails(categoryId, fromUnitId, toUnitId) {
       return {
         equation: 'km/L = 100 / (L/100km)',
         instruction: 'Divide 100 by the L/100km value',
+      };
+    }
+    if (from.id === 'mi_kwh' && to.id === 'kwh_100km') {
+      return {
+        equation: 'kWh/100km = 62.137 / (mi/kWh)',
+        instruction: 'Divide 62.137 by the mi/kWh value',
+      };
+    }
+    if (from.id === 'kwh_100km' && to.id === 'mi_kwh') {
+      return {
+        equation: 'mi/kWh = 62.137 / (kWh/100km)',
+        instruction: 'Divide 62.137 by the kWh/100km value',
       };
     }
   }
@@ -1991,6 +2341,8 @@ export function filterAndSortUnits(units, search) {
     const symbol = (u.symbol || '').toLowerCase();
     const symbolNoDeg = symbol.replace(/^°/, '');
     const id = (u.id || '').toLowerCase();
+    const subtitle = (u.subtitle || '').toLowerCase();
+    const badge = (u.badge || '').toLowerCase();
     const aliases = (u.aliases || []).map((a) => (a || '').toLowerCase().replace(/^°/, ''));
 
     // Check if unit matches query anywhere
@@ -2000,6 +2352,8 @@ export function filterAndSortUnits(units, search) {
       symbol.includes(rawQuery) ||
       (queryNoDeg.length > 0 && symbolNoDeg.includes(queryNoDeg)) ||
       id.includes(rawQuery) ||
+      subtitle.includes(rawQuery) ||
+      badge.includes(rawQuery) ||
       aliases.some((a) => a.includes(rawQuery) || (queryNoDeg.length > 0 && a.includes(queryNoDeg)));
 
     if (!hasSubstringMatch) {
@@ -2036,9 +2390,12 @@ export function filterAndSortUnits(units, search) {
       } else {
         const nameWords = name.split(/[\s\-_/]+/);
         const pluralWords = plural.split(/[\s\-_/]+/);
+        const subtitleWords = subtitle.split(/[\s\-_/]+/);
         const isWordPrefix =
           nameWords.some((w) => w.startsWith(rawQuery)) ||
           pluralWords.some((w) => w.startsWith(rawQuery)) ||
+          subtitleWords.some((w) => w.startsWith(rawQuery)) ||
+          badge.startsWith(rawQuery) ||
           aliases.some((a) => a.startsWith(rawQuery) || (queryNoDeg.length > 0 && a.startsWith(queryNoDeg)));
 
         if (isWordPrefix) {

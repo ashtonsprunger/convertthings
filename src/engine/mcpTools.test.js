@@ -92,7 +92,7 @@ describe('MCP Tools Engine', () => {
   test('list_units: returns all categories when unconstrained', async () => {
     const res = await executeTool('list_units', {});
     expect(res.isError).toBe(false);
-    expect(res.structuredData.totalCategories).toBe(15);
+    expect(res.structuredData.totalCategories).toBe(22);
     expect(res.structuredData.totalUnits).toBeGreaterThan(100);
   });
 

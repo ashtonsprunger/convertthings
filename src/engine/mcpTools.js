@@ -18,7 +18,7 @@ import { findUnit, parseConversionQuery } from './parser.js';
 export const MCP_SERVER_INFO = {
   name: 'ConvertThings',
   version: '1.0.0',
-  description: 'High-precision unit conversion MCP server and API for ConvertThings.com across 15 physical & computational measurement domains.',
+  description: 'High-precision unit conversion MCP server and API for ConvertThings.com across 22 physical & computational measurement domains.',
   websiteUrl: 'https://www.convertthings.com',
   icons: [
     {
@@ -42,7 +42,7 @@ export const MCP_TOOLS = [
   {
     name: 'convert_units',
     description:
-      'Perform precise unit conversions across 15 measurement domains (length, mass, temperature, area, volume, speed, time, digital storage, data transfer rate, pressure, energy, power, angle, fuel economy, cooking). Returns exact conversion, formatted output, and the step-by-step formula.',
+      'Perform precise unit conversions across 22 measurement domains (length, mass, temperature, area, volume, speed, time, digital storage, data transfer rate, pressure, energy, power, angle, fuel economy, cooking, frequency, torque, force, flow rate, typography, electric current, illuminance). Returns exact conversion, formatted output, and the step-by-step formula.',
     inputSchema: {
       type: 'object',
       properties: {
