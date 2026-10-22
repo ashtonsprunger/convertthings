@@ -244,12 +244,21 @@ function renderPageHtml({
     `<meta name="twitter:description" content="${escapeHtml(seo.ogDescription)}" />`
   );
 
-  // 5.5. Inject Schema.org FAQPage & SoftwareApplication
+  // 5.5. Inject Schema.org WebSite, FAQPage & SoftwareApplication
   const schemas = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: 'ConvertThings',
+      alternateName: ['Convert Things', 'ConvertThings.com', 'Convert Things Unit Converter'],
+      url: 'https://www.convertthings.com/',
+    },
     {
       '@context': 'https://schema.org',
       '@type': 'SoftwareApplication',
       name: 'ConvertThings Unit Converter',
+      alternateName: 'Convert Things',
+      url: 'https://www.convertthings.com/',
       applicationCategory: 'UtilitiesApplication',
       operatingSystem: 'All',
       offers: {
@@ -359,7 +368,7 @@ function renderPageHtml({
           <div class="ct-guide-content">
             <h2 class="ct-guide-heading">Scientific Precision Across 22 Measurement Domains</h2>
             <p class="ct-guide-text">
-              ConvertThings is a comprehensive, real-time unit conversion platform built for engineers, scientists, students, tradespeople, and home bakers. Every conversion factor is calibrated against official <strong>NIST Special Publication 811</strong> (National Institute of Standards and Technology) and <strong>ISO/IEC 80000</strong> international metrology definitions, with custom IEEE 754 floating-point normalization that eliminates binary rounding errors.
+              ConvertThings (also searched as <strong>Convert Things</strong>) is a comprehensive, real-time unit conversion platform built for engineers, scientists, students, tradespeople, and home cooks who need to convert things quickly and accurately. Every conversion factor is calibrated against official <strong>NIST Special Publication 811</strong> (National Institute of Standards and Technology) and <strong>ISO/IEC 80000</strong> international metrology definitions, with custom IEEE 754 floating-point normalization that eliminates binary rounding errors.
             </p>
             <p class="ct-guide-text">
               In addition to standard decimal conversions, ConvertThings supports <strong>compound measurements</strong> (such as <code>5 ft 10 in to cm</code> or <code>2 lbs 4 oz to g</code>), <strong>carpenter tape measure fractions</strong> (<code>1/16&Prime; &plusmn; 1/32&Prime;</code> ruler markings), and a dedicated <a href="/cooking">Kitchen &amp; Cooking Converter</a> that breaks odd fractional cups and spoons into practical measuring drawer tools.

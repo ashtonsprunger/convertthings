@@ -76,6 +76,8 @@ describe('SEO Metadata Engine', () => {
   test('returns homepage metadata when isRoot is explicitly true', () => {
     const meta = getSeoMetadata({ isRoot: true, categoryId: 'length', fromUnitId: 'm', toUnitId: 'ft' });
     expect(meta.title).toBe('ConvertThings - Instant, Accurate Online Unit Converter');
+    expect(meta.h1).toContain('ConvertThings');
+    expect(meta.description).toContain('Convert Things');
     expect(meta.canonicalUrl).toBe('https://www.convertthings.com/');
   });
 

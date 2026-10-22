@@ -834,9 +834,9 @@ export function getSeoMetadata({
     return {
       title: 'ConvertThings - Instant, Accurate Online Unit Converter',
       description:
-        'Convert units instantly across 22 domains: length, weight, temperature, area, volume, speed, force, flow rate, typography, electric current, illuminance, frequency, torque, digital storage, and cooking. Fast, free, and accurate.',
+        'ConvertThings (Convert Things) is a fast, free online unit converter. Convert things instantly across 22 domains: length, weight, temperature, area, volume, speed, force, flow rate, typography, electric current, illuminance, frequency, torque, digital storage, and cooking.',
       canonicalUrl: `${cleanDomain}/`,
-      h1: 'Instant, Accurate Unit Converter',
+      h1: 'ConvertThings — Instant, Accurate Unit Converter',
       directAnswer: null,
       ogTitle: 'ConvertThings - Instant, Accurate Online Unit Converter',
       ogDescription:

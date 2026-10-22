@@ -80,10 +80,20 @@ export function SeoContent({ categoryId, fromUnitId, toUnitId, hubId = null, onS
       })),
     };
 
+    const webSiteSchema = {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: 'ConvertThings',
+      alternateName: ['Convert Things', 'ConvertThings.com', 'Convert Things Unit Converter'],
+      url: 'https://www.convertthings.com/',
+    };
+
     const webAppSchema = {
       '@context': 'https://schema.org',
       '@type': 'SoftwareApplication',
       name: 'ConvertThings Unit Converter',
+      alternateName: 'Convert Things',
+      url: 'https://www.convertthings.com/',
       applicationCategory: 'UtilitiesApplication',
       operatingSystem: 'All',
       offers: {
@@ -98,7 +108,7 @@ export function SeoContent({ categoryId, fromUnitId, toUnitId, hubId = null, onS
     const script = document.createElement('script');
     script.type = 'application/ld+json';
     script.id = 'ct-schema-faq';
-    script.text = JSON.stringify([faqSchema, webAppSchema]);
+    script.text = JSON.stringify([faqSchema, webSiteSchema, webAppSchema]);
 
     const oldScript = document.getElementById('ct-schema-faq');
     if (oldScript) {
