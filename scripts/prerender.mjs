@@ -78,7 +78,6 @@ function renderStaticFooterHtml() {
         <div class="ct-footer-bottom">
           <p class="ct-footer-copy">&copy; ${new Date().getFullYear()} ConvertThings. All rights reserved.</p>
           <div class="ct-footer-legal-links">
-            <a href="/kitchen" class="ct-footer-legal-link">Kitchen Studio</a>
             <a href="/api/mcp" class="ct-footer-legal-link">AI &amp; Developer API</a>
             <a href="/about.html" class="ct-footer-legal-link">About &amp; Contact</a>
             <a href="/privacy.html" class="ct-footer-legal-link">Privacy Policy</a>
@@ -319,7 +318,7 @@ function renderPageHtml({
       { href: '/convert/feet-inches-to-cm', label: 'Height Converter (Feet & Inches to cm)', note: "5'10\" = 177.8 cm" },
       { href: '/convert/fraction-inches-to-mm', label: 'Tape Measure Fractions to mm', note: '13/16" = 20.6375 mm' },
       { href: '/convert/baking-fractions', label: 'Baking Fractions & Kitchen Spoons', note: '1/3 cup = 5 tbsp + 1 tsp' },
-      { href: '/convert/flour-cups-to-grams', label: 'Flour Cups to Grams Converter', note: '1 cup flour = 120 g' },
+      { href: '/convert/cup_us-to-tbsp_us', label: 'US Cups to Tablespoons (cup to tbsp)', note: '1 cup = 16 tbsp' },
     ]
       .map(
         (item) => `
@@ -363,7 +362,7 @@ function renderPageHtml({
               ConvertThings is a comprehensive, real-time unit conversion platform built for engineers, scientists, students, tradespeople, and home bakers. Every conversion factor is calibrated against official <strong>NIST Special Publication 811</strong> (National Institute of Standards and Technology) and <strong>ISO/IEC 80000</strong> international metrology definitions, with custom IEEE 754 floating-point normalization that eliminates binary rounding errors.
             </p>
             <p class="ct-guide-text">
-              In addition to standard decimal conversions, ConvertThings supports <strong>compound measurements</strong> (such as <code>5 ft 10 in to cm</code> or <code>2 lbs 4 oz to g</code>), <strong>carpenter tape measure fractions</strong> (<code>1/16&Prime; &plusmn; 1/32&Prime;</code> ruler markings), and a dedicated <a href="/kitchen">Kitchen &amp; Baking Studio</a> that converts volume cups and spoons into exact gram weights using USDA and King Arthur Baking ingredient density standards.
+              In addition to standard decimal conversions, ConvertThings supports <strong>compound measurements</strong> (such as <code>5 ft 10 in to cm</code> or <code>2 lbs 4 oz to g</code>), <strong>carpenter tape measure fractions</strong> (<code>1/16&Prime; &plusmn; 1/32&Prime;</code> ruler markings), and a dedicated <a href="/cooking">Kitchen &amp; Cooking Converter</a> that breaks odd fractional cups and spoons into practical measuring drawer tools.
             </p>
 
             <div class="ct-popular-pairs-section">
@@ -382,29 +381,7 @@ function renderPageHtml({
           </div>
         </section>
 
-        ${renderFaqsHtml(seo.faqs, 'Verified metrology standards, fraction handling, and culinary density calculations.')}
-      </article>
-    `.trim();
-  } else if (isKitchenStudio) {
-    contentHtml = `
-      <article class="ct-seo-section">
-        <section class="ct-seo-guide" aria-label="Kitchen and Baking Studio Guide">
-          <header class="ct-seo-header">
-            <h1 class="ct-seo-title">${escapeHtml(seo.h1)}</h1>
-            <p class="ct-seo-lead">${escapeHtml(seo.description)}</p>
-          </header>
-          <div class="ct-guide-content">
-            <h2 class="ct-guide-heading">Ingredient Density &amp; Culinary Weight Conversions</h2>
-            <p class="ct-guide-text">
-              Standard volume converters treat 1 cup of every ingredient the same, but in real-world baking, volume and weight depend on bulk density. 1 US cup (236.59 mL) of water weighs 236.6 grams, while 1 US cup of spooned-and-leveled all-purpose flour weighs <strong>120 grams</strong>, granulated white sugar weighs <strong>200 grams</strong>, packed brown sugar weighs <strong>213 grams</strong>, and US butter weighs <strong>226.8 grams</strong> (113.4 grams per stick).
-            </p>
-            <p class="ct-guide-text">
-              The ConvertThings Kitchen Studio calibrates volume-to-mass conversions against authoritative culinary standards from King Arthur Baking and USDA FoodData Central, and breaks awkward fractional volumes (like <code>1/3 cup</code> or <code>34 mL</code>) into practical measuring drawer tools (<code>5 tbsp + 1 tsp</code>).
-            </p>
-            ${renderPopularPairsHtml('cooking', 'Kitchen & Baking')}
-          </div>
-        </section>
-        ${renderFaqsHtml(seo.faqs, 'Common questions about baking weight conversions and kitchen measuring tools.')}
+        ${renderFaqsHtml(seo.faqs, 'Verified metrology standards, fraction handling, and culinary measurements.')}
       </article>
     `.trim();
   } else if (fromUnit && toUnit) {
@@ -639,12 +616,6 @@ let count = 0;
 const rootSeo = getSeoMetadata({ isRoot: true });
 const rootHtml = renderPageHtml({ seo: rootSeo, isRoot: true });
 writeHtml(indexHtmlPath, rootHtml);
-count++;
-
-// 0.5 Pre-render Dedicated Kitchen Studio (build/kitchen/index.html)
-const kitchenSeo = getSeoMetadata({ isKitchenStudio: true, categoryId: 'cooking' });
-const kitchenHtml = renderPageHtml({ seo: kitchenSeo, categoryId: 'cooking', categoryName: 'Kitchen', isKitchenStudio: true });
-writeHtml(path.resolve(buildDir, 'kitchen', 'index.html'), kitchenHtml);
 count++;
 
 // 1. Pre-render Category landing pages (e.g. build/length/index.html)

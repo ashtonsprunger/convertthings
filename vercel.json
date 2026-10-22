@@ -1,4 +1,8 @@
 {
+  "redirects": [
+    { "source": "/kitchen", "destination": "/cooking", "permanent": true },
+    { "source": "/convert/flour-cups-to-grams", "destination": "/cooking", "permanent": true }
+  ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }

@@ -23,13 +23,6 @@ import {
   parseFractionString,
   isFractionLike,
 } from './conversions.js';
-import {
-  convertCulinary,
-  extractCulinaryIngredient,
-  getCulinaryIngredient,
-  isCulinaryMassUnit,
-  CULINARY_MASS_UNITS,
-} from './culinary.js';
 
 // Category-indexed lookup: { [categoryId]: { [aliasKey]: unit } }
 const LOOKUP_BY_CAT = {};
@@ -724,42 +717,6 @@ export function parseCompoundConversion(rawQuery) {
  * @param {string} rawQuery
  * @returns {object|null}
  */
-/**
- * Resolves a unit token in culinary context: checks mass units (g, oz, lb, kg) as well as cooking/volume units.
- */
-function findCulinaryOrMassUnit(token) {
-  if (!token) return null;
-  const clean = token.trim().toLowerCase();
-  // 1. Check culinary mass units (g, oz, lb, kg)
-  const massMatch = CULINARY_MASS_UNITS.find(
-    (u) =>
-      u.id === clean ||
-      u.symbol.toLowerCase() === clean ||
-      u.name.toLowerCase() === clean ||
-      u.plural.toLowerCase() === clean ||
-      (clean.length > 2 && clean.endsWith('s') && u.name.toLowerCase() === clean.slice(0, -1))
-  );
-  if (massMatch) return massMatch;
-
-  // 2. Check cooking units
-  const cookUnit = findUnit(token, 'cooking');
-  if (cookUnit && (cookUnit.categoryId === 'cooking' || cookUnit.categoryId === 'volume')) {
-    return cookUnit.unit;
-  }
-
-  // 3. Check mass units globally
-  const globalMass = findUnit(token, 'mass');
-  if (globalMass && isCulinaryMassUnit(globalMass.unit.id)) {
-    return globalMass.unit;
-  }
-
-  // 4. Fallback: check any volume unit
-  const volUnit = findUnit(token, 'volume');
-  if (volUnit) return volUnit.unit;
-
-  return null;
-}
-
 export function parseConversionQuery(rawQuery) {
   if (!rawQuery || typeof rawQuery !== 'string') return null;
 
@@ -769,143 +726,6 @@ export function parseConversionQuery(rawQuery) {
 
   let query = sanitizeQuery(rawQuery);
   if (!query) return null;
-
-  // Culinary Baking & Ingredient Density Resolution
-  const { ingredient: culinaryIng, cleanedText: culinaryCleaned } = extractCulinaryIngredient(query);
-  if (culinaryIng && culinaryIng.id !== 'liquid') {
-    // 1. Natural question with ingredient: e.g. "how many grams in 1 cup flour" -> "how many grams in 1 cup"
-    const matchIngHowMany = culinaryCleaned.match(
-      new RegExp('^(?:how many|how much)\\s+([a-z0-9_°\'"/²³µ\\s\\-]+?)\\s+(?:in|are in|are there in)\\s+(?:(' + VALUE_REGEX + ')\\s*)?(?:a\\s+|an\\s+)?([a-z0-9_°\'"/²³µ\\s\\-]+)$', 'i')
-    );
-    if (matchIngHowMany) {
-      const toToken = matchIngHowMany[1].trim();
-      const rawVal = matchIngHowMany[2]?.trim();
-      const val = rawVal ? parseFractionString(rawVal) : 1;
-      const fromToken = matchIngHowMany[3].trim();
-      if (!isNaN(val)) {
-        const uFrom = findCulinaryOrMassUnit(fromToken);
-        const uTo = findCulinaryOrMassUnit(toToken);
-        if (uFrom && uTo) {
-          const res = convertCulinary(val, uFrom.id, uTo.id, culinaryIng.id);
-          if (res !== null && !isNaN(res) && isFinite(res)) {
-            return {
-              success: true,
-              categoryId: 'cooking',
-              fromUnit: uFrom,
-              toUnit: uTo,
-              value: val,
-              displayValue: isFractionLike(rawVal) ? rawVal.trim() : undefined,
-              result: res,
-              formattedResult: formatNumber(res, 'auto', 'cooking'),
-              query: rawQuery,
-              hasExplicitValue: !!rawVal,
-              hasExplicitTo: true,
-              ingredient: culinaryIng.id,
-            };
-          }
-        }
-      }
-    }
-
-    // 2. Full directional with ingredient: e.g. "1 cup flour to grams" -> "1 cup to grams"
-    const matchIngFull = culinaryCleaned.match(
-      new RegExp('^(' + VALUE_REGEX + '\\s*)?([a-z0-9_°\'"/²³µ\\s\\-]+?)\\s+(?:to|in|into|as|=|convert to)\\s+([a-z0-9_°\'"/²³µ\\s\\-]+)$', 'i')
-    );
-    if (matchIngFull) {
-      const rawVal = matchIngFull[1]?.trim();
-      const val = rawVal ? parseFractionString(rawVal) : 1;
-      const fromToken = matchIngFull[2].trim();
-      const toToken = matchIngFull[3].trim();
-      if (!isNaN(val)) {
-        const uFrom = findCulinaryOrMassUnit(fromToken);
-        const uTo = findCulinaryOrMassUnit(toToken);
-        if (uFrom && uTo) {
-          const res = convertCulinary(val, uFrom.id, uTo.id, culinaryIng.id);
-          if (res !== null && !isNaN(res) && isFinite(res)) {
-            return {
-              success: true,
-              categoryId: 'cooking',
-              fromUnit: uFrom,
-              toUnit: uTo,
-              value: val,
-              displayValue: isFractionLike(rawVal) ? rawVal.trim() : undefined,
-              result: res,
-              formattedResult: formatNumber(res, 'auto', 'cooking'),
-              query: rawQuery,
-              hasExplicitValue: !!rawVal,
-              hasExplicitTo: true,
-              ingredient: culinaryIng.id,
-            };
-          }
-        }
-      }
-    }
-
-    // 3. Two units with ingredient: e.g. "1 cup flour grams" or "cup flour grams" -> "1 cup grams"
-    const matchIngTwo = culinaryCleaned.match(
-      new RegExp('^(' + VALUE_REGEX + '\\s+)?([a-z0-9_°\'"/²³µ\\-]+)\\s+([a-z0-9_°\'"/²³µ\\-]+)$', 'i')
-    );
-    if (matchIngTwo) {
-      const rawVal = matchIngTwo[1]?.trim();
-      const val = rawVal ? parseFractionString(rawVal) : 1;
-      const fromToken = matchIngTwo[2].trim();
-      const toToken = matchIngTwo[3].trim();
-      if (!isNaN(val)) {
-        const uFrom = findCulinaryOrMassUnit(fromToken);
-        const uTo = findCulinaryOrMassUnit(toToken);
-        if (uFrom && uTo) {
-          const res = convertCulinary(val, uFrom.id, uTo.id, culinaryIng.id);
-          if (res !== null && !isNaN(res) && isFinite(res)) {
-            return {
-              success: true,
-              categoryId: 'cooking',
-              fromUnit: uFrom,
-              toUnit: uTo,
-              value: val,
-              displayValue: isFractionLike(rawVal) ? rawVal.trim() : undefined,
-              result: res,
-              formattedResult: formatNumber(res, 'auto', 'cooking'),
-              query: rawQuery,
-              hasExplicitValue: !!rawVal,
-              hasExplicitTo: true,
-              ingredient: culinaryIng.id,
-            };
-          }
-        }
-      }
-    }
-
-    // 4. Single-unit with ingredient: e.g. "1 cup flour" -> "1 cup" or "flour" -> ""
-    const matchIngSingle = culinaryCleaned.match(
-      new RegExp('^(' + VALUE_REGEX + '\\s*)?([a-z0-9_°\'"/²³µ\\s\\-]+)?$', 'i')
-    );
-    if (matchIngSingle) {
-      const rawVal = matchIngSingle[1]?.trim();
-      const val = rawVal ? parseFractionString(rawVal) : 1;
-      const unitToken = matchIngSingle[2]?.trim();
-      let uFrom = unitToken ? findCulinaryOrMassUnit(unitToken) : getUnit('cooking', 'cup_us');
-      if (uFrom) {
-        const uTo = isCulinaryMassUnit(uFrom.id) ? getUnit('cooking', 'cup_us') : CULINARY_MASS_UNITS[0];
-        const res = convertCulinary(val, uFrom.id, uTo.id, culinaryIng.id);
-        if (res !== null && !isNaN(res) && isFinite(res)) {
-          return {
-            success: true,
-            categoryId: 'cooking',
-            fromUnit: uFrom,
-            toUnit: uTo,
-            value: val,
-            displayValue: isFractionLike(rawVal) ? rawVal.trim() : undefined,
-            result: res,
-            formattedResult: formatNumber(res, 'auto', 'cooking'),
-            query: rawQuery,
-            hasExplicitValue: !!rawVal,
-            hasExplicitTo: false,
-            ingredient: culinaryIng.id,
-          };
-        }
-      }
-    }
-  }
 
   // Pattern 0: Natural question format: "how many [toUnit] in [val]? [fromUnit]"
   const patternHowMany = new RegExp('^(?:how many|how much)\\s+([a-z0-9_°\'"/²³µ\\s\\-]+?)\\s+(?:in|are in|are there in)\\s+(?:(' + VALUE_REGEX + ')\\s*)?(?:a\\s+|an\\s+)?([a-z0-9_°\'"/²³µ\\s\\-]+)$', 'i');
@@ -1402,26 +1222,21 @@ export function getSearchSuggestions(rawQuery, options = {}) {
     const toPlural = parsed.toUnit.plural || parsed.toUnit.name;
     const fromValFormatted = formatNumber(parsed.value, 'auto', parsed.categoryId);
 
-    const ingObj = parsed.ingredient ? getCulinaryIngredient(parsed.ingredient) : null;
-    const ingTitle = ingObj ? ` (${ingObj.shortName})` : '';
-
     const mainTitle = isCompound
       ? `${parsed.compoundDisplay} = ${parsed.formattedResult} ${toPlural}`
-      : `${fromValFormatted} ${fromPlural}${ingTitle} = ${parsed.formattedResult} ${toPlural}`;
+      : `${fromValFormatted} ${fromPlural} = ${parsed.formattedResult} ${toPlural}`;
 
     suggestions.push({
-      id: `conv-main-${parsed.categoryId}-${parsed.fromUnit.id}-${parsed.toUnit.id}${parsed.ingredient ? `-${parsed.ingredient}` : ''}`,
+      id: `conv-main-${parsed.categoryId}-${parsed.fromUnit.id}-${parsed.toUnit.id}`,
       type: isCompound ? 'compound' : 'conversion',
       categoryId: parsed.categoryId,
       title: mainTitle,
-      subtitle: parsed.ingredient
-        ? `Culinary Studio · ${ingObj?.name || 'Baking Standard'}`
-        : `${catName} · ${parsed.fromUnit.symbol} → ${parsed.toUnit.symbol}`,
-      badge: parsed.ingredient ? 'Baking Match' : (isCompound ? (parsed.categoryId === 'length' ? 'Height Match' : 'Compound Match') : 'Instant Match'),
-      icon: parsed.ingredient ? (ingObj?.icon || 'Wheat') : catIcon,
+      subtitle: `${catName} · ${parsed.fromUnit.symbol} → ${parsed.toUnit.symbol}`,
+      badge: isCompound ? (parsed.categoryId === 'length' ? 'Height Match' : 'Compound Match') : 'Instant Match',
+      icon: catIcon,
       equation: {
         fromVal: isCompound ? parsed.compoundDisplay : fromValFormatted,
-        fromUnit: isCompound ? '' : `${fromPlural}${ingTitle}`,
+        fromUnit: isCompound ? '' : fromPlural,
         fromSymbol: parsed.fromUnit.symbol,
         toVal: parsed.formattedResult,
         toUnit: toPlural,
@@ -1437,7 +1252,6 @@ export function getSearchSuggestions(rawQuery, options = {}) {
         formattedResult: parsed.formattedResult,
         hasExplicitValue: isCompound || !!parsed.hasExplicitValue,
         hasExplicitTo: parsed.hasExplicitTo !== false,
-        ingredient: parsed.ingredient,
       },
     });
 

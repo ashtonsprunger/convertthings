@@ -635,36 +635,6 @@ export const HUB_SEO_INFO = {
       },
     ],
   },
-  'flour-cups-to-grams': {
-    hubId: 'flour-cups-to-grams',
-    title: 'Flour Cups to Grams Converter (All-Purpose Baking Chart) | ConvertThings',
-    description: 'Convert cups of all-purpose flour to grams instantly. Based on King Arthur Baking & USDA standards (1 cup = 120 grams). Free baking weight chart and calculator.',
-    canonicalPath: '/convert/flour-cups-to-grams',
-    h1: 'Flour Cups to Grams Converter (Baking Weight)',
-    directAnswer: '1 US cup All-Purpose Flour = 120 grams',
-    baselineAnswer: '120',
-    targetUnitSymbol: 'g',
-    formulaEquation: 'Grams = (US Cups) × 120',
-    formulaInstruction: 'To convert cups of all-purpose flour to grams, multiply the number of cups by 120 (based on standard spooned & leveled method: 1 cup = 120g). For example: 2 cups × 120 = 240g.',
-    faqs: [
-      {
-        q: 'How many grams is 1 cup of all-purpose flour?',
-        a: '1 US cup of all-purpose flour equals 120 grams when measured with the standard spoon-and-level method (or ~125g if lightly dipped).',
-      },
-      {
-        q: 'How many grams is 1/2 cup of flour?',
-        a: '1/2 cup of all-purpose flour equals exactly 60 grams.',
-      },
-      {
-        q: 'How many cups is 250 grams of flour?',
-        a: '250 grams of all-purpose flour is approximately 2.08 cups (or about 2 cups plus 1 tablespoon).',
-      },
-      {
-        q: 'Why should I weigh flour in grams instead of using cups?',
-        a: 'A cup of flour can weigh anywhere from 110g to 150g depending on humidity, brand, and how tightly packed it is. Weighing in grams ensures exact baking ratios every time.',
-      },
-    ],
-  },
 };
 
 export const HOMEPAGE_FAQS = [
@@ -677,8 +647,8 @@ export const HOMEPAGE_FAQS = [
     a: 'You can type compound measurements directly into either the main input field or the universal search bar (press "/" to focus). For example, typing "5\'10\\" to cm" or "2 lbs 4 oz to g" resolves both components automatically.',
   },
   {
-    q: 'Why does Kitchen Studio convert cups to grams differently for each ingredient?',
-    a: 'Cups measure volume while grams measure weight (mass). Because ingredients have different bulk densities—1 US cup of all-purpose flour weighs 120 grams, whereas 1 US cup of granulated sugar weighs 200 grams and honey weighs 340 grams—ConvertThings uses USDA and King Arthur Baking density tables for accurate culinary scaling.',
+    q: 'How do kitchen and baking fraction conversions work?',
+    a: 'In Kitchen Mode (Cooking), ConvertThings automatically formats odd fractional volumes into practical measuring cups and spoons found in standard home drawers—for example, breaking 13/16 cup into 3/4 cup + 1 tablespoon, or 34 mL into 2 tablespoons + 1 teaspoon.',
   },
   {
     q: 'How do tape measure fraction conversions work?',
@@ -833,27 +803,8 @@ export function getSeoMetadata({
   isRoot = false,
   isCategoryPage = false,
   hubId = null,
-  isKitchenStudio = false,
 }) {
   const cleanDomain = (domain || 'https://www.convertthings.com').replace(/\/$/, '');
-
-  // 0. Dedicated Kitchen & Baking Studio Metadata
-  if (isKitchenStudio) {
-    return {
-      title: 'Kitchen & Baking Converter | Cups to Grams, Spoons & Density | ConvertThings',
-      description:
-        'Free high-precision baking and kitchen conversion studio. Convert cups to grams by ingredient density (flour, sugar, butter), measuring drawer spoon breakdowns, and oven temps.',
-      canonicalUrl: `${cleanDomain}/kitchen`,
-      h1: 'Kitchen & Baking Converter Studio',
-      directAnswer: null,
-      ogTitle: 'Kitchen & Baking Converter Studio | ConvertThings',
-      ogDescription:
-        'Convert cups to grams by ingredient density (flour, sugar, butter), measuring drawer spoon breakdowns, and oven temps.',
-      faqs: HUB_SEO_INFO['flour-cups-to-grams'].faqs,
-      isIndexable: true,
-      robots: 'index, follow',
-    };
-  }
 
   // 0. Dedicated High-Intent Hub Route Metadata
   if (hubId && HUB_SEO_INFO[hubId]) {

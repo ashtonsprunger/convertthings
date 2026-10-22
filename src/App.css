@@ -2821,33 +2821,6 @@ button:focus:not(:focus-visible) {
   transition: transform 0.06s ease;
 }
 
-.ct-category-expand-btn.is-expanded {
-  float: right;
-  position: relative;
-  z-index: 25;
-  margin-top: 0;
-  margin-bottom: 0.45rem;
-  margin-left: 0.5rem;
-  background-color: var(--bg-card-subtle);
-  border-color: transparent;
-  color: var(--text-secondary);
-  box-shadow: none;
-}
-
-.ct-category-expand-btn.is-expanded:hover {
-  background-color: var(--bg-card-subtle);
-  color: var(--text-main);
-  border-color: transparent;
-  box-shadow: none;
-  transform: translateY(-1.5px);
-}
-
-.ct-category-expand-btn.is-expanded:active {
-  transform: translateY(0) scale(0.96);
-  background-color: var(--bg-card-subtle);
-  transition: transform 0.06s ease;
-}
-
 .ct-expand-chevron {
   opacity: 0.7;
 }
@@ -2999,11 +2972,6 @@ button:focus:not(:focus-visible) {
     height: 32px;
     font-size: 0.75rem;
     margin-top: 5px;
-  }
-  .ct-category-expand-btn.is-expanded {
-    margin-top: 0;
-    margin-bottom: 0.4rem;
-    margin-left: 0.45rem;
   }
 }
 

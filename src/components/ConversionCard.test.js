@@ -231,40 +231,6 @@ describe('ConversionCard Component', () => {
     expect(handleShare).toHaveBeenCalledTimes(1);
   });
 
-  test('renders kitchen drawer measuring tools in lower section and allows copying', () => {
-    const handleCopy = jest.fn();
-
-    const { container } = render(
-      <ConversionCard
-        {...defaultProps}
-        categoryId="flour_ap"
-        fromUnitId="cup_us"
-        toUnitId="g"
-        fromValue="2"
-        toValue="240"
-        onCopy={handleCopy}
-      />
-    );
-
-    expect(screen.getByText('Measuring Tools Needed')).toBeInTheDocument();
-
-    const kitchenOutputBox = screen.getByRole('button', { name: /Kitchen measuring tools:/i });
-    fireEvent.click(kitchenOutputBox);
-    expect(handleCopy).toHaveBeenCalled();
-
-    // Click individual kitchen tool pills
-    const toolChips = container.querySelectorAll('.ct-kitchen-tool-chip');
-    expect(toolChips.length).toBeGreaterThan(0);
-    fireEvent.click(toolChips[0]);
-    expect(handleCopy).toHaveBeenCalled();
-
-    // Click equivalent pills
-    const equivPills = container.querySelectorAll('.ct-kitchen-equiv-pill');
-    expect(equivPills.length).toBe(5);
-    equivPills.forEach((pill) => fireEvent.click(pill));
-    expect(handleCopy).toHaveBeenCalledTimes(7);
-  });
-
   test('clears search input inside unit dropdowns', () => {
     render(<ConversionCard {...defaultProps} />);
 

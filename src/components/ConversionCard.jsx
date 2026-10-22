@@ -16,9 +16,7 @@ import {
   isCompoundLike,
   parseCompoundValue,
   evaluateInputStatus,
-  getKitchenDrawerBreakdown,
   getSmartEquationDisplay,
-  isKitchenCategory,
 } from '../engine/conversions';
 
 const PRECISION_OPTIONS = [
@@ -67,8 +65,6 @@ export function ConversionCard({
   fromValue,
   toValue,
   precision,
-  kitchenMode = false,
-  isKitchenMode = false,
   isFavorite,
   onFromUnitChange,
   onToUnitChange,
@@ -84,7 +80,6 @@ export function ConversionCard({
   onRemoveFavorite,
   onClearFavorites,
 }) {
-  const isKitchenActive = Boolean(kitchenMode || isKitchenMode || isKitchenCategory(categoryId));
   const units = useMemo(() => getUnitsForCategory(categoryId), [categoryId]);
   const fromUnit = useMemo(
     () => getUnit(categoryId, fromUnitId) || units[0] || { id: fromUnitId, name: fromUnitId, symbol: fromUnitId },
@@ -107,7 +102,6 @@ export function ConversionCard({
   const [copiedNumber, setCopiedNumber] = useState(false);
   const [copiedFormula, setCopiedFormula] = useState(false);
   const [copiedInstruction, setCopiedInstruction] = useState(false);
-  const [copiedKitchen, setCopiedKitchen] = useState(false);
   const [copiedShare, setCopiedShare] = useState(false);
 
   const fromDropdownRef = useRef(null);
@@ -125,7 +119,6 @@ export function ConversionCard({
   const copiedTimeoutRef = useRef(null);
   const copiedFormulaTimeoutRef = useRef(null);
   const copiedInstructionTimeoutRef = useRef(null);
-  const copiedKitchenTimeoutRef = useRef(null);
   const copiedShareTimeoutRef = useRef(null);
 
   const formulaDetails = getFormulaDetails(categoryId, fromUnit.id, toUnit.id);
@@ -136,7 +129,6 @@ export function ConversionCard({
     setCopiedNumber(false);
     setCopiedFormula(false);
     setCopiedInstruction(false);
-    setCopiedKitchen(false);
     setCopiedShare(false);
   }, [fromValue, toValue, fromUnitId, toUnitId]);
 
@@ -146,7 +138,6 @@ export function ConversionCard({
       if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
       if (copiedFormulaTimeoutRef.current) clearTimeout(copiedFormulaTimeoutRef.current);
       if (copiedInstructionTimeoutRef.current) clearTimeout(copiedInstructionTimeoutRef.current);
-      if (copiedKitchenTimeoutRef.current) clearTimeout(copiedKitchenTimeoutRef.current);
       if (copiedShareTimeoutRef.current) clearTimeout(copiedShareTimeoutRef.current);
       activeAnimationsRef.current.forEach((a) => {
         try {
@@ -583,25 +574,6 @@ export function ConversionCard({
     if (isNaN(num)) return null;
     return convertUnits(num, categoryId, fromUnit.id, toUnit.id);
   })();
-
-  const isCulinaryVolume = [
-    'cup_us', 'cup_metric', 'tbsp_us', 'tbsp_metric', 'tsp_us',
-    'floz_us', 'ml', 'l', 'dsp', 'pinch', 'dash', 'tad', 'smidgen', 'drop', 'shot', 'stick_butter',
-  ].includes(fromUnit.id);
-  const kitchenDrawer = isKitchenActive && isCulinaryVolume
-    ? getKitchenDrawerBreakdown(fromValue, fromUnit.id)
-    : null;
-
-  const handleCopyKitchenOutput = () => {
-    if (!kitchenDrawer || !kitchenDrawer.primary) return;
-    const textToCopy = kitchenDrawer.primary;
-    onCopy(textToCopy, `${textToCopy} copied to clipboard!`);
-    setCopiedKitchen(true);
-    if (copiedKitchenTimeoutRef.current) clearTimeout(copiedKitchenTimeoutRef.current);
-    copiedKitchenTimeoutRef.current = setTimeout(() => {
-      setCopiedKitchen(false);
-    }, 1600);
-  };
 
   const currentPrecisionOption =
     PRECISION_OPTIONS.find((opt) => opt.id === precision) ||
@@ -1641,127 +1613,6 @@ export function ConversionCard({
             </div>
           )}
         </div>
-
-        {/* Kitchen Measuring Drawer Shelf (rendered when kitchen drawer tools are applicable) */}
-        {isKitchenActive && kitchenDrawer && (
-          <div className="ct-kitchen-drawer-card" aria-label="Kitchen Measuring Drawer">
-            <div className="ct-kitchen-tools-section">
-              <div className="ct-kitchen-shelf-header">
-                <span className="ct-kitchen-shelf-title">
-                  <Icon name="ChefHat" size={16} />
-                  <span>Measuring Tools Needed</span>
-                </span>
-                <span className="ct-kitchen-shelf-hint">Pull these from your kitchen drawer</span>
-              </div>
-
-              {/* Quick summary box with copy support and caption */}
-              <div
-                className="ct-kitchen-output-box"
-                role="button"
-                tabIndex={0}
-                onClick={handleCopyKitchenOutput}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleCopyKitchenOutput();
-                  }
-                }}
-                title={copiedKitchen ? 'Copied to clipboard!' : `Click to copy: ${kitchenDrawer?.primary || '0'}`}
-                aria-label={`Kitchen measuring tools: ${kitchenDrawer?.primary || '0'}. Click to copy.`}
-              >
-                <div className="ct-kitchen-output-content">
-                  <span className="ct-kitchen-output-caption">Drawer Tools to Pull</span>
-                  <span className={`ct-kitchen-output-text ${getNumberFontSizeClass(kitchenDrawer?.primary || '0')}`}>
-                    {kitchenDrawer?.primary || '0'}
-                  </span>
-                </div>
-                <span className={`ct-kitchen-copy-indicator ${copiedKitchen ? 'copied' : ''}`} aria-hidden="true">
-                  <Icon name={copiedKitchen ? 'Check' : 'Copy'} size={16} />
-                </span>
-              </div>
-
-              <div className="ct-kitchen-tools-pills">
-                {kitchenDrawer && kitchenDrawer.tools && kitchenDrawer.tools.length > 0 ? (
-                  kitchenDrawer.tools.map((tool, idx) => (
-                    <React.Fragment key={idx}>
-                      {idx > 0 && <span className="ct-kitchen-plus" aria-hidden="true">+</span>}
-                      <button
-                        type="button"
-                        className="ct-kitchen-tool-chip"
-                        onClick={() => onCopy(tool, `${tool} copied!`)}
-                        title={`Click to copy: ${tool}`}
-                      >
-                        <span className="ct-tool-chip-icon" aria-hidden="true">🥄</span>
-                        <span className="ct-tool-chip-text"><Fraction value={tool} /></span>
-                      </button>
-                    </React.Fragment>
-                  ))
-                ) : (
-                  <span className="ct-kitchen-tool-chip empty">0</span>
-                )}
-              </div>
-            </div>
-
-            {kitchenDrawer && (
-              <div className="ct-kitchen-equivalents-section">
-                <div className="ct-kitchen-shelf-header">
-                  <span className="ct-kitchen-shelf-title">
-                    <Icon name="Sparkles" size={14} />
-                    <span>Standard Equivalents</span>
-                  </span>
-                  <span className="ct-kitchen-shelf-hint">Quick reference for common measures</span>
-                </div>
-                <div className="ct-kitchen-equiv-grid">
-                  <button
-                    type="button"
-                    className="ct-kitchen-equiv-pill"
-                    onClick={() => onCopy(kitchenDrawer.cups, `${kitchenDrawer.cups} copied!`)}
-                    title={`Click to copy cups: ${kitchenDrawer.cups}`}
-                  >
-                    <span className="ct-equiv-label">Cups</span>
-                    <span className="ct-equiv-val">{kitchenDrawer.cups}</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="ct-kitchen-equiv-pill"
-                    onClick={() => onCopy(kitchenDrawer.tbsp, `${kitchenDrawer.tbsp} copied!`)}
-                    title={`Click to copy tablespoons: ${kitchenDrawer.tbsp}`}
-                  >
-                    <span className="ct-equiv-label">Tablespoons</span>
-                    <span className="ct-equiv-val">{kitchenDrawer.tbsp}</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="ct-kitchen-equiv-pill"
-                    onClick={() => onCopy(kitchenDrawer.tsp, `${kitchenDrawer.tsp} copied!`)}
-                    title={`Click to copy teaspoons: ${kitchenDrawer.tsp}`}
-                  >
-                    <span className="ct-equiv-label">Teaspoons</span>
-                    <span className="ct-equiv-val">{kitchenDrawer.tsp}</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="ct-kitchen-equiv-pill"
-                    onClick={() => onCopy(kitchenDrawer.flOz, `${kitchenDrawer.flOz} copied!`)}
-                    title={`Click to copy fluid ounces: ${kitchenDrawer.flOz}`}
-                  >
-                    <span className="ct-equiv-label">Fluid Ounces</span>
-                    <span className="ct-equiv-val">{kitchenDrawer.flOz}</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="ct-kitchen-equiv-pill"
-                    onClick={() => onCopy(kitchenDrawer.ml, `${kitchenDrawer.ml} copied!`)}
-                    title={`Click to copy metric milliliters: ${kitchenDrawer.ml}`}
-                  >
-                    <span className="ct-equiv-label">Metric</span>
-                    <span className="ct-equiv-val">{kitchenDrawer.ml}</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
       </div>
     );
   }

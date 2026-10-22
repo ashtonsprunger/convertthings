@@ -414,7 +414,7 @@ describe('ConvertThings UI Integration', () => {
     expect(parseFloat(toInput.value)).toBeCloseTo(62.137, 2);
   });
 
-  test('automatically displays practical drawer tools and equivalents in Kitchen Mode on category page', () => {
+  test('automatically displays practical compound spoons/cups in the Hero Equation Pill on cooking pages', () => {
     window.history.replaceState({}, '', '/cooking');
     render(<App />);
 
@@ -422,15 +422,10 @@ describe('ConvertThings UI Integration', () => {
     fireEvent.change(fromInput, { target: { value: '1' } });
     expect(fromInput.value).toBe('1');
 
-    // The kitchen drawer shelf renders measuring tools needed
-    const drawerCard = screen.getByLabelText(/Kitchen Measuring Drawer/i);
-    expect(drawerCard).toBeInTheDocument();
-    expect(drawerCard).toHaveTextContent(/1 cup/i);
-
-    // And standard equivalents
-    expect(drawerCard).toHaveTextContent(/Cups/i);
-    expect(drawerCard).toHaveTextContent(/Tablespoons/i);
-    expect(drawerCard).toHaveTextContent(/Teaspoons/i);
+    // 1 cup to tbsp -> 16 tbsp, with compound 1 cup (16 tbsp) in the Hero Equation Pill
+    const copyBtn = screen.getByLabelText(/Copy result number/i);
+    expect(copyBtn).toBeInTheDocument();
+    expect(copyBtn).toHaveTextContent(/16 tbsp/i);
   });
 
   test('navigates to culinary pair URL (e.g. cups to butter)', () => {
@@ -445,21 +440,17 @@ describe('ConvertThings UI Integration', () => {
     expect(toInput.value).toBe('2');
   });
 
-  test('converts 34 mL in Kitchen Mode as real spoons (2 tbsp + 1 tsp) and never 5/32', () => {
-    window.history.replaceState({}, '', '/convert/34-ml-to-cup_us?kitchen=1');
+  test('converts 34 mL in Kitchen Mode as real spoons (2 tbsp + 1 tsp) in Hero Equation Pill and never 5/32', () => {
+    window.history.replaceState({}, '', '/convert/34-ml-to-cup_us');
     render(<App />);
 
     const fromInput = screen.getByLabelText(/Enter value in/i);
     expect(fromInput.value).toBe('34');
 
-    const kitchenOutput = screen.getByLabelText(/Kitchen measuring tools:.*2 tbsp \+ 1 tsp/i);
-    expect(kitchenOutput).toHaveTextContent('2 tbsp + 1 tsp');
-    expect(kitchenOutput).not.toHaveTextContent('5/32');
-
-    const drawerCard = screen.getByLabelText(/Kitchen Measuring Drawer/i);
-    expect(drawerCard).toHaveTextContent('2 tbsp');
-    expect(drawerCard).toHaveTextContent('1 tsp');
-    expect(drawerCard).toHaveTextContent(/34 mL/i);
+    const copyBtn = screen.getByLabelText(/Copy result number 2 tbsp \+ 1 tsp/i);
+    expect(copyBtn).toBeInTheDocument();
+    expect(copyBtn).toHaveTextContent('2 tbsp + 1 tsp');
+    expect(copyBtn).not.toHaveTextContent('5/32');
   });
 
   test('displays smart human-friendly readouts directly in the equation button with subtext in auto mode', () => {
@@ -1109,7 +1100,7 @@ describe('Dual-Tier Memory System (In-Session & Cross-Session Persistence)', () 
     const expandBtn = screen.getByRole('button', { name: /View all.*categories/i });
     expect(expandBtn).toHaveAttribute('aria-expanded', 'false');
     fireEvent.click(expandBtn);
-    expect(expandBtn).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.queryByRole('button', { name: /View all.*categories/i })).not.toBeInTheDocument();
 
     // Click From unit dropdown button on first attempt
     const fromUnitBtn = screen.getByTitle(/Change unit from Meter/i);
@@ -1123,28 +1114,15 @@ describe('Dual-Tier Memory System (In-Session & Cross-Session Persistence)', () 
     expect(screen.getByPlaceholderText(/Search unit.../i)).toBeInTheDocument();
 
     // Expanded categories should simultaneously collapse
-    expect(expandBtn).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: /View all.*categories/i })).toHaveAttribute('aria-expanded', 'false');
   });
 
-  test('loads /convert/...-to-...?kitchen=1 directly with Kitchen Mode ON and drawer active', () => {
-    window.history.replaceState({}, '', '/convert/cup_us-to-tbsp_us?kitchen=1');
-    render(<App />);
-
-    expect(window.location.pathname).toBe('/convert/cup_us-to-tbsp_us');
-    expect(window.location.search).toBe('?kitchen=1');
-
-    // Kitchen mode drawer elements should be visible
-    expect(screen.getByText('Drawer Tools to Pull')).toBeInTheDocument();
-  });
-
-  test('loads /convert/...-to-... with Kitchen Mode OFF by default', () => {
+  test('loads /convert/cup_us-to-tbsp_us cleanly in unified Standard Mode', () => {
     window.history.replaceState({}, '', '/convert/cup_us-to-tbsp_us');
     render(<App />);
 
     expect(window.location.pathname).toBe('/convert/cup_us-to-tbsp_us');
     expect(window.location.search).toBe('');
-
-    // Kitchen drawer should NOT be active
     expect(screen.queryByText('Drawer Tools to Pull')).not.toBeInTheDocument();
   });
 
@@ -1514,74 +1492,19 @@ describe('Dual-Tier Memory System (In-Session & Cross-Session Persistence)', () 
     });
   });
 
-  describe('Dedicated Kitchen Studio (/kitchen)', () => {
-    test('loads /kitchen directly with Kitchen Staples shelf and escape hatch', () => {
+  describe('Legacy Kitchen Studio Route Fallback (/kitchen -> /cooking)', () => {
+    test('routes /kitchen and /convert/flour-cups-to-grams cleanly to unified cooking category', () => {
       window.history.replaceState({}, '', '/kitchen');
       render(<App />);
 
-      expect(window.location.pathname).toBe('/kitchen');
-      expect(document.title).toContain('Kitchen & Baking Converter');
+      expect(window.location.pathname).toBe('/cooking');
+      expect(screen.getByRole('tab', { name: /Kitchen/i })).toHaveClass('active');
+      expect(screen.getByRole('tab', { name: /Length & Distance/i })).toBeInTheDocument();
 
-      // Pinned escape hatch to return to standard converters
-      const exitTab = screen.getByRole('tab', { name: /All Converters/i });
-      expect(exitTab).toBeInTheDocument();
-
-      // Top baking staples are present on the shelf
-      expect(screen.getAllByRole('tab', { name: /Flour/i })[0]).toBeInTheDocument();
-      expect(screen.getByRole('tab', { name: /White Sugar/i })).toBeInTheDocument();
-      expect(screen.getByRole('tab', { name: /Butter/i })).toBeInTheDocument();
-
-      // Default staple is Flour (cup_us to g, 1 cup = 120 g)
       const fromInput = screen.getByLabelText(/Enter value in/i);
       expect(fromInput).toHaveValue('1');
       const toInput = screen.getByLabelText(/Converted value in/i);
-      expect(toInput).toHaveValue('120');
-    });
-
-    test('switches staples in 1 tap and updates ingredient and density', () => {
-      window.history.replaceState({}, '', '/kitchen');
-      render(<App />);
-
-      // Switch to Butter
-      const butterTab = screen.getByRole('tab', { name: /Butter/i });
-      fireEvent.click(butterTab);
-
-      // Butter converts 1 stick of butter to ~113.4g
-      const toInput = screen.getByLabelText(/Converted value in/i);
-      expect(parseFloat(toInput.value)).toBeCloseTo(113.4, 1);
-    });
-
-    test('exits Kitchen Studio back to universal converters via escape hatch', () => {
-      window.history.replaceState({}, '', '/kitchen');
-      render(<App />);
-
-      const exitTab = screen.getByRole('tab', { name: /All Converters/i });
-      fireEvent.click(exitTab);
-
-      // Returns to root homepage with standard categories
-      expect(window.location.pathname).toBe('/');
-      expect(screen.getByRole('tab', { name: /Length & Distance/i })).toBeInTheDocument();
-    });
-
-    test('toggles Kitchen Studio via Header mode switcher', () => {
-      window.history.replaceState({}, '', '/');
-      render(<App />);
-
-      // Equal peer mode switcher buttons in header
-      const kitchenModeBtn = screen.getByRole('radio', { name: /Kitchen Studio Mode/i });
-      fireEvent.click(kitchenModeBtn);
-
-      // Enters Kitchen Studio
-      expect(window.location.pathname).toBe('/kitchen');
-      expect(screen.getByRole('tab', { name: /All Converters/i })).toBeInTheDocument();
-
-      // Click Standard Mode switcher button to return
-      const standardModeBtn = screen.getByRole('radio', { name: /Standard Converters Mode/i });
-      fireEvent.click(standardModeBtn);
-
-      // Returns to standard mode
-      expect(window.location.pathname).toBe('/');
-      expect(screen.getByRole('tab', { name: /Length & Distance/i })).toBeInTheDocument();
+      expect(toInput).toHaveValue('16');
     });
   });
 });

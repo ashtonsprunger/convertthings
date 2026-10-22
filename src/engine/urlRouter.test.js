@@ -95,33 +95,20 @@ describe('ConvertThings URL Router', () => {
     expect(route.fromUnitId).toBe('cup_us');
   });
 
-  test('parses dedicated /kitchen studio destination route', () => {
+  test('redirects legacy /kitchen and /convert/flour-cups-to-grams routes cleanly to cooking category', () => {
     const route = parseRoute('/kitchen');
     expect(route).not.toBeNull();
-    expect(route.categoryId).toBe('flour_ap');
-    expect(route.isKitchenStudio).toBe(true);
-    expect(route.ingredient).toBe('flour_ap');
+    expect(route.categoryId).toBe('cooking');
+    expect(route.isCategoryPage).toBe(true);
     expect(route.fromUnitId).toBe('cup_us');
-    expect(route.toUnitId).toBe('g');
+    expect(route.toUnitId).toBe('tbsp_us');
 
-    const butterRoute = parseRoute('/kitchen', '?ing=butter');
-    expect(butterRoute).not.toBeNull();
-    expect(butterRoute.categoryId).toBe('butter');
-    expect(butterRoute.isKitchenStudio).toBe(true);
-    expect(butterRoute.ingredient).toBe('butter');
-    expect(butterRoute.fromUnitId).toBe('stick_butter');
-    expect(butterRoute.toUnitId).toBe('g');
-
-    const sugarRoute = parseRoute('/kitchen', '?ing=sugar_granulated&v=2');
-    expect(sugarRoute).not.toBeNull();
-    expect(sugarRoute.ingredient).toBe('sugar_granulated');
-    expect(sugarRoute.fromValue).toBe('2');
-  });
-
-  test('formats /kitchen studio route paths correctly', () => {
-    expect(formatRoutePath('cooking', 'cup_us', 'g', '1', 'auto', false, null, 'flour_ap', true)).toBe('/kitchen');
-    expect(formatRoutePath('cooking', 'stick_butter', 'g', '1', 'auto', false, null, 'butter', true)).toBe('/kitchen?ing=butter');
-    expect(formatRoutePath('cooking', 'cup_us', 'g', '2', 'auto', false, null, 'flour_ap', true)).toBe('/kitchen?v=2');
+    const flourRoute = parseRoute('/convert/flour-cups-to-grams');
+    expect(flourRoute).not.toBeNull();
+    expect(flourRoute.categoryId).toBe('cooking');
+    expect(flourRoute.isCategoryPage).toBe(true);
+    expect(flourRoute.fromUnitId).toBe('cup_us');
+    expect(flourRoute.toUnitId).toBe('tbsp_us');
   });
 
   test('maintains backward compatibility with legacy query parameters', () => {
@@ -300,25 +287,12 @@ describe('ConvertThings URL Router', () => {
 
   describe('High-Intent Hub Routes', () => {
     test('exposes defined HUB_ROUTES and getHubRoute helper', () => {
-      expect(HUB_ROUTES.length).toBe(4);
+      expect(HUB_ROUTES.length).toBe(3);
       expect(getHubRoute('feet-inches-to-cm')).not.toBeNull();
       expect(getHubRoute('/convert/feet-inches-to-cm')).not.toBeNull();
       expect(getHubRoute('fraction-inches-to-mm')).not.toBeNull();
       expect(getHubRoute('baking-fractions')).not.toBeNull();
-      expect(getHubRoute('flour-cups-to-grams')).not.toBeNull();
       expect(getHubRoute('nonexistent-hub')).toBeNull();
-    });
-
-    test('parses /convert/flour-cups-to-grams (Culinary Density Hub)', () => {
-      const route = parseRoute('/convert/flour-cups-to-grams');
-      expect(route).not.toBeNull();
-      expect(route.isHubPage).toBe(true);
-      expect(route.hubId).toBe('flour-cups-to-grams');
-      expect(route.categoryId).toBe('cooking');
-      expect(route.fromUnitId).toBe('cup_us');
-      expect(route.toUnitId).toBe('g');
-      expect(route.fromValue).toBe('1');
-      expect(route.ingredient).toBe('flour_ap');
     });
 
     test('parses /convert/feet-inches-to-cm (Height Hub)', () => {

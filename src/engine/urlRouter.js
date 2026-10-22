@@ -4,7 +4,7 @@
  * legacy query parameters, canonical URL generation, and XML sitemap generation.
  */
 
-import { CATEGORIES, KITCHEN_CATEGORIES, UNIT_DEFINITIONS, getUnit, isFractionLike, isCompoundLike } from './conversions.js';
+import { CATEGORIES, UNIT_DEFINITIONS, getUnit, isFractionLike, isCompoundLike } from './conversions.js';
 import { findUnit, findAllUnits } from './parser.js';
 
 export const VALID_PRECISIONS = [
@@ -112,20 +112,6 @@ export const HUB_ROUTES = [
     name: 'Baking Measurements & Kitchen Drawer Fractions',
     shortName: 'Baking Drawer Fractions',
   },
-  {
-    id: 'flour-cups-to-grams',
-    slug: 'flour-cups-to-grams',
-    path: '/convert/flour-cups-to-grams',
-    categoryId: 'cooking',
-    fromUnitId: 'cup_us',
-    toUnitId: 'g',
-    defaultValue: '1',
-    precision: 'auto',
-    isKitchenMode: false,
-    ingredient: 'flour_ap',
-    name: 'Flour Cups to Grams Converter (Baking Weight)',
-    shortName: 'Flour (Cups ➔ Grams)',
-  },
 ];
 
 /**
@@ -195,43 +181,19 @@ export function parseRoute(pathname = '', search = '') {
     const cleanPath = (pathname || '').trim().toLowerCase();
     const normalizedPath = cleanPath.replace(/\/$/, '') || '/';
 
-    // 0. Dedicated Kitchen & Baking Studio (/kitchen)
-    if (normalizedPath === '/kitchen') {
-      let ing = ingredient || 'flour_ap';
-      let staple = KITCHEN_CATEGORIES.find((k) => k.id === ing) || KITCHEN_CATEGORIES[0];
-      let defFrom = staple.defaultFrom || 'cup_us';
-      let defTo = staple.defaultTo || 'g';
-
-      let val = '1';
-      if (search) {
-        const params = new URLSearchParams(search);
-        const rawV = params.get('v') ?? params.get('val');
-        if (rawV !== null) {
-          const cleanV = rawV.trim().replace(/,/g, '');
-          if (cleanV !== '' && (!isNaN(cleanV) || isFractionLike(cleanV) || isCompoundLike(cleanV))) {
-            val = cleanV;
-          }
-        }
-        const fromP = params.get('from');
-        const toP = params.get('to');
-        if (fromP && (getUnit(staple.id, fromP) || getUnit('cooking', fromP))) {
-          defFrom = fromP;
-        }
-        if (toP && (getUnit(staple.id, toP) || getUnit('cooking', toP))) {
-          defTo = toP;
-        }
-      }
-
+    // 0. Legacy Kitchen Studio & Flour-Cups redirects -> Cooking category
+    if (
+      normalizedPath === '/kitchen' ||
+      normalizedPath === '/convert/flour-cups-to-grams' ||
+      normalizedPath === '/flour-cups-to-grams'
+    ) {
       return {
-        categoryId: staple.id,
-        fromUnitId: defFrom,
-        toUnitId: defTo,
-        fromValue: val,
+        categoryId: 'cooking',
+        fromUnitId: 'cup_us',
+        toUnitId: 'tbsp_us',
+        fromValue: '1',
         isCategoryPage: true,
-        isKitchenStudio: true,
-        ingredient: staple.id,
         ...(precision ? { precision } : {}),
-        isKitchenMode: staple.id === 'water' || staple.id === 'liquid',
       };
     }
 
@@ -443,26 +405,8 @@ export function formatRoutePath(
   value = '1',
   precision = 'auto',
   isKitchenMode = false,
-  hubId = null,
-  ingredient = null,
-  isKitchenStudio = false
+  hubId = null
 ) {
-  if (isKitchenStudio) {
-    const queryParams = [];
-    if (ingredient && ingredient !== 'flour_ap' && ingredient !== 'liquid') {
-      queryParams.push(`ing=${encodeURIComponent(ingredient)}`);
-    }
-    const rawVal = value !== null && value !== undefined ? String(value).trim().replace(/,/g, '') : '1';
-    const valStr = rawVal.endsWith('.') ? rawVal.slice(0, -1) : rawVal;
-    if (valStr !== '' && valStr !== '1') {
-      queryParams.push(`v=${encodeURIComponent(valStr)}`);
-    }
-    if (precision && precision !== 'auto' && VALID_PRECISIONS.includes(precision)) {
-      queryParams.push(`p=${encodeURIComponent(precision)}`);
-    }
-    return queryParams.length > 0 ? `/kitchen?${queryParams.join('&')}` : '/kitchen';
-  }
-
   if (hubId) {
     const hub = getHubRoute(hubId);
     if (hub && hub.categoryId === categoryId && hub.fromUnitId === fromUnitId && hub.toUnitId === toUnitId) {
@@ -543,10 +487,6 @@ export function formatRoutePath(
     }
   }
 
-  if (categoryId === 'cooking' && ingredient && ingredient !== 'liquid') {
-    queryParams.push(`ing=${encodeURIComponent(ingredient)}`);
-  }
-
   if (queryParams.length > 0) {
     return `${path}?${queryParams.join('&')}`;
   }
@@ -622,14 +562,6 @@ export function generateSitemapXml(domain = 'https://www.convertthings.com') {
   // 1. Homepage
   xml += `  <url>\n`;
   xml += `    <loc>${domain}/</loc>\n`;
-  xml += `    <lastmod>${today}</lastmod>\n`;
-  xml += `    <changefreq>daily</changefreq>\n`;
-  xml += `    <priority>1.0</priority>\n`;
-  xml += `  </url>\n`;
-
-  // 1.5 Dedicated Kitchen & Baking Studio
-  xml += `  <url>\n`;
-  xml += `    <loc>${domain}/kitchen</loc>\n`;
   xml += `    <lastmod>${today}</lastmod>\n`;
   xml += `    <changefreq>daily</changefreq>\n`;
   xml += `    <priority>1.0</priority>\n`;

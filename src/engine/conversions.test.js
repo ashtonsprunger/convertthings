@@ -1131,39 +1131,32 @@ describe('Phase 2 Unit Precision & Conversions', () => {
     });
   });
 
-  describe('Kitchen Studio Native Conversion Engine', () => {
-    test('getCategory retrieves both engineering domains and kitchen staples', () => {
-      expect(getCategory('length')?.name).toBe('Length & Distance');
-      expect(getCategory('flour_ap')?.name).toBe('All-Purpose Flour');
-      expect(getCategory('butter')?.name).toBe('Butter');
-      expect(getCategory('sugar_granulated')?.name).toBe('Granulated Sugar');
-      expect(getCategory('unknown_xyz')).toBeNull();
-    });
+  test('formats cooking conversions as practical kitchen drawer spoons and cups in Hero Equation', () => {
+    const mlUnit = UNIT_DEFINITIONS.cooking.units.find((u) => u.id === 'ml');
+    const cupCookUnit = UNIT_DEFINITIONS.cooking.units.find((u) => u.id === 'cup_us');
+    const tbspCookUnit = UNIT_DEFINITIONS.cooking.units.find((u) => u.id === 'tbsp_us');
 
-    test('getUnitsForCategory returns units for kitchen ingredients', () => {
-      const flourUnits = getUnitsForCategory('flour_ap');
-      expect(flourUnits.length).toBeGreaterThanOrEqual(10);
-      expect(flourUnits.some((u) => u.id === 'cup_us')).toBe(true);
-      expect(flourUnits.some((u) => u.id === 'g')).toBe(true);
-      expect(flourUnits.some((u) => u.id === 'oz')).toBe(true);
-    });
+    // 34 mL to cup_us -> 2 tbsp + 1 tsp (approximate)
+    const targetVal34 = convertUnits(34, 'cooking', 'ml', 'cup_us');
+    const defaultFmt34 = formatNumber(targetVal34, 'auto', 'cooking');
+    const result34 = getSmartEquationDisplay('cooking', mlUnit, cupCookUnit, 34, targetVal34, defaultFmt34);
 
-    test('convertUnits natively converts volume to weight with exact density factors', () => {
-      // 1 US Cup All-Purpose Flour = 120 grams
-      expect(convertUnits(1, 'flour_ap', 'cup_us', 'g')).toBe(120);
-      // 240 grams flour = 2 cups
-      expect(convertUnits(240, 'flour_ap', 'g', 'cup_us')).toBe(2);
-      // 1 cup sugar = 200 grams
-      expect(convertUnits(1, 'sugar_granulated', 'cup_us', 'g')).toBe(200);
-      // 1 stick butter = 113.398 grams = 8 tbsp = 0.5 cups
-      expect(convertUnits(1, 'butter', 'stick_butter', 'tbsp_us')).toBeCloseTo(8, 2);
-      expect(convertUnits(1, 'butter', 'stick_butter', 'cup_us')).toBeCloseTo(0.5, 2);
-    });
+    expect(result34.value).toBe('2 tbsp + 1 tsp');
+    expect(result34.unit).toBe('');
+    expect(result34.isSmart).toBe(true);
+    expect(result34.isExact).toBe(false);
+    expect(result34.subtext).toBe('≈ 0.1437 cup');
 
-    test('getFormulaDetails produces clean formula for kitchen conversions', () => {
-      const details = getFormulaDetails('flour_ap', 'cup_us', 'g');
-      expect(details.equation).toContain('g =');
-    });
+    // 13 tbsp to cup_us -> 3/4 cup + 1 tbsp (exact)
+    const targetVal13 = convertUnits(13, 'cooking', 'tbsp_us', 'cup_us');
+    const defaultFmt13 = formatNumber(targetVal13, 'auto', 'cooking');
+    const result13 = getSmartEquationDisplay('cooking', tbspCookUnit, cupCookUnit, 13, targetVal13, defaultFmt13);
+
+    expect(result13.value).toBe('3/4 cup + 1 tbsp');
+    expect(result13.unit).toBe('');
+    expect(result13.isSmart).toBe(true);
+    expect(result13.isExact).toBe(true);
+    expect(result13.subtext).toBe('= 13/16 cup');
   });
 });
 

@@ -1,30 +1,22 @@
-import {
-  KITCHEN_CATEGORIES,
-  KITCHEN_UNIT_DEFINITIONS,
-  PANTRY_GROUPS,
-  isKitchenCategory,
-  getKitchenCategory,
-} from './kitchenDataset.js';
-
 export const CATEGORIES = [
   { id: 'length', name: 'Length & Distance', icon: 'Ruler', defaultFrom: 'm', defaultTo: 'ft' },
   { id: 'mass', name: 'Weight & Mass', icon: 'Scale', defaultFrom: 'kg', defaultTo: 'lb' },
   { id: 'temperature', name: 'Temperature', icon: 'Thermometer', defaultFrom: 'c', defaultTo: 'f' },
-  { id: 'area', name: 'Area', icon: 'Square', defaultFrom: 'sqm', defaultTo: 'sqft' },
   { id: 'volume', name: 'Volume & Capacity', icon: 'Droplet', defaultFrom: 'l', defaultTo: 'gal_us' },
+  { id: 'cooking', name: 'Kitchen & Cooking', icon: 'ChefHat', defaultFrom: 'cup_us', defaultTo: 'tbsp_us' },
+  { id: 'area', name: 'Area', icon: 'Square', defaultFrom: 'sqm', defaultTo: 'sqft' },
   { id: 'speed', name: 'Speed', icon: 'Gauge', defaultFrom: 'kmh', defaultTo: 'mph' },
   { id: 'time', name: 'Time', icon: 'Clock', defaultFrom: 'h', defaultTo: 'min' },
+  { id: 'fuel', name: 'Fuel Economy', icon: 'Fuel', defaultFrom: 'mpg_us', defaultTo: 'l100km' },
   { id: 'digital', name: 'Digital Storage', icon: 'HardDrive', defaultFrom: 'gb', defaultTo: 'mb' },
   { id: 'data_rate', name: 'Data Transfer Rate', icon: 'Zap', defaultFrom: 'mbps', defaultTo: 'mbs' },
   { id: 'pressure', name: 'Pressure', icon: 'Compass', defaultFrom: 'bar', defaultTo: 'psi' },
   { id: 'energy', name: 'Energy', icon: 'Sparkles', defaultFrom: 'j', defaultTo: 'cal' },
   { id: 'power', name: 'Power', icon: 'Lightbulb', defaultFrom: 'kw', defaultTo: 'hp' },
-  { id: 'angle', name: 'Angle', icon: 'RotateCw', defaultFrom: 'deg', defaultTo: 'rad' },
-  { id: 'fuel', name: 'Fuel Economy', icon: 'Fuel', defaultFrom: 'mpg_us', defaultTo: 'l100km' },
-  { id: 'cooking', name: 'Kitchen Mode', icon: 'ChefHat', defaultFrom: 'cup_us', defaultTo: 'tbsp_us' },
-  { id: 'frequency', name: 'Frequency', icon: 'Waveform', defaultFrom: 'hz', defaultTo: 'khz' },
   { id: 'torque', name: 'Torque', icon: 'Wrench', defaultFrom: 'nm', defaultTo: 'ftlb' },
   { id: 'force', name: 'Force', icon: 'Crosshair', defaultFrom: 'n', defaultTo: 'lbf' },
+  { id: 'angle', name: 'Angle', icon: 'RotateCw', defaultFrom: 'deg', defaultTo: 'rad' },
+  { id: 'frequency', name: 'Frequency', icon: 'Waveform', defaultFrom: 'hz', defaultTo: 'khz' },
   { id: 'flow_rate', name: 'Volumetric Flow Rate', icon: 'Waves', defaultFrom: 'cfm', defaultTo: 'l_s' },
   { id: 'typography', name: 'Typography', icon: 'Type', defaultFrom: 'px', defaultTo: 'rem' },
   { id: 'current', name: 'Electric Current', icon: 'BatteryCharging', defaultFrom: 'a', defaultTo: 'ma' },
@@ -479,43 +471,30 @@ export const UNIT_DEFINITIONS = {
 };
 
 /**
- * Retrieves category definition across standard engineering domains and kitchen studio staples.
+ * Retrieves category definition across standard measurement domains.
  */
 export function getCategory(categoryId) {
   if (!categoryId) return null;
   const clean = String(categoryId).trim().toLowerCase();
-  return (
-    CATEGORIES.find((c) => c.id === clean) ||
-    KITCHEN_CATEGORIES.find((c) => c.id === clean) ||
-    null
-  );
+  return CATEGORIES.find((c) => c.id === clean) || null;
 }
 
 /**
  * Returns the unit definition object by category and unit ID.
- * Natively resolves units across both Standard Engineering domains and Kitchen Studio ingredients.
  */
 export function getUnit(categoryId, unitId) {
-  const cat = UNIT_DEFINITIONS[categoryId] || KITCHEN_UNIT_DEFINITIONS[categoryId];
+  const cat = UNIT_DEFINITIONS[categoryId];
   if (!cat) return null;
   return cat.units.find((u) => u.id === unitId) || null;
 }
 
 /**
- * Returns all units for a category (Standard domain or Kitchen ingredient).
+ * Returns all units for a category.
  */
 export function getUnitsForCategory(categoryId) {
-  const cat = UNIT_DEFINITIONS[categoryId] || KITCHEN_UNIT_DEFINITIONS[categoryId];
+  const cat = UNIT_DEFINITIONS[categoryId];
   return cat ? cat.units : [];
 }
-
-export {
-  KITCHEN_CATEGORIES,
-  KITCHEN_UNIT_DEFINITIONS,
-  PANTRY_GROUPS,
-  isKitchenCategory,
-  getKitchenCategory,
-};
 
 /**
  * Returns whether a unit belongs to the specialized/trade tier.
@@ -2051,7 +2030,23 @@ export function getSmartEquationDisplay(categoryId, fromUnit, toUnit, fromValue,
     }
   }
 
-  // 4. Volume & Capacity -> Exact culinary / fluid fractions
+  // 4. Kitchen & Cooking -> Practical culinary compound drawer tools
+  if (categoryId === 'cooking') {
+    const compound = getCookingCompoundMeasure(rawTargetNum, toUnit.id, 'cooking');
+    if (compound && compound !== `${defaultFormattedValue} ${toUnit.symbol}`) {
+      const totalTsp = convertUnits(rawTargetNum, 'cooking', toUnit.id, 'tsp_us');
+      const isExact = totalTsp !== null && Math.abs(totalTsp * 2 - Math.round(totalTsp * 2)) < 1e-4;
+      return {
+        value: compound,
+        unit: '',
+        subtext: `${isExact ? '=' : '≈'} ${defaultFormattedValue} ${toUnit.symbol}`,
+        isSmart: true,
+        isExact,
+      };
+    }
+  }
+
+  // 5. Volume & Capacity -> Exact culinary / fluid fractions
   if (categoryId === 'volume') {
     const fracStr = toFraction(rawTargetNum, 128, false);
     if (fracStr && fracStr.includes('/')) {

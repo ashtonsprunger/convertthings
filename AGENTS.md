@@ -225,21 +225,21 @@ convertThings/
 1. **Length & Distance (`length` - 18 units)**: Meter, Kilometer, Centimeter, Millimeter, Micrometer, Nanometer, Mile, Yard, Foot, Inch, Nautical Mile, Light-Year, Astronomical Unit, Parsec, Ångström, Mil / Thou, Fathom, Hand.
 2. **Weight & Mass (`mass` - 17 units)**: Kilogram, Gram, Milligram, Microgram, Metric Ton, Pound, Ounce, Stone, US Short Ton, Imperial Long Ton, Carat, Grain, Troy Ounce, Pennyweight, Dalton (Atomic Mass Unit), Slug, Metric Quintal.
 3. **Temperature (`temperature` - 4 units)**: Celsius, Fahrenheit, Kelvin, Rankine.
-4. **Area (`area` - 10 units)**: Square Meter, Square Kilometer, Square Centimeter, Square Millimeter, Square Mile, Square Yard, Square Foot, Square Inch, Acre, Hectare.
-5. **Volume & Capacity (`volume` - 23 units)**: Liter, Milliliter, Centiliter, Deciliter, Cubic Meter, Cubic Centimeter, US Gallon, US Quart, US Pint, Imperial Pint, Imperial Quart, US Cup, US Fluid Ounce, US Tablespoon, US Teaspoon, Imperial Gallon, Imperial Fluid Ounce, Oil Barrel, Cubic Foot, Cubic Yard, Cubic Inch, Microliter, Bushel (US Dry).
-6. **Speed (`speed` - 6 units)**: Meter per Second, Kilometer per Hour, Mile per Hour, Knot, Foot per Second, Mach (Standard Sea Level).
-7. **Time (`time` - 12 units)**: Second, Millisecond, Microsecond, Nanosecond, Minute, Hour, Day, Week, Month (Average), Year (365.25 days), Decade, Century.
-8. **Digital Storage (`digital` - 15 units)**: Bit, Nibble, Byte, Kilobyte (Decimal), Kibibyte (Binary), Megabyte (Decimal), Mebibyte (Binary), Gigabyte (Decimal), Gibibyte (Binary), Terabyte (Decimal), Tebibyte (Binary), Petabyte (Decimal), Pebibyte (Binary), Exabyte (Decimal), Exbibyte (Binary).
-9. **Data Transfer Rate (`data_rate` - 11 units)**: Bit per Second, Kilobit per Second, Megabit per Second, Gigabit per Second, Terabit per Second, Byte per Second, Kilobyte per Second, Megabyte per Second, Mebibyte per Second, Gigabyte per Second, Terabyte per Second.
-10. **Pressure (`pressure` - 13 units)**: Pascal, Kilopascal, Megapascal, Bar, Millibar, Pound per Square Inch, Kilopound per Square Inch (ksi), Standard Atmosphere, Torr / mmHg, Inch of Mercury, Hectopascal, Inch of Water, Centimeter of Water.
-11. **Energy (`energy` - 11 units)**: Joule, Kilojoule, Calorie (Gram/Small), Kilocalorie (Food Calorie), Watt-hour, Kilowatt-hour, Megawatt-hour, Electronvolt, British Thermal Unit, Therm, Foot-pound.
-12. **Power (`power` - 8 units)**: Watt, Milliwatt, Kilowatt, Megawatt, Horsepower (Mechanical/US), Metric Horsepower (PS), BTU per Hour, Ton of Refrigeration.
-13. **Angle (`angle` - 6 units)**: Degree, Radian, Gradian, Arcminute, Arcsecond, Revolution (Turn).
-14. **Fuel Economy (`fuel` - 6 units)**: Liters per 100 km, Miles per Gallon (US), Miles per Gallon (UK), Kilometers per Liter, Miles per kWh, kWh per 100 km.
-15. **Kitchen Mode (`cooking` - 19 units)**: Milliliter, US Cup, Metric Cup, US Tablespoon, Metric Tablespoon, US Teaspoon, Dessertspoon, Fluid Ounce, Standard Shot (Jigger), Pinch, Dash, Tad, Smidgen, Drop, Stick of Butter (US), Liter, US Pint, US Quart, US Gallon.
-16. **Frequency (`frequency` - 8 units)**: Hertz, Kilohertz, Megahertz, Gigahertz, Terahertz, Revolutions per Minute, Radians per Second, Degrees per Second.
-17. **Torque (`torque` - 6 units)**: Newton-meter, Pound-foot, Pound-inch, Kilogram-force Meter, Kilonewton-meter, Ounce-force Inch.
-18. **Force (`force` - 8 units)**: Newton, Kilonewton, Meganewton, Pound-force, Kilogram-force, Dyne, Kip, Ounce-force.
+4. **Volume & Capacity (`volume` - 23 units)**: Liter, Milliliter, Centiliter, Deciliter, Cubic Meter, Cubic Centimeter, US Gallon, US Quart, US Pint, Imperial Pint, Imperial Quart, US Cup, US Fluid Ounce, US Tablespoon, US Teaspoon, Imperial Gallon, Imperial Fluid Ounce, Oil Barrel, Cubic Foot, Cubic Yard, Cubic Inch, Microliter, Bushel (US Dry).
+5. **Kitchen & Cooking (`cooking` - 19 units)**: Milliliter, US Cup, Metric Cup, US Tablespoon, Metric Tablespoon, US Teaspoon, Dessertspoon, Fluid Ounce, Standard Shot (Jigger), Pinch, Dash, Tad, Smidgen, Drop, Stick of Butter (US), Liter, US Pint, US Quart, US Gallon.
+6. **Area (`area` - 10 units)**: Square Meter, Square Kilometer, Square Centimeter, Square Millimeter, Square Mile, Square Yard, Square Foot, Square Inch, Acre, Hectare.
+7. **Speed (`speed` - 6 units)**: Meter per Second, Kilometer per Hour, Mile per Hour, Knot, Foot per Second, Mach (Standard Sea Level).
+8. **Time (`time` - 12 units)**: Second, Millisecond, Microsecond, Nanosecond, Minute, Hour, Day, Week, Month (Average), Year (365.25 days), Decade, Century.
+9. **Fuel Economy (`fuel` - 6 units)**: Liters per 100 km, Miles per Gallon (US), Miles per Gallon (UK), Kilometers per Liter, Miles per kWh, kWh per 100 km.
+10. **Digital Storage (`digital` - 15 units)**: Bit, Nibble, Byte, Kilobyte (Decimal), Kibibyte (Binary), Megabyte (Decimal), Mebibyte (Binary), Gigabyte (Decimal), Gibibyte (Binary), Terabyte (Decimal), Tebibyte (Binary), Petabyte (Decimal), Pebibyte (Binary), Exabyte (Decimal), Exbibyte (Binary).
+11. **Data Transfer Rate (`data_rate` - 11 units)**: Bit per Second, Kilobit per Second, Megabit per Second, Gigabit per Second, Terabit per Second, Byte per Second, Kilobyte per Second, Megabyte per Second, Mebibyte per Second, Gigabyte per Second, Terabyte per Second.
+12. **Pressure (`pressure` - 13 units)**: Pascal, Kilopascal, Megapascal, Bar, Millibar, Pound per Square Inch, Kilopound per Square Inch (ksi), Standard Atmosphere, Torr / mmHg, Inch of Mercury, Hectopascal, Inch of Water, Centimeter of Water.
+13. **Energy (`energy` - 11 units)**: Joule, Kilojoule, Calorie (Gram/Small), Kilocalorie (Food Calorie), Watt-hour, Kilowatt-hour, Megawatt-hour, Electronvolt, British Thermal Unit, Therm, Foot-pound.
+14. **Power (`power` - 8 units)**: Watt, Milliwatt, Kilowatt, Megawatt, Horsepower (Mechanical/US), Metric Horsepower (PS), BTU per Hour, Ton of Refrigeration.
+15. **Torque (`torque` - 6 units)**: Newton-meter, Pound-foot, Pound-inch, Kilogram-force Meter, Kilonewton-meter, Ounce-force Inch.
+16. **Force (`force` - 8 units)**: Newton, Kilonewton, Meganewton, Pound-force, Kilogram-force, Dyne, Kip, Ounce-force.
+17. **Angle (`angle` - 6 units)**: Degree, Radian, Gradian, Arcminute, Arcsecond, Revolution (Turn).
+18. **Frequency (`frequency` - 8 units)**: Hertz, Kilohertz, Megahertz, Gigahertz, Terahertz, Revolutions per Minute, Radians per Second, Degrees per Second.
 19. **Volumetric Flow Rate (`flow_rate` - 7 units)**: Cubic Feet per Minute, Liter per Second, Liter per Minute, Cubic Meter per Hour, Cubic Meter per Second, US Gallon per Minute, US Gallon per Hour.
 20. **Typography & Screen Resolution (`typography` - 7 units)**: Pixel, Point, Rem, Em, Pica, CSS Inch, CSS Millimeter.
 21. **Electric Current & Battery Charge (`current` - 8 units)**: Ampere, Milliampere, Microampere, Kiloampere, Ampere-hour, Milliampere-hour, Abampere (Biot), Statampere.

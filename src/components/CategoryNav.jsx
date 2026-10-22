@@ -1,16 +1,6 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { CATEGORIES } from '../engine/conversions';
-import { KITCHEN_CATEGORIES } from '../engine/kitchenDataset';
 import { Icon } from './Icons';
-
-export const KITCHEN_STAPLES = KITCHEN_CATEGORIES.map((c) => ({
-  id: c.id,
-  name: c.name,
-  shortName: c.shortName,
-  icon: c.icon,
-  fromUnit: c.defaultFrom,
-  toUnit: c.defaultTo,
-}));
 
 function getCategoryTabTargetScroll(container, tab) {
   if (!container || !tab) return 0;
@@ -26,14 +16,8 @@ export function CategoryNav({
   categories,
   activeCategoryId,
   onSelectCategory,
-  isKitchenStudio = false,
-  activeIngredientId = 'flour_ap',
-  onSelectKitchenStaple,
-  onExitKitchenStudio,
 }) {
-  const displayCategories = isKitchenStudio
-    ? (categories && categories !== CATEGORIES ? categories : KITCHEN_CATEGORIES)
-    : (categories || CATEGORIES);
+  const displayCategories = categories || CATEGORIES;
   const [isExpanded, setIsExpanded] = useState(false);
   const navRef = useRef(null);
   const navInnerRef = useRef(null);
@@ -116,12 +100,10 @@ export function CategoryNav({
     });
 
     const containerRect = navInnerRef.current.getBoundingClientRect();
-    const btnRect = expandBtnRef.current?.getBoundingClientRect() || null;
     const scrollRect = scrollRef.current.getBoundingClientRect();
     return {
       chips: chipMap,
       container: containerRect,
-      btn: btnRect,
       scroll: scrollRect,
       wasExpanded: isExpanded,
     };
@@ -192,7 +174,6 @@ export function CategoryNav({
     const {
       chips: prevChips,
       container: prevContainer,
-      btn: prevBtn,
       scroll: prevScroll,
     } = prevSnapshotRef.current;
     prevSnapshotRef.current = null;
@@ -251,21 +232,16 @@ export function CategoryNav({
       activeAnimationsRef.current.push(anim);
     }
 
-    // 2. Animate expand/collapse button seamlessly with FLIP
-    if (prevBtn && expandBtnRef.current && typeof expandBtnRef.current.animate === 'function') {
-      const curBtn = expandBtnRef.current.getBoundingClientRect();
-      const btnDx = prevBtn.left - curBtn.left;
-      const btnDy = prevBtn.top - curBtn.top;
-      if (Math.abs(btnDx) > 0.5 || Math.abs(btnDy) > 0.5) {
-        const anim = expandBtnRef.current.animate(
-          [
-            { transform: `translate3d(${btnDx}px, ${btnDy}px, 0)` },
-            { transform: 'translate3d(0, 0, 0)' },
-          ],
-          { duration, easing }
-        );
-        activeAnimationsRef.current.push(anim);
-      }
+    // 2. When collapsing back to single row, smoothly fade in the All (22) button
+    if (!isExpanded && expandBtnRef.current && typeof expandBtnRef.current.animate === 'function') {
+      const anim = expandBtnRef.current.animate(
+        [
+          { opacity: 0, transform: 'scale(0.92)' },
+          { opacity: 1, transform: 'scale(1)' },
+        ],
+        { duration, easing }
+      );
+      activeAnimationsRef.current.push(anim);
     }
 
     // 3. FLIGHT OVERLAYS: Animate chips outside the scroll container without triggering scroll-snap
@@ -535,28 +511,27 @@ export function CategoryNav({
       >
         {/* Carousel track & persistent category chip track */}
         <div className={`ct-category-controls-row ${isExpanded ? 'is-expanded' : ''}`}>
-          <button
-            ref={expandBtnRef}
-            type="button"
-            className={`ct-category-expand-btn ${isExpanded ? 'is-expanded' : ''}`}
-            onClick={() => toggleExpand(!isExpanded)}
-            title={isExpanded ? 'Show fewer categories' : `View all ${displayCategories.length} categories`}
-            aria-expanded={isExpanded}
-            aria-label={isExpanded ? 'Show fewer categories' : `View all ${displayCategories.length} categories`}
-          >
-            {isExpanded ? (
-              <>
-                <Icon name="ChevronUp" size={13} />
-                <span className="ct-expand-text">Show less</span>
-              </>
-            ) : (
-              <>
-                <Icon name="Grid" size={13} />
-                <span className="ct-expand-text">All ({displayCategories.length})</span>
-                <Icon name="ChevronDown" size={11} className="ct-expand-chevron" />
-              </>
-            )}
-          </button>
+          {!isExpanded && (
+            <button
+              ref={expandBtnRef}
+              type="button"
+              className="ct-category-expand-btn"
+              onClick={() => toggleExpand(true)}
+              title={`View all ${displayCategories.length} categories`}
+              aria-expanded={false}
+              aria-label={`View all ${displayCategories.length} categories`}
+            >
+              <Icon name="Grid" size={13} />
+              <span className="ct-expand-text">
+                All ({displayCategories.length})
+              </span>
+              <Icon
+                name="ChevronDown"
+                size={11}
+                className="ct-expand-chevron"
+              />
+            </button>
+          )}
 
           {/* Persistent Chips Container (reused in both single-row and grid states) */}
           <div
@@ -564,75 +539,26 @@ export function CategoryNav({
             ref={scrollRef}
             role="tablist"
           >
-            {isKitchenStudio && (
-              <button
-                type="button"
-                role="tab"
-                aria-selected={false}
-                id="tab-all-converters"
-                data-cat-id="all"
-                className="ct-category-tab ct-kitchen-exit-tab"
-                onClick={onExitKitchenStudio}
-                title="Return to standard measurement converters"
-                aria-label="All Converters (Return to Standard Converters)"
-              >
-                <span className="ct-tab-icon" aria-hidden="true">
-                  <Icon name="ArrowLeft" size={14} />
-                </span>
-                <span className="ct-tab-label">All Converters</span>
-              </button>
-            )}
-
-            {isKitchenStudio ? (
-              displayCategories.map((staple) => {
-                const isActive = (activeIngredientId || activeCategoryId) === staple.id;
-                return (
-                  <button
-                    key={staple.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={isActive}
-                    id={`tab-staple-${staple.id}`}
-                    data-cat-id={staple.id}
-                    className={`ct-category-tab ct-kitchen-staple-tab ${isActive ? 'active' : ''}`}
-                    onClick={() => {
-                      if (isExpanded) toggleExpand(false);
-                      if (onSelectKitchenStaple) {
-                        onSelectKitchenStaple(staple);
-                      } else if (onSelectCategory) {
-                        onSelectCategory(staple.id);
-                      }
-                    }}
-                  >
-                    <span className="ct-tab-icon" aria-hidden="true">
-                      <Icon name={staple.icon} size={16} />
-                    </span>
-                    <span className="ct-tab-label">{staple.shortName || staple.name}</span>
-                  </button>
-                );
-              })
-            ) : (
-              displayCategories.map((cat) => {
-                const isActive = cat.id === activeCategoryId;
-                return (
-                  <button
-                    key={cat.id}
-                    role="tab"
-                    aria-selected={isActive}
-                    aria-controls="conversion-panel"
-                    id={`tab-${cat.id}`}
-                    data-cat-id={cat.id}
-                    className={`ct-category-tab ${isActive ? 'active' : ''} ct-cat-${cat.id}`}
-                    onClick={() => handleSelect(cat.id)}
-                  >
-                    <span className="ct-tab-icon" aria-hidden="true">
-                      <Icon name={cat.icon} size={16} />
-                    </span>
-                    <span className="ct-tab-label">{cat.name}</span>
-                  </button>
-                );
-              })
-            )}
+            {displayCategories.map((cat) => {
+              const isActive = cat.id === activeCategoryId;
+              return (
+                <button
+                  key={cat.id}
+                  role="tab"
+                  aria-selected={isActive}
+                  aria-controls="conversion-panel"
+                  id={`tab-${cat.id}`}
+                  data-cat-id={cat.id}
+                  className={`ct-category-tab ${isActive ? 'active' : ''} ct-cat-${cat.id}`}
+                  onClick={() => handleSelect(cat.id)}
+                >
+                  <span className="ct-tab-icon" aria-hidden="true">
+                    <Icon name={cat.icon} size={16} />
+                  </span>
+                  <span className="ct-tab-label">{cat.name}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
