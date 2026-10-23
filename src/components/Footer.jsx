@@ -69,7 +69,7 @@ export function Footer({ onSelectCategory, onOpenLegal, onOpenDevModal, onGoHome
 
           <div className="ct-footer-legal-links">
             <a
-              href="/api/mcp"
+              href="/#api"
               className="ct-footer-legal-link"
               onClick={(e) => {
                 if (onOpenDevModal) {

@@ -47,12 +47,13 @@ export default async function handler(req, res) {
         'Mcp-Session-Id': sessionId,
       });
 
-      // Emit MCP SSE endpoint event directing client to POST endpoint
+      // Emit MCP SSE endpoint event directing client to POST endpoint and close immediately
+      // so serverless functions never hang open consuming Fluid Active CPU
       res.write(`event: endpoint\ndata: https://www.convertthings.com/api/mcp?sessionId=${sessionId}\n\n`);
-      res.write(`: keep-alive\n\n`);
-      return;
+      return res.end();
     }
 
+    res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800');
     return res.status(200).json({
       status: 'online',
       protocol: 'Model Context Protocol (JSON-RPC 2.0 & StreamableHTTP)',

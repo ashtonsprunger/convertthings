@@ -22,6 +22,10 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
+  if (req.method === 'GET') {
+    res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800');
+  }
+
   try {
     const queryParams = req.query || {};
     const bodyParams = typeof req.body === 'object' && req.body !== null ? req.body : {};

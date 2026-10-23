@@ -78,7 +78,7 @@ function renderStaticFooterHtml() {
         <div class="ct-footer-bottom">
           <p class="ct-footer-copy">&copy; ${new Date().getFullYear()} ConvertThings. All rights reserved.</p>
           <div class="ct-footer-legal-links">
-            <a href="/api/mcp" class="ct-footer-legal-link">AI &amp; Developer API</a>
+            <a href="/#api" class="ct-footer-legal-link">AI &amp; Developer API</a>
             <a href="/about.html" class="ct-footer-legal-link">About &amp; Contact</a>
             <a href="/privacy.html" class="ct-footer-legal-link">Privacy Policy</a>
             <a href="/terms.html" class="ct-footer-legal-link">Terms of Service</a>

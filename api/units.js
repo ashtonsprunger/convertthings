@@ -21,6 +21,10 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
+  if (req.method === 'GET') {
+    res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800');
+  }
+
   try {
     const category = req.query?.cat || req.query?.category;
     const toolRes = await executeTool('list_units', { category });
